@@ -13,23 +13,23 @@
 // limitations under the License.
 
 import {BigintMath} from '../base/bigint_math';
-import {assertExists} from '../base/logging';
-import {Actions, DeferredAction} from '../common/actions';
-import {AggregateData} from '../common/aggregation_data';
-import {Args, ArgsTree} from '../common/arg_types';
+import { assertExists } from '../base/logging';
+import { Actions, DeferredAction } from '../common/actions';
+import { AggregateData } from '../common/aggregation_data';
+import { Args, ArgsTree } from '../common/arg_types';
 import {
   ConversionJobName,
   ConversionJobStatus,
 } from '../common/conversion_jobs';
-import {createEmptyState} from '../common/empty_state';
-import {Engine} from '../common/engine';
+import { createEmptyState } from '../common/empty_state';
+import { Engine } from '../common/engine';
 import {
   HighPrecisionTime,
   HighPrecisionTimeSpan,
 } from '../common/high_precision_time';
-import {MetricResult} from '../common/metric_data';
-import {CurrentSearchResults, SearchSummary} from '../common/search_data';
-import {CallsiteInfo, EngineConfig, ProfileType, State} from '../common/state';
+import { MetricResult } from '../common/metric_data';
+import { CurrentSearchResults, SearchSummary } from '../common/search_data';
+import { CallsiteInfo, EngineConfig, ProfileType, State } from '../common/state';
 import {Span, tpTimeFromSeconds} from '../common/time';
 import {
   TPDuration,
@@ -37,12 +37,12 @@ import {
   TPTimeSpan,
 } from '../common/time';
 
-import {Analytics, initAnalytics} from './analytics';
-import {BottomTabList} from './bottom_tab';
-import {FrontendLocalState} from './frontend_local_state';
-import {RafScheduler} from './raf_scheduler';
-import {Router} from './router';
-import {ServiceWorkerController} from './service_worker_controller';
+import { Analytics, initAnalytics } from './analytics';
+import { BottomTabList } from './bottom_tab';
+import { FrontendLocalState } from './frontend_local_state';
+import { RafScheduler } from './raf_scheduler';
+import { Router } from './router';
+import { ServiceWorkerController } from './service_worker_controller';
 import {PxSpan, TimeScale} from './time_scale';
 
 type Dispatch = (action: DeferredAction) => void;
@@ -252,6 +252,11 @@ class Globals {
 
   // TODO(hjd): Remove once we no longer need to update UUID on redraw.
   private _publishRedraw?: () => void = undefined;
+
+  // Extensions for integration
+  private _ignoreUnknownPostMessage?: boolean = undefined;
+  private _disableMainRendering?: boolean = undefined;
+  private _disableRouting?: boolean = undefined;
 
   private _currentSearchResults: CurrentSearchResults = {
     sliceIds: new Float64Array(0),
@@ -489,6 +494,30 @@ class Globals {
     this._ftraceCounters = value;
   }
 
+  get ignoreUnknownPostMessage(): boolean {
+    return !!this._ignoreUnknownPostMessage;
+  }
+
+  set ignoreUnknownPostMessage(value: boolean) {
+    this._ignoreUnknownPostMessage = value;
+  }
+
+  get disableMainRendering(): boolean {
+    return !!this._disableMainRendering;
+  }
+
+  set disableMainRendering(value: boolean) {
+    this._disableMainRendering = value;
+  }
+
+  get disableRouting(): boolean {
+    return !!this._disableRouting;
+  }
+
+  set disableRouting(value: boolean) {
+    this._disableRouting = value;
+  }
+
   getConversionJobStatus(name: ConversionJobName): ConversionJobStatus {
     return this.getJobStatusMap().get(name) || ConversionJobStatus.NotRunning;
   }
@@ -609,6 +638,9 @@ class Globals {
       sources: [],
       totalResults: 0,
     };
+    this._ignoreUnknownPostMessage = undefined;
+    this._disableMainRendering = undefined;
+    this._disableRouting = undefined;
   }
 
   // This variable is set by the is_internal_user.js script if the user is a

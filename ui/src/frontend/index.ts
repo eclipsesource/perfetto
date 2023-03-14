@@ -317,11 +317,13 @@ function onCssLoaded() {
   initCssConstants();
   // Clear all the contents of the initial page (e.g. the <pre> error message)
   // And replace it with the root <main> element which will be used by mithril.
-  document.body.innerHTML = '<main></main>';
-  const main = assertExists(document.body.querySelector('main'));
-  globals.rafScheduler.domRedraw = () => {
-    m.render(main, globals.router.resolve());
-  };
+  if(!globals.disableMainRendering) {
+    document.body.innerHTML = '<main></main>';
+    const main = assertExists(document.body.querySelector('main'));
+    globals.rafScheduler.domRedraw = () => {
+      m.render(main, globals.router.resolve());
+    };
+  }
 
   initLiveReloadIfLocalhost();
 
