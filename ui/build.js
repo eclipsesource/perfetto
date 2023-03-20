@@ -248,6 +248,7 @@ async function main() {
     }
 
     bundleJs('rollup.config.js');
+    copyCSSAndWASM();
     genServiceWorkerManifestJson();
 
     // Watches the /dist. When changed:
@@ -462,6 +463,21 @@ function buildWasm(skipWasmBuild) {
       addTask(cp, [pjoin(wasmOutDir, fname), pjoin(cfg.outGenDir, fname)]);
     }
   }
+}
+
+function copyCSSAndWASM() {
+  const css = pjoin(cfg.outDistDir, 'perfetto.css');
+  const assets = pjoin(cfg.outDistDir, 'assets')
+  const engine_bundle = pjoin(cfg.outDistDir, 'engine_bundle.js');
+  const trace_processor = pjoin(cfg.outDistDir, 'trace_processor.wasm');
+  const traceconv_bundle = pjoin(cfg.outDistDir, 'traceconv_bundle.js');
+  const traceconv = pjoin(cfg.outDistDir, 'traceconv.wasm');
+  addTask(cp, [css, pjoin(ROOT_DIR, 'ui', 'css',  'perfetto.css')]);
+  addTask(cpR, [assets, pjoin(ROOT_DIR, 'ui', 'css', 'assets')]);
+  addTask(cp, [engine_bundle, pjoin(ROOT_DIR, 'ui', 'wasm',  'engine_bundle.js')]);
+  addTask(cp, [trace_processor, pjoin(ROOT_DIR, 'ui', 'wasm',  'trace_processor.wasm')]);
+  addTask(cp, [traceconv_bundle, pjoin(ROOT_DIR, 'ui', 'wasm',  'traceconv_bundle.js')]);
+  addTask(cp, [traceconv, pjoin(ROOT_DIR, 'ui', 'wasm',  'traceconv.wasm')]);
 }
 
 // This transpiles all the sources (frontend, controller, engine, extension) in
@@ -788,6 +804,15 @@ function cp(src, dst) {
   fs.copyFileSync(src, dst);
 }
 
+function cpR(src, dst) {
+  ensureDir(path.dirname(dst));
+  if (cfg.verbose) {
+    console.log(
+        'cp -r', path.relative(ROOT_DIR, src), '->', path.relative(ROOT_DIR, dst));
+  }
+  fs.cpSync(src, dst, {recursive: true})
+}
+
 function mklink(src, dst) {
   // If the symlink already points to the right place don't touch it. This is
   // to avoid changing the mtime of the ui/ dir when unnecessary.
@@ -802,3 +827,4 @@ function mklink(src, dst) {
 }
 
 main();
+
