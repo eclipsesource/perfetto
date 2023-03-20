@@ -239,6 +239,7 @@ async function main() {
     generateImports('ui/src/tracks', 'all_tracks.ts');
     compileProtos();
     genVersion();
+    copyCSS();
     transpileTsProject('ui');
     transpileTsProject('ui/src/service_worker');
     bundleJs('rollup.config.js');
@@ -446,6 +447,13 @@ function buildWasm(skipWasmBuild) {
       addTask(cp, [pjoin(wasmOutDir, fname), pjoin(cfg.outGenDir, fname)]);
     }
   }
+}
+
+function copyCSS() {
+  const css = pjoin(cfg.outDistDir, 'perfetto.css');
+  const assets = pjoin(cfg.outDistDir, 'assets')
+  addTask(cp, [css, pjoin(ROOT_DIR, 'ui', 'css',  'perfetto.css')]);
+  addTask(cpR, [assets, pjoin(ROOT_DIR, 'ui', 'css', 'assets')]);
 }
 
 // This transpiles all the sources (frontend, controller, engine, extension) in
@@ -771,6 +779,15 @@ function cp(src, dst) {
   fs.copyFileSync(src, dst);
 }
 
+function cpR(src, dst) {
+  ensureDir(path.dirname(dst));
+  if (cfg.verbose) {
+    console.log(
+        'cp -r', path.relative(ROOT_DIR, src), '->', path.relative(ROOT_DIR, dst));
+  }
+  fs.cpSync(src, dst, {recursive: true})
+}
+
 function mklink(src, dst) {
   // If the symlink already points to the right place don't touch it. This is
   // to avoid changing the mtime of the ui/ dir when unnecessary.
@@ -785,3 +802,4 @@ function mklink(src, dst) {
 }
 
 main();
+
