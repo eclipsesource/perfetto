@@ -175,7 +175,7 @@ function getRoot() {
 }
 
 // Extensions for integration
-const ALLOW_UNSAFE_INLINE_CSS_KEY = 'allowUnsafeInlineCSS';
+const RELAX_CONTENT_SECURITY = 'relaxContentSecurity';
 
 /**
  * Global accessors for state/dispatch in the frontend.
@@ -227,9 +227,10 @@ class Globals {
   private _ignoreUnknownPostMessage?: boolean = undefined;
   private _disableMainRendering?: boolean = undefined;
   private _disableHashBasedRouting?: boolean = undefined;
+  private _cachePrefix: string = '';
 
   // Init from session storage since correct value may be required very early on
-  private _allowUnsafeInlineCSS: boolean = window.sessionStorage.getItem(ALLOW_UNSAFE_INLINE_CSS_KEY) === 'true';
+  private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
 
   private _currentSearchResults: CurrentSearchResults = {
     sliceIds: new Float64Array(0),
@@ -487,8 +488,16 @@ class Globals {
     this._disableHashBasedRouting = value;
   }
 
-  get allowUnsafeInlineCSS(): boolean {
-    return !!this._allowUnsafeInlineCSS
+  get relaxContentSecurity(): boolean {
+    return !!this._relaxContentSecurity
+  }
+
+  get cachePrefix(): string {
+    return this._cachePrefix;
+  }
+
+  set cachePrefix(value: string) {
+    this._cachePrefix = value;
   }
 
   getConversionJobStatus(name: ConversionJobName): ConversionJobStatus {
