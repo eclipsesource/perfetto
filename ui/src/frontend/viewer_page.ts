@@ -19,7 +19,7 @@ import {clamp} from '../base/math_utils';
 import {Actions} from '../common/actions';
 import {featureFlags} from '../common/feature_flags';
 
-import {TRACK_SHELL_WIDTH} from './css_constants';
+import {TOPBAR_HEIGHT, TRACK_SHELL_WIDTH} from './css_constants';
 import {DetailsPanel} from './details_panel';
 import {globals} from './globals';
 import {NotesPanel} from './notes_panel';
@@ -195,8 +195,15 @@ class TraceViewer implements m.ClassComponent {
               visibleTimeScale.pxToHpTime(startPx).toTPTime('floor'),
               visibleTimeScale.pxToHpTime(endPx).toTPTime('ceil'),
           );
-          frontendLocalState.areaY.start = dragStartY;
-          frontendLocalState.areaY.end = currentY;
+
+          // we need to encount for the embedded scenario so we may not be at
+          // the very top. We remove the topbar height as it is added again in
+          // the rendering of the panel container
+          const panelBounds = panZoomEl.getBoundingClientRect();
+          frontendLocalState.areaY.start = dragStartY + panelBounds.y -
+            TOPBAR_HEIGHT;
+          frontendLocalState.areaY.end = currentY + panelBounds.y -
+            TOPBAR_HEIGHT;
         }
         globals.rafScheduler.scheduleRedraw();
       },
