@@ -1,0 +1,34 @@
+name: Build and Publish Perfetto UI
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - reuse_timeline
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set Git Short SHA
+        id: sha
+        run: echo "sha_short=$(git rev-parse --short=14 HEAD)" >> $GITHUB_OUTPUT
+      - name: Install Dependencies
+        run: tools/install-build-deps --ui
+      - name: Run Build
+        run: ui/build
+      - name: Create Archive
+        run: zip -r perfetto-ui-${{ steps.sha.outputs.sha_short }}.zip ui/wasm ui/css ui/out/tsc ui/src/gen/protos.* -x "ui/out/tsc/node_modules/*"
+      - name: Publish Archive
+        uses: 'marvinpinto/action-automatic-releases@d68defdd11f9dcc7f52f35c1b7c236ee7513bcc1'
+        with:
+          repo_token: '${{ secrets.GITHUB_TOKEN }}'
+          title: 'Perfetto UI - ${{ steps.sha.outputs.sha_short }}'
+          automatic_release_tag: 'perfetto-ui-${{ steps.sha.outputs.sha_short }}'
+          files: |
+            perfetto-ui-${{ steps.sha.outputs.sha_short }}.zip
