@@ -16,6 +16,7 @@ import {Draft} from 'immer';
 
 import {assertExists, assertTrue} from '../base/logging';
 import {RecordConfig} from '../controller/record_config_types';
+import {TraceStream} from '../controller/trace_stream';
 import {globals} from '../frontend/globals';
 import {
   Aggregation,
@@ -149,7 +150,7 @@ export const StateActions = {
     state.engine = {
       id,
       ready: false,
-      source: {type: 'FILE', file: args.file},
+      source: {type: 'FILE', ...args},
     };
   },
 
@@ -169,7 +170,17 @@ export const StateActions = {
     state.engine = {
       id,
       ready: false,
-      source: {type: 'URL', url: args.url},
+      source: {type: 'URL', ...args},
+    };
+  },
+
+  openTraceFromStream(state: StateDraft, args: {stream: TraceStream}): void {
+    clearTraceState(state);
+    const id = generateNextId(state);
+    state.engine = {
+      id,
+      ready: false,
+      source: {type: 'STREAM', ...args},
     };
   },
 
