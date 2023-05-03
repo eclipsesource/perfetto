@@ -150,7 +150,7 @@ export const StateActions = {
     state.engine = {
       id,
       ready: false,
-      source: {type: 'FILE', ...args},
+      source: {...args, type: 'FILE'},
     };
   },
 
@@ -160,7 +160,7 @@ export const StateActions = {
     state.engine = {
       id,
       ready: false,
-      source: {type: 'ARRAY_BUFFER', ...args},
+      source: {...args, type: 'ARRAY_BUFFER'},
     };
   },
 
@@ -170,7 +170,7 @@ export const StateActions = {
     state.engine = {
       id,
       ready: false,
-      source: {type: 'URL', ...args},
+      source: {...args, type: 'URL'},
     };
   },
 
@@ -180,7 +180,7 @@ export const StateActions = {
     state.engine = {
       id,
       ready: false,
-      source: {type: 'STREAM', ...args},
+      source: {...args, type: 'STREAM'},
     };
   },
 
