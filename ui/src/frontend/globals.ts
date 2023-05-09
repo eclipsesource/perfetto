@@ -50,6 +50,7 @@ type TrackDataStore = Map<string, {}>;
 type QueryResultsStore = Map<string, {}|undefined>;
 type AggregateDataStore = Map<string, AggregateData>;
 type Description = Map<string, string>;
+type ViewOpener = (url: string) => void;
 
 export interface SliceDetails {
   ts?: TPTime;
@@ -262,6 +263,7 @@ class Globals {
   private _disableHashBasedRouting?: boolean = undefined;
   private _cachePrefix: string = '';
 
+  private _viewOpener?: ViewOpener = undefined;
   private _httpRpcEnginePort = 9001;
 
   // Init from session storage since correct value may be required very early on
@@ -624,6 +626,14 @@ class Globals {
 
   set ftracePanelData(data: FtracePanelData|undefined) {
     this._ftracePanelData = data;
+  }
+
+  get viewOpener(): ViewOpener | undefined {
+    return this._viewOpener;
+  }
+
+  set viewOpener(viewOpener: ViewOpener | undefined) {
+    this._viewOpener = viewOpener;
   }
 
   get httpRpcEnginePort(): number {
