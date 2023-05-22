@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import {BigintMath} from '../base/bigint_math';
+import { HttpRcpEngineCustomizer } from '../common/http_rpc_engine';
 import { assertExists } from '../base/logging';
 import { Actions, DeferredAction } from '../common/actions';
 import { AggregateData } from '../common/aggregation_data';
@@ -264,7 +265,10 @@ class Globals {
   private _cachePrefix: string = '';
 
   private _viewOpener?: ViewOpener = undefined;
+  private _allowFileDrop = true;
   private _httpRpcEnginePort = 9001;
+  private _httpRpcEngineCustomizer?: HttpRcpEngineCustomizer;
+  private _promptToLoadFromTraceProcessorShell = true;
 
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
@@ -636,12 +640,36 @@ class Globals {
     this._viewOpener = viewOpener;
   }
 
+  get allowFileDrop(): boolean {
+    return this._allowFileDrop;
+  }
+
+  set allowFileDrop(allowFileDrop: boolean) {
+    this._allowFileDrop = allowFileDrop;
+  }
+
   get httpRpcEnginePort(): number {
     return this._httpRpcEnginePort;
   }
 
   set httpRpcEnginePort(httpRpcEnginePort: number) {
     this._httpRpcEnginePort = httpRpcEnginePort;
+  }
+
+  get httpRpcEngineCustomizer(): HttpRcpEngineCustomizer | undefined {
+    return this._httpRpcEngineCustomizer;
+  }
+
+  set httpRpcEngineCustomizer(httpRpcEngineCustomizer: HttpRcpEngineCustomizer | undefined) {
+    this._httpRpcEngineCustomizer = httpRpcEngineCustomizer;
+  }
+
+  get promptToLoadFromTraceProcessorShell(): boolean {
+    return this._promptToLoadFromTraceProcessorShell;
+  }
+
+  set promptToLoadFromTraceProcessorShell(promptToLoadFromTraceProcessorShell: boolean) {
+    this._promptToLoadFromTraceProcessorShell = promptToLoadFromTraceProcessorShell;
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
