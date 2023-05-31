@@ -115,7 +115,7 @@ export class NotesPanel extends Panel {
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     let aNoteIsHovered = false;
 
-    ctx.fillStyle = '#999';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--font-color').trim();;
     ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
 
     ctx.save();

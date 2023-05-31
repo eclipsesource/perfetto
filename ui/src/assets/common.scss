@@ -160,6 +160,8 @@ button.close {
 }
 
 .page {
+  color: var(--font-color);
+  background-color: var(--bg-color);
   grid-area: page;
   position: relative;
   display: flex;
@@ -667,7 +669,7 @@ button.query-ctrl {
   --collapsed-transparent: hsla(190, 49%, 97%, 0);
   --expanded-background: hsl(215, 22%, 19%);
   --expanded-transparent: hsl(215, 22%, 19%, 0);
-  color:var(--bg-alt-color);
+  color:var(--font-color);
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: 1fr;
