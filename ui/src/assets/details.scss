@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+@import "common";
 .details-content {
   display: grid;
   grid-template-rows: auto 1fr;
 
   .handle {
-    background-color: hsl(215, 1%, 95%);
+    background-color: var(--bg-color) !important;
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-bottom: none;
     cursor: row-resize;
@@ -51,7 +52,8 @@
         box-shadow: #0000003b 0px 0px 3px 1px;
 
         &[active] {
-          background-color: white;
+          background-color: var(--accent-color);
+          color: var(--bg-alt-color);
           &:hover {
             cursor: default;
             background-color: white;
@@ -102,7 +104,8 @@
 
 .details-panel {
   @include bottom-panel-font;
-
+  color: var(--bg-alt-color);
+  background-color: var(--accent-color);
   .material-icons {
     @include transition(0.3s);
     font-size: 16px;
@@ -131,7 +134,7 @@
     z-index: 1;
 
     display: flex;
-    background: white;
+    background-color: var(--accent-color);
     &.aggregation {
       padding-top: 5px;
       display: grid;
@@ -624,13 +627,12 @@
   grid-template-rows: auto 1fr;
   font-family: "Roboto Condensed", sans-serif;
   user-select: text;
-
+  color: var(--font-color);
   .sticky {
     position: sticky;
     top: 0;
     z-index: 1;
-    background-color: white;
-    color: #3c4b5d;
+    background-color: var(--accent-color);
     padding: 5px 10px;
     display: grid;
     grid-template-columns: auto auto;
@@ -657,11 +659,11 @@
       position: absolute;
       min-width: 100%;
       line-height: 20px;
-      background-color: hsl(214, 22%, 100%);
+      background-color: var(--accent-color);
       white-space: nowrap;
 
       &:nth-child(even) {
-        background-color: hsl(214, 22%, 95%);
+        background-color: var(--bg-color);
       }
 
       &:hover {

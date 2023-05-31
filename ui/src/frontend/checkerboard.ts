@@ -23,9 +23,9 @@ export function checkerboard(
     rightPx: number): void {
   const widthPx = rightPx - leftPx;
   ctx.font = '12px Roboto Condensed';
-  ctx.fillStyle = '#eee';
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim();
   ctx.fillRect(leftPx, 0, widthPx, heightPx);
-  ctx.fillStyle = '#666';
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--font-color').trim();
   const oldBaseline = ctx.textBaseline;
   ctx.textBaseline = 'middle';
   if (LOADING_TEXT_WIDTH === 0) {
