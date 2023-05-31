@@ -18,7 +18,7 @@
   grid-template-rows: auto 1fr;
 
   .handle {
-    background-color: var(--bg-color) !important;
+    background-color: var(--bg-color);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-bottom: none;
     cursor: row-resize;
