@@ -93,7 +93,7 @@ export class OverviewTimelinePanel extends Panel {
       const maxMajorTicks = getMaxMajorTicks(this.width - TRACK_SHELL_WIDTH);
       const tickGen = new TickGenerator(
           this.traceTime, maxMajorTicks, globals.state.traceTime.start);
-      ctx.fillStyle = getCssStr('--overview-background')!;
+      ctx.fillStyle = getCssStr('--overview-background-color')!;
       ctx.fillRect(TRACK_SHELL_WIDTH, headerHeight, this.width, size.height - headerHeight);
       // Draw time labels on the top header.
       ctx.font = '10px Roboto Condensed';
