@@ -55,13 +55,15 @@
           background-color: var(--main-background-color);
           &:hover {
             cursor: default;
-            background-color: white;
+            background-color: var(--main-foreground-color);
+            color: var(--main-background-color);
           }
         }
 
         &:hover {
           cursor: pointer;
-          background-color: hsla(0, 0%, 85%, 1);
+          background-color: var(--main-foreground-color);
+          color: var(--main-background-color);
         }
 
         &:nth-child(1) {
