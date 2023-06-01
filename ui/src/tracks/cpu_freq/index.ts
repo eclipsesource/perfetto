@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { getCssStr } from '../../frontend/css_constants';
 import {BigintMath as BIMath} from '../../base/bigint_math';
 import {searchSegment} from '../../base/binary_search';
 import {assertTrue} from '../../base/logging';
@@ -374,7 +375,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     ctx.stroke();
 
     // Draw CPU idle rectangles that overlay the CPU freq graph.
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+    ctx.fillStyle = getCssStr('--accent-color')!;
 
     for (let i = 0; i < data.lastIdleValues.length; i++) {
       if (data.lastIdleValues[i] < 0) {

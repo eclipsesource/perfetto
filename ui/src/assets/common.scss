@@ -21,18 +21,16 @@
   --topbar-height: 44px;
   --monospace-font: "Roboto Mono", monospace;
   --track-shell-width: 250px;
-  --track-border-color: #00000025;
   --anim-easing: cubic-bezier(0.4, 0, 0.2, 1);
   --selection-stroke-color: #00344596;
   --selection-fill-color: #8398e64d;
   --overview-timeline-non-visible-color: #c8c8c8cc;
   --details-content-height: 280px;
-
-  // Light Theme Colors
-  --bg-alt-color:gray;
-  --accent-color:lightgrey;
-  --font-color:black;
-  --bg-color:white;
+  --main-background-color:#ffffff;
+  --main-foreground-color:#222;
+  --bg-alt-color:#808080;
+  --accent-color:#d3d3d3;
+  --overview-background:#ffffff;
 }
 
 @mixin transition($time: 0.1s) {
@@ -160,8 +158,8 @@ button.close {
 }
 
 .page {
-  color: var(--font-color);
-  background-color: var(--bg-color);
+  color: var(--main-foreground-color);
+  background-color: var(--main-background-color);
   grid-area: page;
   position: relative;
   display: flex;
@@ -377,7 +375,7 @@ $bottom-tab-padding: 10px;
     display: block;
     content: "";
     grid-column: 1 / span 2;
-    border-top: 1px solid var(--track-border-color);
+    border-top: 1px solid var(--main-foreground-color);
     margin-top: -1px;
     z-index: 2;
   }
@@ -391,8 +389,8 @@ $bottom-tab-padding: 10px;
     grid-template-columns: 1fr auto;
     align-items: center;
     width: var(--track-shell-width);
-    background: var(--bg-color);
-    border-right: 1px solid #c7d0db;
+    background: var(--main-background-color);
+    border-right: 1px solid var(--main-foreground-color);
     overflow: hidden;
 
     &.drag {
@@ -424,7 +422,7 @@ $bottom-tab-padding: 10px;
 
     h1 {
       grid-area: title;
-      color: var(--font-color);
+      color: var(--main-foreground-color);
       @include track_shell_title();
     }
     .track-buttons {
@@ -665,11 +663,11 @@ button.query-ctrl {
 }
 
 .track-group-panel {
-  --collapsed-background: var(--bg-color);
+  --collapsed-background: var(--main-background-color);
   --collapsed-transparent: hsla(190, 49%, 97%, 0);
   --expanded-background: hsl(215, 22%, 19%);
   --expanded-transparent: hsl(215, 22%, 19%, 0);
-  color:var(--font-color);
+  color:var(--main-foreground-color);
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: 1fr;
@@ -679,13 +677,13 @@ button.query-ctrl {
     display: block;
     content: "";
     grid-column: 1 / span 2;
-    border-top: 1px solid var(--track-border-color);
+    border-top: 1px solid var(--main-foreground-color);
     margin-top: -1px;
   }
   &[collapsed="true"] {
     background-color: var(--collapsed-transparent);
     .shell {
-      border-right: 1px solid #c7d0db;
+      border-right: 1px solid var(--main-foreground-color);
       background-color: var(--collapsed-background);
     }
     .track-button {

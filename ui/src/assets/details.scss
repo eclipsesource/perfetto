@@ -18,7 +18,7 @@
   grid-template-rows: auto 1fr;
 
   .handle {
-    background-color: var(--bg-color);
+    background-color: var(--main-background-color);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-bottom: none;
     cursor: row-resize;
@@ -368,7 +368,7 @@
     }
     input {
       background-color: var(--bg-alt-color);
-      color: var(--font-color);
+      color: var(--main-foreground-color);
       vertical-align: middle;
     }
   }
@@ -387,7 +387,7 @@
   input[type="text"] {
     flex-grow: 1;
     border-radius: 4px;
-    border: 1px solid var(--font-color);
+    border: 1px solid var(--main-foreground-color);
     padding: 3px;
     margin: 0 10px;
     &:focus {
@@ -628,7 +628,7 @@
   grid-template-rows: auto 1fr;
   font-family: "Roboto Condensed", sans-serif;
   user-select: text;
-  color: var(--font-color);
+  color: var(--main-foreground-color);
   .sticky {
     position: sticky;
     top: 0;
@@ -664,7 +664,7 @@
       white-space: nowrap;
 
       &:nth-child(even) {
-        background-color: var(--bg-color);
+        background-color: var(--main-background-color);
       }
 
       &:hover {
