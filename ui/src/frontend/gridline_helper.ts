@@ -211,7 +211,7 @@ export function drawGridLines(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number): void {
-  ctx.strokeStyle = getCssStr('--main-foreground-color')!;
+  ctx.strokeStyle = getCssStr('--main-foreground-color');
   ctx.lineWidth = 1;
 
   const {earliest, latest} = globals.frontendLocalState.visibleWindow;

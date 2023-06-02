@@ -35,7 +35,7 @@ export class TimeAxisPanel extends Panel {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    ctx.fillStyle = getCssStr('--main-foreground-color')!;
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.font = '10px Roboto Condensed';
     ctx.textAlign = 'left';
 

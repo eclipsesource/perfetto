@@ -28,7 +28,7 @@
   --details-content-height: 280px;
   --main-background-color: #ffffff;
   --main-foreground-color: #222;
-  --alt-background-color: #808080;
+  --alt-background-color: #d3d3d3;
   --overview-background-color: #ffffff;
 }
 
@@ -526,7 +526,6 @@ canvas.main-canvas {
     position: sticky;
     z-index: 3;
     top: 0;
-    background-color: hsl(215, 22%, 19%);
   }
 }
 
@@ -662,8 +661,6 @@ button.query-ctrl {
 .track-group-panel {
   --collapsed-background: var(--main-background-color);
   --collapsed-transparent: fade-out(var(--main-background-color),1);
-  --expanded-background: var(--alt-background-color);
-  --expanded-transparent: fade-out(var(--alt-background-color),1);
   color: var(--main-foreground-color);
   display: grid;
   grid-template-columns: auto 1fr;
@@ -678,7 +675,6 @@ button.query-ctrl {
     margin-top: -1px;
   }
   &[collapsed="true"] {
-    background-color: var(--collapsed-transparent);
     .shell {
       border-right: 1px solid var(--main-foreground-color);
       background-color: var(--collapsed-background);
@@ -688,8 +684,8 @@ button.query-ctrl {
     }
   }
   &[collapsed="false"] {
-    background-color: var(--expanded-transparent);
-    color: white;
+    background-color: var(--collapsed-background);
+    color: var(--main-foreground-color);
     font-weight: bold;
     .shell.flash {
       color: #121212;

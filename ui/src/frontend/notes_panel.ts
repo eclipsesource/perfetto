@@ -115,7 +115,7 @@ export class NotesPanel extends Panel {
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     let aNoteIsHovered = false;
 
-    ctx.fillStyle = getCssStr('--main-foreground-color')!;
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
 
     ctx.save();

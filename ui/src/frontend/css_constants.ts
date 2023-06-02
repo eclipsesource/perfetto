@@ -39,8 +39,8 @@ export function initCssConstants() {
       getCssNum('--details-content-height') || DEFAULT_DETAILS_CONTENT_HEIGHT;
 }
 
-export function getCssStr(prop: string): string|undefined {
-  if (typeof window === 'undefined') return undefined;
+export function getCssStr(prop: string): string {
+  if (typeof window === 'undefined') return '';
   const doc = window.document.documentElement;
   return window.getComputedStyle(doc).getPropertyValue(prop).trim();
 }

@@ -375,7 +375,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     ctx.stroke();
 
     // Draw CPU idle rectangles that overlay the CPU freq graph.
-    ctx.fillStyle = getCssStr('--alt-background-color')!;
+    ctx.fillStyle = getCssStr('--alt-background-color');
 
     for (let i = 0; i < data.lastIdleValues.length; i++) {
       if (data.lastIdleValues[i] < 0) {

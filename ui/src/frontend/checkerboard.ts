@@ -25,9 +25,9 @@ export function checkerboard(
     rightPx: number): void {
   const widthPx = rightPx - leftPx;
   ctx.font = '12px Roboto Condensed';
-  ctx.fillStyle = getCssStr('--main-background-color')!;
+  ctx.fillStyle = getCssStr('--main-background-color');
   ctx.fillRect(leftPx, 0, widthPx, heightPx);
-  ctx.fillStyle = getCssStr('--main-foreground-color')!;
+  ctx.fillStyle = getCssStr('--main-foreground-color');
   const oldBaseline = ctx.textBaseline;
   ctx.textBaseline = 'middle';
   if (LOADING_TEXT_WIDTH === 0) {

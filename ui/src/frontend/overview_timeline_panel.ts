@@ -93,11 +93,11 @@ export class OverviewTimelinePanel extends Panel {
       const maxMajorTicks = getMaxMajorTicks(this.width - TRACK_SHELL_WIDTH);
       const tickGen = new TickGenerator(
           this.traceTime, maxMajorTicks, globals.state.traceTime.start);
-      ctx.fillStyle = getCssStr('--overview-background-color')!;
+      ctx.fillStyle = getCssStr('--overview-background-color');
       ctx.fillRect(TRACK_SHELL_WIDTH, headerHeight, this.width, size.height - headerHeight);
       // Draw time labels on the top header.
       ctx.font = '10px Roboto Condensed';
-      ctx.fillStyle = getCssStr('--main-foreground-color')!;
+      ctx.fillStyle = getCssStr('--main-foreground-color');
       for (const {type, time} of tickGen) {
         const xPos = Math.floor(this.timeScale.tpTimeToPx(time));
         if (xPos <= 0) continue;
@@ -134,7 +134,7 @@ export class OverviewTimelinePanel extends Panel {
     }
 
     // Draw bottom border.
-    ctx.fillStyle = getCssStr('--main-foreground-color')!;
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(0, size.height - 1, this.width, 1);
 
     // Draw semi-opaque rects that occlude the non-visible time range.
@@ -150,7 +150,7 @@ export class OverviewTimelinePanel extends Panel {
     ctx.fillRect(vizEndPx, headerHeight, this.width - vizEndPx, tracksHeight);
 
     // Draw brushes.
-    ctx.fillStyle = getCssStr('--main-foreground-color')!;
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(vizStartPx - 1, headerHeight, 1, tracksHeight);
     ctx.fillRect(vizEndPx, headerHeight, 1, tracksHeight);
 
