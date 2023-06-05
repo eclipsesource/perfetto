@@ -80,6 +80,24 @@ export interface AddTrackArgs {
   config: {};
 }
 
+export interface AddTrackGroupArgs {
+  id: string;
+  engineId: string;
+  name: string;
+  summaryTrackId: string;
+  collapsed: boolean;
+}
+
+export type AddTrackLikeArgs = AddTrackArgs | AddTrackGroupArgs;
+
+export function isAddTrackArgs(args: AddTrackLikeArgs): args is AddTrackArgs {
+  return 'kind' in args && 'config' in args;
+}
+
+export function isAddTrackGroupArgs(args: AddTrackLikeArgs): args is AddTrackGroupArgs {
+  return 'summaryTrackId' in args;
+}
+
 export interface PostedTrace {
   buffer: ArrayBuffer;
   title: string;
@@ -279,10 +297,7 @@ export const StateActions = {
       state: StateDraft,
       // Define ID in action so a track group can be referred to without running
       // the reducer.
-      args: {
-        engineId: string; name: string; id: string; summaryTrackId: string;
-        collapsed: boolean;
-      }): void {
+      args: AddTrackGroupArgs): void {
     state.trackGroups[args.id] = {
       engineId: args.engineId,
       name: args.name,
@@ -290,6 +305,16 @@ export const StateActions = {
       collapsed: args.collapsed,
       tracks: [args.summaryTrackId],
     };
+  },
+
+  addTrackLike(state: StateDraft, args: AddTrackLikeArgs): void {
+    if (isAddTrackGroupArgs(args)) {
+      this.addTrackGroup(state, args);
+    } else if (isAddTrackArgs(args)) {
+      this.addTrack(state, args);
+    } else {
+      assertUnreachable(args);
+    }
   },
 
   addDebugTrack(
