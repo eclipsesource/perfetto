@@ -43,7 +43,7 @@ export class ArgumentPopup implements m.ClassComponent<ArgumentPopupArgs> {
   setArgument(attrs: ArgumentPopupArgs, arg: string) {
     this.argument = arg;
     attrs.onArgumentChange(arg);
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   renderMatches(attrs: ArgumentPopupArgs): m.Child[] {

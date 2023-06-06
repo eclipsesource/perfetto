@@ -41,7 +41,7 @@ export class ThreadStateTab extends BottomTab<ThreadStateTabConfig> {
     getThreadState(this.engine, this.config.id).then((state?: ThreadState) => {
       this.loaded = true;
       this.state = state;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     });
   }
 

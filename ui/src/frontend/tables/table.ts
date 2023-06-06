@@ -124,13 +124,13 @@ export class TableData<T> {
     if (this._sortingInfo !== undefined) {
       this.reorder(this._sortingInfo);
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   resetOrder() {
     this.permutation = range(this.data.length);
     this._sortingInfo = undefined;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   get sortingInfo(): SortingInfo<T>|undefined {
@@ -142,7 +142,7 @@ export class TableData<T> {
     this.permutation.sort(withDirection(
         comparingBy((index: number) => this.data[index], info.ordering),
         info.direction));
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 }
 

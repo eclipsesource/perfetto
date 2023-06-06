@@ -15,11 +15,11 @@
 import {globals} from './globals';
 
 export function isShareable() {
-  return (globals.isInternalUser && isDownloadable());
+  return (globals().isInternalUser && isDownloadable());
 }
 
 export function isDownloadable() {
-  const engine = globals.getCurrentEngine();
+  const engine = globals().getCurrentEngine();
   if (!engine) {
     return false;
   }

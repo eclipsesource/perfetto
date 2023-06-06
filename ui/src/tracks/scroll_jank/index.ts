@@ -39,7 +39,7 @@ function onDetailsPanelSelectionChange(newSelection?: Selection) {
       newSelection.kind !== TOP_LEVEL_SCROLL_KIND) {
     return;
   }
-  const bottomTabList = globals.bottomTabList;
+  const bottomTabList = globals().bottomTabList;
   if (!bottomTabList) return;
   bottomTabList.addTab({
     kind: TopLevelScrollDetailsTab.kind,

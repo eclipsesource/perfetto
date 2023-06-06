@@ -54,7 +54,7 @@ export class VisualisedArgsTrack extends ChromeSliceTrack {
     const buttons: Array<m.Vnode<TrackButtonAttrs>> = [];
     buttons.push(m(TrackButton, {
       action: () => {
-        globals.dispatch(
+        globals().dispatch(
             Actions.removeVisualisedArg({argName: config.argName}));
       },
       i: 'close',

@@ -22,7 +22,7 @@ interface CpuProfileDetailsPanelAttrs {}
 
 export class CpuProfileDetailsPanel extends Panel<CpuProfileDetailsPanelAttrs> {
   view() {
-    const sampleDetails = globals.cpuProfileDetails;
+    const sampleDetails = globals().cpuProfileDetails;
     const header =
         m('.details-panel-heading', m('h2', `CPU Profile Sample Details`));
     if (!sampleDetails || sampleDetails.id === undefined) {

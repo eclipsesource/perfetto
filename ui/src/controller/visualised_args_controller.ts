@@ -48,7 +48,7 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
 
   onDestroy() {
     this.engine.query(`drop table if exists ${this.tableName}`);
-    globals.dispatch(
+    globals().dispatch(
         Actions.removeVisualisedArgTracks({trackIds: this.addedTrackIds}));
   }
 
@@ -90,8 +90,8 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
     const it = result.iter({'trackId': NUM, 'maxDepth': NUM});
     for (; it.valid(); it.next()) {
       const track =
-          globals.state
-              .tracks[globals.state.uiTrackIdByTraceTrackId[it.trackId]];
+          globals().state
+              .tracks[globals().state.uiTrackIdByTraceTrackId[it.trackId]];
       const utid = (track.trackSortKey as {utid?: number}).utid;
       const id = uuidv4();
       this.addedTrackIds.push(id);
@@ -113,8 +113,8 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
         },
       });
     }
-    globals.dispatch(Actions.addTracks({tracks: tracksToAdd}));
-    globals.dispatch(Actions.sortThreadTracks({}));
+    globals().dispatch(Actions.addTracks({tracks: tracksToAdd}));
+    globals().dispatch(Actions.sortThreadTracks({}));
   }
 
   run() {

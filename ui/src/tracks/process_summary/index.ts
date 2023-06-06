@@ -166,7 +166,7 @@ class ProcessSummaryTrack extends Track<Config, Data> {
     const {
       visibleTimeScale,
       windowSpan,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const data = this.data();
     if (data === undefined) return;  // Can't possibly draw anything.
 
@@ -183,7 +183,7 @@ class ProcessSummaryTrack extends Track<Config, Data> {
 
   // TODO(dproy): Dedup with CPU slices.
   renderSummary(ctx: CanvasRenderingContext2D, data: Data): void {
-    const {visibleTimeScale, windowSpan} = globals.frontendLocalState;
+    const {visibleTimeScale, windowSpan} = globals().frontendLocalState;
     const startPx = windowSpan.start;
     const bottomY = TRACK_HEIGHT;
 

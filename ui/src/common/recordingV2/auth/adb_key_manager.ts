@@ -37,7 +37,7 @@ export async function maybeStoreKey(key: AdbKey): Promise<void> {
     id: 'webusb-adb-key',
     password: key.serializeKey(),
     name: 'WebUSB ADB Key',
-    iconURL: `${globals.root}assets/favicon.png`,
+    iconURL: `${globals().root}assets/favicon.png`,
   });
   // The 'Save password?' Chrome dialogue only appears if the key is
   // not already stored in Chrome.

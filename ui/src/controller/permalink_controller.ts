@@ -59,17 +59,17 @@ export class PermalinkController extends Controller<'main'> {
   }
 
   run() {
-    if (globals.state.permalink.requestId === undefined ||
-        globals.state.permalink.requestId === this.lastRequestId) {
+    if (globals().state.permalink.requestId === undefined ||
+        globals().state.permalink.requestId === this.lastRequestId) {
       return;
     }
-    const requestId = assertExists(globals.state.permalink.requestId);
+    const requestId = assertExists(globals().state.permalink.requestId);
     this.lastRequestId = requestId;
 
     // if the |hash| is not set, this is a request to create a permalink.
-    if (globals.state.permalink.hash === undefined) {
+    if (globals().state.permalink.hash === undefined) {
       const isRecordingConfig =
-          assertExists(globals.state.permalink.isRecordingConfig);
+          assertExists(globals().state.permalink.isRecordingConfig);
 
       const jobName = 'create_permalink';
       publishConversionJobStatusUpdate({
@@ -79,7 +79,7 @@ export class PermalinkController extends Controller<'main'> {
 
       PermalinkController.createPermalink(isRecordingConfig)
           .then((hash) => {
-            globals.dispatch(Actions.setPermalink({requestId, hash}));
+            globals().dispatch(Actions.setPermalink({requestId, hash}));
           })
           .finally(() => {
             publishConversionJobStatusUpdate({
@@ -91,7 +91,7 @@ export class PermalinkController extends Controller<'main'> {
     }
 
     // Otherwise, this is a request to load the permalink.
-    PermalinkController.loadState(globals.state.permalink.hash)
+    PermalinkController.loadState(globals().state.permalink.hash!)
         .then((stateOrConfig) => {
           if (PermalinkController.isRecordConfig(stateOrConfig)) {
             // This permalink state only contains a RecordConfig. Show the
@@ -99,11 +99,11 @@ export class PermalinkController extends Controller<'main'> {
             const validConfig =
                 runValidator(recordConfigValidator, stateOrConfig as unknown)
                     .result;
-            globals.dispatch(Actions.setRecordConfig({config: validConfig}));
+            globals().dispatch(Actions.setRecordConfig({config: validConfig}));
             Router.navigate('#!/record');
             return;
           }
-          globals.dispatch(Actions.setState({newState: stateOrConfig}));
+          globals().dispatch(Actions.setState({newState: stateOrConfig}));
           this.lastRequestId = stateOrConfig.permalink.requestId;
         });
   }
@@ -150,12 +150,12 @@ export class PermalinkController extends Controller<'main'> {
 
   private static async createPermalink(isRecordingConfig: boolean):
       Promise<string> {
-    let uploadState: State|RecordConfig = globals.state;
+    let uploadState: State|RecordConfig = globals().state;
 
     if (isRecordingConfig) {
-      uploadState = globals.state.recordConfig;
+      uploadState = globals().state.recordConfig;
     } else {
-      const engine = assertExists(globals.getCurrentEngine());
+      const engine = assertExists(globals().getCurrentEngine());
       let dataToUpload: File|ArrayBuffer|undefined = undefined;
       let traceName = `trace ${engine.id}`;
       if (engine.source.type === 'FILE') {
@@ -171,7 +171,7 @@ export class PermalinkController extends Controller<'main'> {
         PermalinkController.updateStatus(`Uploading ${traceName}`);
         const url = await saveTrace(dataToUpload);
         // Convert state to use URLs and remove permalink.
-        uploadState = produce(globals.state, (draft) => {
+        uploadState = produce(globals().state, (draft) => {
           assertExists(draft.engine).source = {type: 'URL', url};
           draft.permalink = {};
         });
@@ -215,7 +215,7 @@ export class PermalinkController extends Controller<'main'> {
 
   private static updateStatus(msg: string): void {
     // TODO(hjd): Unify loading updates.
-    globals.dispatch(Actions.updateStatus({
+    globals().dispatch(Actions.updateStatus({
       msg,
       timestamp: Date.now() / 1000,
     }));

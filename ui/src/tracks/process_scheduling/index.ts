@@ -203,7 +203,7 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     const {
       visibleTimeScale,
       visibleWindowTime,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;  // Can't possibly draw anything.
@@ -243,12 +243,12 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
       const rectWidth = rectEnd - rectStart;
       if (rectWidth < 0.3) continue;
 
-      const threadInfo = globals.threads.get(utid);
+      const threadInfo = globals().threads.get(utid);
       const pid = (threadInfo ? threadInfo.pid : -1) || -1;
 
-      const isHovering = globals.state.hoveredUtid !== -1;
-      const isThreadHovered = globals.state.hoveredUtid === utid;
-      const isProcessHovered = globals.state.hoveredPid === pid;
+      const isHovering = globals().state.hoveredUtid !== -1;
+      const isThreadHovered = globals().state.hoveredUtid === utid;
+      const isProcessHovered = globals().state.hoveredPid === pid;
       const color = colorForThread(threadInfo);
       if (isHovering && !isThreadHovered) {
         if (!isProcessHovered) {
@@ -267,7 +267,7 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
       ctx.fillRect(rectStart, y, rectEnd - rectStart, cpuTrackHeight);
     }
 
-    const hoveredThread = globals.threads.get(this.utidHoveredInThisTrack);
+    const hoveredThread = globals().threads.get(this.utidHoveredInThisTrack);
     if (hoveredThread !== undefined && this.mousePos !== undefined) {
       const tidText = `T: ${hoveredThread.threadName} [${hoveredThread.tid}]`;
       if (hoveredThread.pid) {
@@ -285,32 +285,32 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     if (data === undefined) return;
     if (pos.y < MARGIN_TOP || pos.y > MARGIN_TOP + RECT_HEIGHT) {
       this.utidHoveredInThisTrack = -1;
-      globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
+      globals().dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
 
     const cpuTrackHeight = Math.floor(RECT_HEIGHT / data.maxCpu);
     const cpu = Math.floor((pos.y - MARGIN_TOP) / (cpuTrackHeight + 1));
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const t = visibleTimeScale.pxToHpTime(pos.x).toTPTime('floor');
 
     const [i, j] = searchRange(data.starts, t, searchEq(data.cpus, cpu));
     if (i === j || i >= data.starts.length || t > data.ends[i]) {
       this.utidHoveredInThisTrack = -1;
-      globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
+      globals().dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
 
     const utid = data.utids[i];
     this.utidHoveredInThisTrack = utid;
-    const threadInfo = globals.threads.get(utid);
+    const threadInfo = globals().threads.get(utid);
     const pid = threadInfo ? (threadInfo.pid ? threadInfo.pid : -1) : -1;
-    globals.dispatch(Actions.setHoveredUtidAndPid({utid, pid}));
+    globals().dispatch(Actions.setHoveredUtidAndPid({utid, pid}));
   }
 
   onMouseOut() {
     this.utidHoveredInThisTrack = -1;
-    globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
+    globals().dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
     this.mousePos = undefined;
   }
 }

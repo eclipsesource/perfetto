@@ -665,10 +665,10 @@ class Globals {
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
     // A new selection should cancel the current search selection.
-    globals.dispatch(Actions.setSearchIndex({index: -1}));
+    globals().dispatch(Actions.setSearchIndex({index: -1}));
     const tab = action.type === 'deselect' ? undefined : tabToOpen;
-    globals.dispatch(Actions.setCurrentTab({tab}));
-    globals.dispatch(action);
+    globals().dispatch(Actions.setCurrentTab({tab}));
+    globals().dispatch(action);
   }
 
   resetForTesting() {
@@ -767,4 +767,13 @@ class Globals {
   }
 }
 
-export const globals = new Globals();
+const allGlobals = new Map<string, Globals>();
+allGlobals.set('', new Globals());
+
+export function globals(context = ''): Globals {
+  const _globals = allGlobals.get(context);
+  if (_globals === undefined) {
+    throw Error('No Globals found for given context key');
+  }
+  return _globals;
+}

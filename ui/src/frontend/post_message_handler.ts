@@ -133,7 +133,7 @@ export function postMessageHandler(messageEvent: MessageEvent) {
   } else if (messageEvent.data instanceof ArrayBuffer) {
     postedTrace = {title: 'External trace', buffer: messageEvent.data};
   } else {
-    if (!globals.ignoreUnknownPostMessage) {
+    if (!globals().ignoreUnknownPostMessage) {
       console.warn(
         'Unknown postMessage() event received. If you are trying to open a ' +
         'trace via postMessage(), this is a bug in your code. If not, this ' +
@@ -161,7 +161,7 @@ export function postMessageHandler(messageEvent: MessageEvent) {
     // For external traces, we need to disable other features such as
     // downloading and sharing a trace.
     postedTrace.localOnly = true;
-    globals.dispatch(Actions.openTraceFromBuffer(postedTrace));
+    globals().dispatch(Actions.openTraceFromBuffer(postedTrace));
   };
 
   // If the origin is trusted open the trace directly.
@@ -201,7 +201,7 @@ function sanitizeString(str: string): string {
 }
 
 function isTraceViewerReady(): boolean {
-  return !!(globals.getCurrentEngine()?.ready);
+  return !!(globals().getCurrentEngine()?.ready);
 }
 
 const _maxScrollToRangeAttempts = 20;

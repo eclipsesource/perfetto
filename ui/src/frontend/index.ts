@@ -82,19 +82,19 @@ class FrontendApi {
     }
 
     // Update overall state.
-    globals.state = this.state;
+    globals().state = this.state;
 
     // If the visible time in the global state has been updated more recently
     // than the visible time handled by the frontend @ 60fps, update it. This
     // typically happens when restoring the state from a permalink.
-    globals.frontendLocalState.mergeState(this.state.frontendLocalState);
+    globals().frontendLocalState.mergeState(this.state.frontendLocalState);
 
     // Only redraw if something other than the frontendLocalState changed.
     let key: keyof State;
     for (key in this.state) {
       if (key !== 'frontendLocalState' && key !== 'visibleTracks' &&
           oldState[key] !== this.state[key]) {
-        globals.rafScheduler.scheduleFullRedraw();
+        globals().rafScheduler.scheduleFullRedraw();
         break;
       }
     }
@@ -140,19 +140,19 @@ class FrontendApi {
 }
 
 function setExtensionAvailability(available: boolean) {
-  globals.dispatch(Actions.setExtensionAvailable({
+  globals().dispatch(Actions.setExtensionAvailable({
     available,
   }));
 }
 
 function initGlobalsFromQueryString() {
   const queryString = window.location.search;
-  globals.embeddedMode = queryString.includes('mode=embedded');
-  globals.hideSidebar = queryString.includes('hideSidebar=true');
+  globals().embeddedMode = queryString.includes('mode=embedded');
+  globals().hideSidebar = queryString.includes('hideSidebar=true');
 }
 
 function setupContentSecurityPolicy() {
-  const defaultSrc = globals.relaxContentSecurity ? [
+  const defaultSrc = globals().relaxContentSecurity ? [
     `'self'`,
     `'unsafe-inline'`,
   ] : [
@@ -160,7 +160,7 @@ function setupContentSecurityPolicy() {
     // Google Tag Manager bootstrap.
     `'sha256-LirUKeorCU4uRNtNzr8tlB11uy8rzrdmqHCX38JSwHY='`,
   ]
-  const connectSrc = globals.relaxContentSecurity ? [
+  const connectSrc = globals().relaxContentSecurity ? [
     '*'
   ] : [
     `'self'`,
@@ -214,21 +214,21 @@ function main() {
   const cssLoadPromise = defer<void>();
   const css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = globals.root + 'perfetto.css';
+  css.href = globals().root + 'perfetto.css';
   css.onload = () => cssLoadPromise.resolve();
   css.onerror = (err) => cssLoadPromise.reject(err);
   const favicon = document.head.querySelector('#favicon') as HTMLLinkElement;
-  if (favicon) favicon.href = globals.root + 'assets/favicon.png';
+  if (favicon) favicon.href = globals().root + 'assets/favicon.png';
 
-  // Load the script to detect if this is a Googler (see comments on globals.ts)
+  // Load the script to detect if this is a Googler (see comments on globals().ts)
   // and initialize GA after that (or after a timeout if something goes wrong).
   const script = document.createElement('script');
   script.src =
       'https://storage.cloud.google.com/perfetto-ui-internal/is_internal_user.js';
   script.async = true;
-  script.onerror = () => globals.logging.initialize();
-  script.onload = () => globals.logging.initialize();
-  setTimeout(() => globals.logging.initialize(), 5000);
+  script.onerror = () => globals().logging.initialize();
+  script.onload = () => globals().logging.initialize();
+  setTimeout(() => globals().logging.initialize(), 5000);
 
   document.head.append(script, css);
 
@@ -239,7 +239,7 @@ function main() {
 
   const extensionLocalChannel = new MessageChannel();
 
-  initWasm(globals.root);
+  initWasm(globals().root);
   initializeImmerJs();
   initController(extensionLocalChannel.port1);
 
@@ -258,7 +258,7 @@ function main() {
     '/widgets': WidgetsPage,
   });
   router.onRouteChanged = (route) => {
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
     maybeOpenTraceFromRoute(route);
   };
 
@@ -266,11 +266,11 @@ function main() {
   // `embeddedMode` global is set.
   initGlobalsFromQueryString();
 
-  globals.initialize(dispatch, router);
-  globals.serviceWorkerController.install();
+  globals().initialize(dispatch, router);
+  globals().serviceWorkerController.install();
 
   const frontendApi = new FrontendApi();
-  globals.publishRedraw = () => globals.rafScheduler.scheduleFullRedraw();
+  globals().publishRedraw = () => globals().rafScheduler.scheduleFullRedraw();
 
   // We proxy messages between the extension and the controller because the
   // controller's worker can't access chrome.runtime.
@@ -289,7 +289,7 @@ function main() {
     extensionPort.onMessage.addListener(
         (message: object, _port: chrome.runtime.Port) => {
           if (isGetCategoriesResponse(message)) {
-            globals.dispatch(Actions.setChromeCategories(message));
+            globals().dispatch(Actions.setChromeCategories(message));
             return;
           }
           extensionLocalChannel.port2.postMessage(message);
@@ -311,7 +311,7 @@ function main() {
 
   cssLoadPromise.then(() => onCssLoaded());
 
-  if (globals.testing) {
+  if (globals().testing) {
     document.body.classList.add('testing');
   }
 
@@ -326,11 +326,11 @@ function onCssLoaded() {
   initCssConstants();
   // Clear all the contents of the initial page (e.g. the <pre> error message)
   // And replace it with the root <main> element which will be used by mithril.
-  if(!globals.disableMainRendering) {
+  if(!globals().disableMainRendering) {
     document.body.innerHTML = '<main></main>';
     const main = assertExists(document.body.querySelector('main'));
-    globals.rafScheduler.domRedraw = () => {
-      m.render(main, globals.router.resolve());
+    globals().rafScheduler.domRedraw = () => {
+      m.render(main, globals().router.resolve());
     };
   }
 
@@ -355,13 +355,13 @@ function onCssLoaded() {
   // accidentially clober the state of an open trace processor instance
   // otherwise.
   CheckHttpRpcConnection().then(() => {
-    if (!globals.embeddedMode && globals.allowFileDrop) {
+    if (!globals().embeddedMode && globals().allowFileDrop) {
       installFileDropHandler();
     }
 
     // Don't allow postMessage or opening trace from route when the user says
     // that they want to reuse the already loaded trace in trace processor.
-    const engine = globals.getCurrentEngine();
+    const engine = globals().getCurrentEngine();
     if (engine && engine.source.type === 'HTTP_RPC') {
       return;
     }

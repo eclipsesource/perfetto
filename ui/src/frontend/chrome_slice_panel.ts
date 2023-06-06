@@ -136,11 +136,11 @@ function getSliceContextMenuItems(slice: SliceDetails): PopupMenuItem[] {
 }
 
 function getEngine(): EngineProxy|undefined {
-  const engineId = globals.getCurrentEngine()?.id;
+  const engineId = globals().getCurrentEngine()?.id;
   if (engineId === undefined) {
     return undefined;
   }
-  const engine = globals.engines.get(engineId)?.getProxy('SlicePanel');
+  const engine = globals().engines.get(engineId)?.getProxy('SlicePanel');
   return engine;
 }
 
@@ -285,7 +285,7 @@ class TableBuilder {
 
 export class ChromeSliceDetailsPanel extends SlicePanel {
   view() {
-    const sliceInfo = globals.sliceDetails;
+    const sliceInfo = globals().sliceDetails;
     if (sliceInfo.ts !== undefined && sliceInfo.dur !== undefined &&
         sliceInfo.name !== undefined) {
       const defaultBuilder = new TableBuilder();
@@ -297,7 +297,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
               sliceInfo.category);
       defaultBuilder.add(
           'Start time',
-          tpTimeToCode(sliceInfo.ts - globals.state.traceTime.start));
+          tpTimeToCode(sliceInfo.ts - globals().state.traceTime.start));
       if (sliceInfo.absTime !== undefined) {
         defaultBuilder.add('Absolute Time', sliceInfo.absTime);
       }
@@ -360,7 +360,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
       builder.add('Slice', {
         kind: 'SLICE',
         sliceId: flow.sliceId,
-        trackId: globals.state.uiTrackIdByTraceTrackId[flow.trackId],
+        trackId: globals().state.uiTrackIdByTraceTrackId[flow.trackId],
         description: flow.sliceChromeCustomName === undefined ?
             flow.sliceName :
             flow.sliceChromeCustomName,
@@ -428,7 +428,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
         itemType: 'regular',
         text: 'Visualise argument values',
         callback: () => {
-          globals.dispatch(Actions.addVisualisedArg({argName: fullKey}));
+          globals().dispatch(Actions.addVisualisedArg({argName: fullKey}));
         },
       },
     ];
@@ -439,7 +439,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
 
     const immediatelyPrecedingByFlowSlices = [];
     const immediatelyFollowingByFlowSlices = [];
-    for (const flow of globals.connectedFlows) {
+    for (const flow of globals().connectedFlows) {
       if (flow.begin.sliceId === sliceInfo.id) {
         immediatelyFollowingByFlowSlices.push({flow: flow.end, dur: flow.dur});
       }
@@ -533,7 +533,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
                 m('i.material-icons.grey',
                   {
                     onclick: () => {
-                      globals.makeSelection(Actions.selectChromeSlice(
+                      globals().makeSelection(Actions.selectChromeSlice(
                           {id: sliceId, trackId, table: 'slice'}));
                       // Ideally we want to have a callback to
                       // findCurrentSelection after this selection has been

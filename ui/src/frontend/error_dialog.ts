@@ -33,7 +33,7 @@ const queuedErrors = new Array<string>();
 const ERR_QUEUE_MAX_LEN = 10;
 
 export function maybeShowErrorDialog(errLog: string) {
-  globals.logging.logError(errLog);
+  globals().logging.logError(errLog);
   const now = performance.now();
 
   // Here we rely on the exception message from onCannotGrowMemory function
@@ -87,7 +87,7 @@ export function maybeShowErrorDialog(errLog: string) {
   const errTitle = errLog.split('\n', 1)[0].substr(0, 80);
   const userDescription = '';
   let checked = false;
-  const engine = globals.getCurrentEngine();
+  const engine = globals().getCurrentEngine();
 
   const shareTraceSection: m.Vnode[] = [];
   if (isShareable() && !urlExists()) {
@@ -165,7 +165,7 @@ function renderModal(
 
 // If there is a trace URL to share, we don't have to show the upload checkbox.
 function urlExists() {
-  const engine = globals.getCurrentEngine();
+  const engine = globals().getCurrentEngine();
   return engine !== undefined &&
       (engine.source.type === 'ARRAY_BUFFER' || engine.source.type === 'URL') &&
       engine.source.url !== undefined;
@@ -173,7 +173,7 @@ function urlExists() {
 
 function createErrorMessage(errLog: string, checked: boolean, url?: string) {
   let errMessage = '';
-  const engine = globals.getCurrentEngine();
+  const engine = globals().getCurrentEngine();
   if (checked && url !== undefined) {
     errMessage += `Trace: ${url}`;
   } else if (urlExists()) {

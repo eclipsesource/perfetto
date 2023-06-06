@@ -27,7 +27,7 @@ export class CounterAggregationController extends AggregationController {
 
     const ids = [];
     for (const trackId of area.tracks) {
-      const track = globals.state.tracks[trackId];
+      const track = globals().state.tracks[trackId];
       // Track will be undefined for track groups.
       if (track !== undefined && track.kind === COUNTER_TRACK_KIND) {
         const config = track.config as Config;

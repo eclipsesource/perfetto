@@ -27,7 +27,7 @@ import {showModal} from './modal';
 const CURRENT_API_VERSION = perfetto.protos.TraceProcessorApiVersion
                                 .TRACE_PROCESSOR_CURRENT_API_VERSION;
 
-const PROMPT = `Trace Processor Native Accelerator detected on ${getRPC_URL(globals.httpRpcEnginePort)} with:
+const PROMPT = `Trace Processor Native Accelerator detected on ${getRPC_URL(globals().httpRpcEnginePort)} with:
 $loadedTraceName
 
 YES, use loaded trace:
@@ -50,7 +50,7 @@ too old. Get the latest version from get.perfetto.dev/trace_processor.
 `;
 
 
-const MSG_TOO_OLD = `The Trace Processor instance on ${getRPC_URL(globals.httpRpcEnginePort)} is too old.
+const MSG_TOO_OLD = `The Trace Processor instance on ${getRPC_URL(globals().httpRpcEnginePort)} is too old.
 
 This UI requires TraceProcessor features that are not present in the
 Trace Processor native accelerator you are currently running.
@@ -79,8 +79,8 @@ let forceUseOldVersion = false;
 // consistent UX (i.e. so that the user can tell if the RPC is working without
 // having to open a trace).
 export async function CheckHttpRpcConnection(): Promise<void> {
-  const state = await HttpRpcEngine.checkConnection(globals.httpRpcEnginePort);
-  globals.frontendLocalState.setHttpRpcState(state);
+  const state = await HttpRpcEngine.checkConnection(globals().httpRpcEnginePort);
+  globals().frontendLocalState.setHttpRpcState(state);
   if (!state.connected) return;
   const tpStatus = assertExists(state.status);
 
@@ -109,7 +109,7 @@ async function showDialogTraceProcessorTooOld(tpStatus: StatusResult) {
         text: 'Use builtin Wasm',
         primary: true,
         action: () => {
-          globals.dispatch(
+          globals().dispatch(
               Actions.setNewEngineMode({mode: 'FORCE_BUILTIN_WASM'}));
         },
       },
@@ -135,7 +135,7 @@ async function showDialogToUsePreloadedTrace(tpStatus: StatusResult) {
         text: 'YES, use loaded trace',
         primary: true,
         action: () => {
-          globals.dispatch(Actions.openTraceFromHttpRpc({}));
+          globals().dispatch(Actions.openTraceFromHttpRpc({}));
         },
       },
       {
@@ -144,7 +144,7 @@ async function showDialogToUsePreloadedTrace(tpStatus: StatusResult) {
       {
         text: 'NO, Use builtin Wasm',
         action: () => {
-          globals.dispatch(
+          globals().dispatch(
               Actions.setNewEngineMode({mode: 'FORCE_BUILTIN_WASM'}));
         },
       },

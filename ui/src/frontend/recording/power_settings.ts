@@ -28,7 +28,7 @@ export class PowerSettings implements m.ClassComponent<RecordingSectionAttrs> {
                     the PowerStats HAL (`),
            m('a', {href: DOC_URL, target: '_blank'}, 'see docs for more'),
            m('span', ')'))];
-    if (globals.isInternalUser) {
+    if (globals().isInternalUser) {
       descr.push(m(
           'div',
           m('span', 'Googlers: See '),

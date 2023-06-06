@@ -141,12 +141,12 @@ export class TimeSelectionPanel extends Panel {
     ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
     ctx.clip();
 
-    const span = globals.frontendLocalState.visibleWindow.timestampSpan;
+    const span = globals().frontendLocalState.visibleWindow.timestampSpan;
     if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
       const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
       for (const {type, time} of new TickGenerator(
-               span, maxMajorTicks, globals.state.traceTime.start)) {
+               span, maxMajorTicks, globals().state.traceTime.start)) {
         const px = Math.floor(map.tpTimeToPx(time));
         if (type === TickType.MAJOR) {
           ctx.fillRect(px, 0, 1, size.height);
@@ -154,28 +154,28 @@ export class TimeSelectionPanel extends Panel {
       }
     }
 
-    const localArea = globals.frontendLocalState.selectedArea;
-    const selection = globals.state.currentSelection;
+    const localArea = globals().frontendLocalState.selectedArea;
+    const selection = globals().state.currentSelection;
     if (localArea !== undefined) {
       const start = BigintMath.min(localArea.start, localArea.end);
       const end = BigintMath.max(localArea.start, localArea.end);
       this.renderSpan(ctx, size, new TPTimeSpan(start, end));
     } else if (selection !== null && selection.kind === 'AREA') {
-      const selectedArea = globals.state.areas[selection.areaId];
+      const selectedArea = globals().state.areas[selection.areaId];
       const start = BigintMath.min(selectedArea.start, selectedArea.end);
       const end = BigintMath.max(selectedArea.start, selectedArea.end);
       this.renderSpan(ctx, size, new TPTimeSpan(start, end));
     }
 
-    if (globals.state.hoverCursorTimestamp !== -1n) {
-      this.renderHover(ctx, size, globals.state.hoverCursorTimestamp);
+    if (globals().state.hoverCursorTimestamp !== -1n) {
+      this.renderHover(ctx, size, globals().state.hoverCursorTimestamp);
     }
 
-    for (const note of Object.values(globals.state.notes)) {
+    for (const note of Object.values(globals().state.notes)) {
       const noteIsSelected = selection !== null && selection.kind === 'AREA' &&
           selection.noteId === note.id;
       if (note.noteType === 'AREA' && !noteIsSelected) {
-        const selectedArea = globals.state.areas[note.areaId];
+        const selectedArea = globals().state.areas[note.areaId];
         this.renderSpan(
             ctx, size, new TPTimeSpan(selectedArea.start, selectedArea.end));
       }
@@ -185,10 +185,10 @@ export class TimeSelectionPanel extends Panel {
   }
 
   renderHover(ctx: CanvasRenderingContext2D, size: PanelSize, ts: TPTime) {
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const xPos =
         TRACK_SHELL_WIDTH + Math.floor(visibleTimeScale.tpTimeToPx(ts));
-    const offsetTime = tpTimeToString(ts - globals.state.traceTime.start);
+    const offsetTime = tpTimeToString(ts - globals().state.traceTime.start);
     const timeFromStart = tpTimeToString(ts);
     const label = `${offsetTime} (${timeFromStart})`;
     drawIBar(ctx, xPos, this.bounds(size), label);
@@ -196,7 +196,7 @@ export class TimeSelectionPanel extends Panel {
 
   renderSpan(
       ctx: CanvasRenderingContext2D, size: PanelSize, span: Span<TPTime>) {
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const xLeft = visibleTimeScale.tpTimeToPx(span.start);
     const xRight = visibleTimeScale.tpTimeToPx(span.end);
     const label = tpTimeToString(span.duration);

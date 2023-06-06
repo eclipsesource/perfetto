@@ -211,7 +211,7 @@ export class PivotTableController extends Controller<{}> {
       return false;
     }
 
-    const newTracks = new Set(globals.state.areas[selection.areaId].tracks);
+    const newTracks = new Set(globals().state.areas[selection.areaId].tracks);
     if (this.lastQueryAreaId !== state.selectionArea.areaId ||
         !this.sameTracks(newTracks)) {
       this.lastQueryAreaId = state.selectionArea.areaId;
@@ -245,7 +245,7 @@ export class PivotTableController extends Controller<{}> {
     if (!it.valid()) {
       // Iterator is invalid after creation; means that there are no rows
       // satisfying filtering criteria. Return an empty tree.
-      globals.dispatch(Actions.setPivotStateQueryResult(
+      globals().dispatch(Actions.setPivotStateQueryResult(
           {queryResult: createEmptyQueryResult(query.metadata)}));
       return;
     }
@@ -255,9 +255,9 @@ export class PivotTableController extends Controller<{}> {
       treeBuilder.ingestRow(nextRow());
     }
 
-    globals.dispatch(Actions.setPivotStateQueryResult(
+    globals().dispatch(Actions.setPivotStateQueryResult(
         {queryResult: {tree: treeBuilder.build(), metadata: query.metadata}}));
-    globals.dispatch(Actions.setCurrentTab({tab: 'pivot_table'}));
+    globals().dispatch(Actions.setCurrentTab({tab: 'pivot_table'}));
   }
 
   async requestArgumentNames() {
@@ -273,7 +273,7 @@ export class PivotTableController extends Controller<{}> {
       it.next();
     }
 
-    globals.dispatch(Actions.setPivotTableArgumentNames({argumentNames}));
+    globals().dispatch(Actions.setPivotTableArgumentNames({argumentNames}));
   }
 
 
@@ -286,23 +286,23 @@ export class PivotTableController extends Controller<{}> {
       this.requestArgumentNames();
     }
 
-    const pivotTableState = globals.state.nonSerializableState.pivotTable;
-    const selection = globals.state.currentSelection;
+    const pivotTableState = globals().state.nonSerializableState.pivotTable;
+    const selection = globals().state.currentSelection;
 
     if (pivotTableState.queryRequested ||
         (selection !== null && selection.kind === 'AREA' &&
          this.shouldRerun(pivotTableState, selection))) {
-      globals.dispatch(
+      globals().dispatch(
           Actions.setPivotTableQueryRequested({queryRequested: false}));
       // Need to re-run the existing query, clear the current result.
-      globals.dispatch(Actions.setPivotStateQueryResult({queryResult: null}));
+      globals().dispatch(Actions.setPivotStateQueryResult({queryResult: null}));
       this.processQuery(generateQueryFromState(pivotTableState));
     }
 
     if (selection !== null && selection.kind === 'AREA' &&
         (pivotTableState.selectionArea === undefined ||
          pivotTableState.selectionArea.areaId !== selection.areaId)) {
-      globals.dispatch(Actions.togglePivotTable({areaId: selection.areaId}));
+      globals().dispatch(Actions.togglePivotTable({areaId: selection.areaId}));
     }
   }
 }

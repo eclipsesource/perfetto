@@ -24,7 +24,7 @@ import {Sidebar} from './sidebar';
 import {Topbar} from './topbar';
 
 function renderPermalink(): m.Children {
-  const permalink = globals.state.permalink;
+  const permalink = globals().state.permalink;
   if (!permalink.requestId || !permalink.hash) return null;
   const url = `${self.location.origin}/#!/?s=${permalink.hash}`;
   const linkProps = {title: 'Click to copy the URL', onclick: onClickCopy(url)};
@@ -33,7 +33,7 @@ function renderPermalink(): m.Children {
     m('div', 'Permalink: ', m(`a[href=${url}]`, linkProps, url)),
     m('button',
       {
-        onclick: () => globals.dispatch(Actions.clearPermalink({})),
+        onclick: () => globals().dispatch(Actions.clearPermalink({})),
       },
       m('i.material-icons.disallow-selection', 'close')),
   ]);
@@ -58,7 +58,7 @@ export function createPage(component: m.Component<PageAttrs>):
         m(CookieConsent),
         m(fullscreenModalContainer.mithrilComponent),
       ];
-      if (globals.state.perfDebug) {
+      if (globals().state.perfDebug) {
         children.push(m('.perf-stats'));
       }
       return children;

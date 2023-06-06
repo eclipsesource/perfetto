@@ -26,7 +26,7 @@ import {KeyMapping} from './pan_and_zoom_handler';
 import {Spinner} from './widgets/spinner';
 
 export function toggleHelp() {
-  globals.logging.logEvent('User Actions', 'Show help');
+  globals().logging.logEvent('User Actions', 'Show help');
   showHelp();
 }
 
@@ -50,7 +50,7 @@ class KeyMappingsHelp implements m.ClassComponent {
     nativeKeyboardLayoutMap()
         .then((keyMap: KeyboardLayoutMap) => {
           this.keyMap = keyMap;
-          globals.rafScheduler.scheduleFullRedraw();
+          globals().rafScheduler.scheduleFullRedraw();
         })
         .catch((e) => {
           if (e instanceof NotSupportedError ||
@@ -63,7 +63,7 @@ class KeyMappingsHelp implements m.ClassComponent {
             // The alternative would be to show key mappings for all keyboard
             // layouts which is not feasible.
             this.keyMap = new EnglishQwertyKeyboardLayoutMap();
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           } else {
             // Something unexpected happened. Either the browser doesn't conform
             // to the keyboard API spec, or the keyboard API spec has changed!
@@ -76,7 +76,7 @@ class KeyMappingsHelp implements m.ClassComponent {
     const ctrlOrCmd =
         window.navigator.platform.indexOf('Mac') !== -1 ? 'Cmd' : 'Ctrl';
 
-    const queryPageInstructions = globals.hideSidebar ? [] : [
+    const queryPageInstructions = globals().hideSidebar ? [] : [
       m('h2', 'Making SQL queries from the query page'),
       m('table',
         m('tr',
@@ -87,7 +87,7 @@ class KeyMappingsHelp implements m.ClassComponent {
           m('td', 'Execute selection'))),
     ];
 
-    const sidebarInstructions = globals.hideSidebar ?
+    const sidebarInstructions = globals().hideSidebar ?
         [] :
         [m('tr',
            m('td', keycap(ctrlOrCmd), ' + ', keycap('b')),

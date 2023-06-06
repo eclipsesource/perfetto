@@ -90,10 +90,10 @@ function RecordHeader() {
 }
 
 function RecordingPlatformSelection() {
-  if (globals.state.recordingInProgress) return [];
+  if (globals().state.recordingInProgress) return [];
 
-  const availableAndroidDevices = globals.state.availableAdbDevices;
-  const recordingTarget = globals.state.recordingTarget;
+  const availableAndroidDevices = globals().state.availableAdbDevices;
+  const recordingTarget = globals().state.recordingTarget;
 
   const targets = [];
   for (const {os, name} of getDefaultRecordingTargets()) {
@@ -141,17 +141,17 @@ function RecordingPlatformSelection() {
 // |target| can be the TargetOs or the android serial.
 function onTargetChange(target: string) {
   const recordingTarget: RecordingTarget =
-      globals.state.availableAdbDevices.find((d) => d.serial === target) ||
+      globals().state.availableAdbDevices.find((d) => d.serial === target) ||
       getDefaultRecordingTargets().find((t) => t.os === target) ||
       getDefaultRecordingTargets()[0];
 
   if (isChromeTarget(recordingTarget)) {
-    globals.dispatch(Actions.setFetchChromeCategories({fetch: true}));
+    globals().dispatch(Actions.setFetchChromeCategories({fetch: true}));
   }
 
-  globals.dispatch(Actions.setRecordingTarget({target: recordingTarget}));
+  globals().dispatch(Actions.setRecordingTarget({target: recordingTarget}));
   recordTargetStore.save(target);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals().rafScheduler.scheduleFullRedraw();
 }
 
 function Instructions(cssClass: string) {
@@ -162,7 +162,7 @@ function Instructions(cssClass: string) {
           m('button.permalinkconfig',
             {
               onclick: () => {
-                globals.dispatch(
+                globals().dispatch(
                     Actions.createPermalink({isRecordingConfig: true}));
               },
             },
@@ -188,10 +188,10 @@ export function loadConfigButton(
       {
         class: 'config-button',
         title: 'Apply configuration settings',
-        disabled: loadedConfigEqual(configType, globals.state.lastLoadedConfig),
+        disabled: loadedConfigEqual(configType, globals().state.lastLoadedConfig),
         onclick: () => {
-          globals.dispatch(Actions.setRecordConfig({config, configType}));
-          globals.rafScheduler.scheduleFullRedraw();
+          globals().dispatch(Actions.setRecordConfig({config, configType}));
+          globals().rafScheduler.scheduleFullRedraw();
         },
       },
       m('i.material-icons', 'file_upload'));
@@ -217,12 +217,12 @@ export function displayRecordConfigs() {
           onclick: () => {
             if (confirm(`Overwrite config "${
                     item.title}" with current settings?`)) {
-              recordConfigStore.overwrite(globals.state.recordConfig, item.key);
-              globals.dispatch(Actions.setRecordConfig({
+              recordConfigStore.overwrite(globals().state.recordConfig, item.key);
+              globals().dispatch(Actions.setRecordConfig({
                 config: item.config,
                 configType: {type: 'NAMED', name: item.title},
               }));
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().rafScheduler.scheduleFullRedraw();
             }
           },
         },
@@ -233,7 +233,7 @@ export function displayRecordConfigs() {
           title: 'Remove configuration',
           onclick: () => {
             recordConfigStore.delete(item.key);
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
         },
         m('i.material-icons', 'delete')),
@@ -284,7 +284,7 @@ export function Configurations(cssClass: string) {
             placeholder: 'Title for config',
             oninput() {
               ConfigTitleState.setTitle(this.value);
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().rafScheduler.scheduleFullRedraw();
             },
           }),
           m('button',
@@ -295,8 +295,8 @@ export function Configurations(cssClass: string) {
                                'Duplicate name, saving disabled',
               onclick: () => {
                 recordConfigStore.save(
-                    globals.state.recordConfig, ConfigTitleState.getTitle());
-                globals.rafScheduler.scheduleFullRedraw();
+                    globals().state.recordConfig, ConfigTitleState.getTitle());
+                globals().rafScheduler.scheduleFullRedraw();
                 ConfigTitleState.clearTitle();
               },
             },
@@ -309,11 +309,11 @@ export function Configurations(cssClass: string) {
                 if (confirm(
                         'Current configuration will be cleared. ' +
                         'Are you sure?')) {
-                  globals.dispatch(Actions.setRecordConfig({
+                  globals().dispatch(Actions.setRecordConfig({
                     config: createEmptyRecordConfig(),
                     configType: {type: 'NONE'},
                   }));
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 }
               },
             },
@@ -323,9 +323,9 @@ export function Configurations(cssClass: string) {
 }
 
 function BufferUsageProgressBar() {
-  if (!globals.state.recordingInProgress) return [];
+  if (!globals().state.recordingInProgress) return [];
 
-  const bufferUsage = globals.bufferUsage ? globals.bufferUsage : 0.0;
+  const bufferUsage = globals().bufferUsage ? globals().bufferUsage! : 0.0;
   // Buffer usage is not available yet on Android.
   if (bufferUsage === 0) return [];
 
@@ -395,14 +395,14 @@ function RecordingNotes() {
         'It looks like you didn\'t add any probes. ' +
             'Please add at least one to get a non-empty trace.');
 
-  if (!hasActiveProbes(globals.state.recordConfig)) {
+  if (!hasActiveProbes(globals().state.recordConfig)) {
     notes.push(msgZeroProbes);
   }
 
-  if (isAdbTarget(globals.state.recordingTarget)) {
+  if (isAdbTarget(globals().state.recordingTarget)) {
     notes.push(msgRecordingNotSupported);
   }
-  switch (globals.state.recordingTarget.os) {
+  switch (globals().state.recordingTarget.os) {
     case 'Q':
       break;
     case 'P':
@@ -415,14 +415,14 @@ function RecordingNotes() {
       notes.push(msgLinux);
       break;
     case 'C':
-      if (!globals.state.extensionInstalled) notes.push(msgChrome);
+      if (!globals().state.extensionInstalled) notes.push(msgChrome);
       break;
     case 'CrOS':
-      if (!globals.state.extensionInstalled) notes.push(msgChrome);
+      if (!globals().state.extensionInstalled) notes.push(msgChrome);
       break;
     default:
   }
-  if (globals.state.recordConfig.mode === 'LONG_TRACE') {
+  if (globals().state.recordConfig.mode === 'LONG_TRACE') {
     notes.unshift(msgLongTraces);
   }
 
@@ -430,12 +430,12 @@ function RecordingNotes() {
 }
 
 function RecordingSnippet() {
-  const target = globals.state.recordingTarget;
+  const target = globals().state.recordingTarget;
 
   // We don't need commands to start tracing on chrome
   if (isChromeTarget(target)) {
-    return globals.state.extensionInstalled &&
-            !globals.state.recordingInProgress ?
+    return globals().state.extensionInstalled &&
+            !globals().state.recordingInProgress ?
         m('div',
           m('label',
             `To trace Chrome from the Perfetto UI you just have to press
@@ -446,11 +446,11 @@ function RecordingSnippet() {
 }
 
 function getRecordCommand(target: RecordingTarget) {
-  const data = globals.trackDataStore.get('config') as
+  const data = globals().trackDataStore.get('config') as
           {commandline: string, pbtxt: string, pbBase64: string} |
       null;
 
-  const cfg = globals.state.recordConfig;
+  const cfg = globals().state.recordConfig;
   let time = cfg.durationMs / 1000;
 
   if (time > MAX_TIME) {
@@ -477,7 +477,7 @@ function getRecordCommand(target: RecordingTarget) {
 }
 
 function recordingButtons() {
-  const state = globals.state;
+  const state = globals().state;
   const target = state.recordingTarget;
   const recInProgress = state.recordingInProgress;
 
@@ -493,7 +493,7 @@ function recordingButtons() {
 
   if (isAndroidTarget(target)) {
     if (!recInProgress && isAdbTarget(target) &&
-        globals.state.recordConfig.mode !== 'LONG_TRACE') {
+        globals().state.recordConfig.mode !== 'LONG_TRACE') {
       buttons.push(start);
     }
   } else if (isChromeTarget(target) && state.extensionInstalled) {
@@ -503,16 +503,16 @@ function recordingButtons() {
 }
 
 function StopCancelButtons() {
-  if (!globals.state.recordingInProgress) return [];
+  if (!globals().state.recordingInProgress) return [];
 
   const stop =
       m(`button.selected`,
-        {onclick: () => globals.dispatch(Actions.stopRecording({}))},
+        {onclick: () => globals().dispatch(Actions.stopRecording({}))},
         'Stop');
 
   const cancel =
       m(`button`,
-        {onclick: () => globals.dispatch(Actions.cancelRecording({}))},
+        {onclick: () => globals().dispatch(Actions.cancelRecording({}))},
         'Cancel');
 
   return [stop, cancel];
@@ -520,30 +520,30 @@ function StopCancelButtons() {
 
 function onStartRecordingPressed() {
   location.href = '#!/record/instructions';
-  globals.rafScheduler.scheduleFullRedraw();
-  autosaveConfigStore.save(globals.state.recordConfig);
+  globals().rafScheduler.scheduleFullRedraw();
+  autosaveConfigStore.save(globals().state.recordConfig);
 
-  const target = globals.state.recordingTarget;
+  const target = globals().state.recordingTarget;
   if (isAndroidTarget(target) || isChromeTarget(target)) {
-    globals.logging.logEvent('Record Trace', `Record trace (${target.os})`);
-    globals.dispatch(Actions.startRecording({}));
+    globals().logging.logEvent('Record Trace', `Record trace (${target.os})`);
+    globals().dispatch(Actions.startRecording({}));
   }
 }
 
 function RecordingStatusLabel() {
-  const recordingStatus = globals.state.recordingStatus;
+  const recordingStatus = globals().state.recordingStatus;
   if (!recordingStatus) return [];
   return m('label', recordingStatus);
 }
 
 export function ErrorLabel() {
-  const lastRecordingError = globals.state.lastRecordingError;
+  const lastRecordingError = globals().state.lastRecordingError;
   if (!lastRecordingError) return [];
   return m('label.error-label', `Error:  ${lastRecordingError}`);
 }
 
 function recordingLog() {
-  const logs = globals.recordingLog;
+  const logs = globals().recordingLog;
   if (logs === undefined) return [];
   return m('.code-snippet.no-top-bar', m('code', logs));
 }
@@ -594,10 +594,10 @@ export async function updateAvailableAdbDevices(
     }
   });
 
-  globals.dispatch(
+  globals().dispatch(
       Actions.setAvailableAdbDevices({devices: availableAdbDevices}));
   selectAndroidDeviceIfAvailable(availableAdbDevices, recordingTarget);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals().rafScheduler.scheduleFullRedraw();
   return availableAdbDevices;
 }
 
@@ -605,7 +605,7 @@ function selectAndroidDeviceIfAvailable(
     availableAdbDevices: AdbRecordingTarget[],
     recordingTarget?: RecordingTarget) {
   if (!recordingTarget) {
-    recordingTarget = globals.state.recordingTarget;
+    recordingTarget = globals().state.recordingTarget;
   }
   const deviceConnected = isAdbTarget(recordingTarget);
   const connectedDeviceDisconnected = deviceConnected &&
@@ -622,20 +622,20 @@ function selectAndroidDeviceIfAvailable(
       recordingTarget = availableAdbDevices[0];
     }
 
-    globals.dispatch(Actions.setRecordingTarget({target: recordingTarget}));
+    globals().dispatch(Actions.setRecordingTarget({target: recordingTarget}));
     return;
   }
 
   // If the currently selected device was disconnected, reset the recording
   // target to the default one.
   if (connectedDeviceDisconnected) {
-    globals.dispatch(
+    globals().dispatch(
         Actions.setRecordingTarget({target: getDefaultRecordingTargets()[0]}));
   }
 }
 
 function recordMenu(routePage: string) {
-  const target = globals.state.recordingTarget;
+  const target = globals().state.recordingTarget;
   const chromeProbe =
       m('a[href="#!/record/chrome"]',
         m(`li${routePage === 'chrome' ? '.active' : ''}`,
@@ -678,7 +678,7 @@ function recordMenu(routePage: string) {
           m('i.material-icons', 'settings'),
           m('.title', 'Advanced settings'),
           m('.sub', 'Complicated stuff for wizards')));
-  const recInProgress = globals.state.recordingInProgress;
+  const recInProgress = globals().state.recordingInProgress;
 
   const probes = [];
   if (isCrOSTarget(target) || isLinuxTarget(target)) {
@@ -700,7 +700,7 @@ function recordMenu(routePage: string) {
       '.record-menu',
       {
         class: recInProgress ? 'disabled' : '',
-        onclick: () => globals.rafScheduler.scheduleFullRedraw(),
+        onclick: () => globals().rafScheduler.scheduleFullRedraw(),
       },
       m('header', 'Trace config'),
       m('ul',
@@ -769,7 +769,7 @@ export const RecordPage = createPage({
 
     return m(
         '.record-page',
-        globals.state.recordingInProgress ? m('.hider') : [],
+        globals().state.recordingInProgress ? m('.hider') : [],
         m('.record-container',
           RecordHeader(),
           m('.record-container-content', recordMenu(routePage), pages)));

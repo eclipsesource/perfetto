@@ -74,7 +74,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   private canvas?: HTMLCanvasElement;
 
   view() {
-    const flamegraphDetails = globals.flamegraphDetails;
+    const flamegraphDetails = globals().flamegraphDetails;
     if (flamegraphDetails && flamegraphDetails.type !== undefined &&
         flamegraphDetails.start !== undefined &&
         flamegraphDetails.dur !== undefined &&
@@ -152,7 +152,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
 
 
   private maybeShowModal(graphIncomplete?: boolean) {
-    if (!graphIncomplete || globals.state.flamegraphModalDismissed) {
+    if (!graphIncomplete || globals().state.flamegraphModalDismissed) {
       return undefined;
     }
     return m(Modal, {
@@ -169,8 +169,8 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
         {
           text: 'Skip',
           action: () => {
-            globals.dispatch(Actions.dismissFlamegraphModal({}));
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().dispatch(Actions.dismissFlamegraphModal({}));
+            globals().rafScheduler.scheduleFullRedraw();
           },
         },
       ],
@@ -198,7 +198,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
     if (this.profileType === undefined) {
       return {};
     }
-    const viewingOption = globals.state.currentFlamegraphState!.viewingOption;
+    const viewingOption = globals().state.currentFlamegraphState!.viewingOption;
     switch (this.profileType) {
       case ProfileType.JAVA_HEAP_GRAPH:
         if (viewingOption === OBJECTS_ALLOCATED_NOT_FREED_KEY) {
@@ -217,7 +217,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   private updateFocusRegex() {
-    globals.dispatch(Actions.changeFocusFlamegraphState({
+    globals().dispatch(Actions.changeFocusFlamegraphState({
       focusRegex: this.focusRegex,
     }));
   }
@@ -230,7 +230,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   downloadPprof() {
-    const engine = globals.getCurrentEngine();
+    const engine = globals().getCurrentEngine();
     if (!engine) return;
     getCurrentTrace()
         .then((file) => {
@@ -245,7 +245,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   private changeFlamegraphData() {
-    const data = globals.flamegraphDetails;
+    const data = globals().flamegraphDetails;
     const flamegraphData = data.flamegraph === undefined ? [] : data.flamegraph;
     this.flamegraph.updateDataIfChanged(
         this.nodeRendering(), flamegraphData, data.expandedCallsite);
@@ -256,7 +256,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
     // TODO(stevegolton): If we truely want to be standalone, then we shouldn't
     // rely on someone else calling the rafScheduler when the window is resized,
     // but it's good enough for now as we know the ViewerPage will do it.
-    globals.rafScheduler.addRedrawCallback(this.rafRedrawCallback);
+    globals().rafScheduler.addRedrawCallback(this.rafRedrawCallback);
   }
 
   onupdate({dom}: m.CVnodeDOM<FlamegraphDetailsPanelAttrs>) {
@@ -264,7 +264,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   onremove(_vnode: m.CVnodeDOM<FlamegraphDetailsPanelAttrs>) {
-    globals.rafScheduler.removeRedrawCallback(this.rafRedrawCallback);
+    globals().rafScheduler.removeRedrawCallback(this.rafRedrawCallback);
   }
 
   private static findCanvasElement(dom: Element): HTMLCanvasElement|undefined {
@@ -299,7 +299,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
 
   private renderLocalCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     this.changeFlamegraphData();
-    const current = globals.state.currentFlamegraphState;
+    const current = globals().state.currentFlamegraphState;
     if (current === null) return;
     const unit =
         current.viewingOption === SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY ||
@@ -311,19 +311,19 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
 
   private onMouseClick({x, y}: {x: number, y: number}): boolean {
     const expandedCallsite = this.flamegraph.onMouseClick({x, y});
-    globals.dispatch(Actions.expandFlamegraphState({expandedCallsite}));
+    globals().dispatch(Actions.expandFlamegraphState({expandedCallsite}));
     return true;
   }
 
   private onMouseMove({x, y}: {x: number, y: number}): boolean {
     this.flamegraph.onMouseMove({x, y});
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
     return true;
   }
 
   private onMouseOut() {
     this.flamegraph.onMouseOut();
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   private static selectViewingOptions(profileType: ProfileType) {
@@ -372,14 +372,14 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   private static buildButtonComponent(
       viewingOption: FlamegraphStateViewingOption, text: string) {
     const active =
-        (globals.state.currentFlamegraphState !== null &&
-         globals.state.currentFlamegraphState.viewingOption === viewingOption);
+        (globals().state.currentFlamegraphState !== null &&
+         globals().state.currentFlamegraphState!.viewingOption === viewingOption);
     return m(Button, {
       label: text,
       active,
       minimal: true,
       onclick: () => {
-        globals.dispatch(Actions.changeViewFlamegraphState({viewingOption}));
+        globals().dispatch(Actions.changeViewFlamegraphState({viewingOption}));
       },
     });
   }

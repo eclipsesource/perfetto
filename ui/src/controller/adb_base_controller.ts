@@ -73,7 +73,7 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
         this.device = await this.findDevice();
         if (!this.device) {
           this.state = AdbConnectionState.READY_TO_CONNECT;
-          const target = globals.state.recordingTarget;
+          const target = globals().state.recordingTarget;
           throw Error(`Device with serial ${
               isAdbTarget(target) ? target.serial : 'n/a'} not found.`);
         }
@@ -84,7 +84,7 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
         await this.adb.connect(this.device);
 
         // During the authentication the device may have been disconnected.
-        if (!globals.state.recordingInProgress || this.deviceDisconnected()) {
+        if (!globals().state.recordingInProgress || this.deviceDisconnected()) {
           throw Error('Recording not in progress after adb authorization.');
         }
 
@@ -130,7 +130,7 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
 
   async findDevice(): Promise<USBDevice|undefined> {
     if (!('usb' in navigator)) return undefined;
-    const connectedDevice = globals.state.recordingTarget;
+    const connectedDevice = globals().state.recordingTarget;
     if (!isAdbTarget(connectedDevice)) return undefined;
     const devices = await navigator.usb.getDevices();
     return devices.find((d) => d.serialNumber === connectedDevice.serial);

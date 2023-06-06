@@ -110,14 +110,14 @@ class HeapProfileTrack extends Track<Config, Data> {
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;
 
     for (let i = 0; i < data.tsStarts.length; i++) {
       const centerX = data.tsStarts[i];
-      const selection = globals.state.currentSelection;
+      const selection = globals().state.currentSelection;
       const isHovered = this.hoveredTs === centerX;
       const isSelected = selection !== null &&
           selection.kind === 'HEAP_PROFILE' && selection.ts === centerX;
@@ -155,7 +155,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     if (data === undefined) return;
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const time = timeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
     const index = this.findTimestampIndex(left, timeScale, data, x, y, right);
@@ -171,7 +171,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     if (data === undefined) return false;
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
 
     const time = timeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
@@ -181,7 +181,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     if (index !== -1) {
       const ts = data.tsStarts[index];
       const type = data.types[index];
-      globals.makeSelection(Actions.selectHeapProfile(
+      globals().makeSelection(Actions.selectHeapProfile(
           {id: index, upid: this.config.upid, ts, type}));
       return true;
     }

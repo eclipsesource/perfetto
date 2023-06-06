@@ -31,7 +31,7 @@ export class ThreadAggregationController extends AggregationController {
   setThreadStateUtids(tracks: string[]) {
     this.utids = [];
     for (const trackId of tracks) {
-      const track = globals.state.tracks[trackId];
+      const track = globals().state.tracks[trackId];
       // Track will be undefined for track groups.
       if (track !== undefined && track.kind === THREAD_STATE_TRACK_KIND) {
         this.utids.push((track.config as Config).utid);

@@ -72,7 +72,7 @@ export abstract class TrackController<
       Promise<Data>;
 
   get trackState(): TrackState {
-    return assertExists(globals.state.tracks[this.trackId]);
+    return assertExists(globals().state.tracks[this.trackId]);
   }
 
   get config(): Config {
@@ -117,13 +117,13 @@ export abstract class TrackController<
   }
 
   private shouldReload(): boolean {
-    const {lastTrackReloadRequest} = globals.state;
+    const {lastTrackReloadRequest} = globals().state;
     return !!lastTrackReloadRequest &&
         this.lastReloadHandled < lastTrackReloadRequest;
   }
 
   private markReloadHandled() {
-    this.lastReloadHandled = globals.state.lastTrackReloadRequest || 0;
+    this.lastReloadHandled = globals().state.lastTrackReloadRequest || 0;
   }
 
   shouldRequestData(traceTime: TraceTime): boolean {
@@ -146,7 +146,7 @@ export abstract class TrackController<
         tspan.start >= this.data.start && tspan.end <= this.data.end;
     return !inRange ||
         this.data.resolution !==
-        globals.state.frontendLocalState.visibleState.resolution;
+        globals().state.frontendLocalState.visibleState.resolution;
   }
 
   // Decides, based on the length of the trace and the number of rows
@@ -160,7 +160,7 @@ export abstract class TrackController<
       return undefined;
     }
 
-    const traceDuration = globals.stateTraceTimeTP().duration;
+    const traceDuration = globals().stateTraceTimeTP().duration;
 
     // For large traces, going through the raw table in the most zoomed-out
     // states can be very expensive as this can involve going through O(millions
@@ -224,13 +224,13 @@ export abstract class TrackController<
   }
 
   run() {
-    const visibleState = globals.state.frontendLocalState.visibleState;
+    const visibleState = globals().state.frontendLocalState.visibleState;
     if (visibleState === undefined) {
       return;
     }
-    const visibleTimeSpan = globals.stateVisibleTime();
+    const visibleTimeSpan = globals().stateVisibleTime();
     const dur = visibleTimeSpan.duration;
-    if (globals.state.visibleTracks.includes(this.trackId) &&
+    if (globals().state.visibleTracks.includes(this.trackId) &&
         this.shouldRequestData(visibleState)) {
       if (this.requestingData) {
         this.queuedRequest = true;

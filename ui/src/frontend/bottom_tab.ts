@@ -154,29 +154,29 @@ export type AddTabResult =
       uuid: string;
     }
 
-// Shorthand for globals.bottomTabList.addTab(...) & redraw.
+// Shorthand for globals().bottomTabList.addTab(...) & redraw.
 // Ignored when bottomTabList does not exist (e.g. no trace is open in the UI).
 export function
 addTab(args: AddTabArgs) {
-  const tabList = globals.bottomTabList;
+  const tabList = globals().bottomTabList;
   if (!tabList) {
     return;
   }
   tabList.addTab(args);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals().rafScheduler.scheduleFullRedraw();
 }
 
 
-// Shorthand for globals.bottomTabList.closeTabById(...) & redraw.
+// Shorthand for globals().bottomTabList.closeTabById(...) & redraw.
 // Ignored when bottomTabList does not exist (e.g. no trace is open in the UI).
 export function
 closeTab(uuid: string) {
-  const tabList = globals.bottomTabList;
+  const tabList = globals().bottomTabList;
   if (!tabList) {
     return;
   }
   tabList.closeTabById(uuid);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals().rafScheduler.scheduleFullRedraw();
 }
 
 interface PendingTab {
@@ -252,12 +252,12 @@ export class BottomTabList {
     // If the current tab was closed, select the tab to the right of it.
     // If the closed tab was current and last in the tab list, select the tab
     // that became last.
-    if (tab.uuid === globals.state.currentTab && this.tabs.length > 0) {
+    if (tab.uuid === globals().state.currentTab && this.tabs.length > 0) {
       const newActiveIndex = index === this.tabs.length ? index - 1 : index;
-      globals.dispatch(Actions.setCurrentTab(
+      globals().dispatch(Actions.setCurrentTab(
           {tab: tabSelectionKey(this.tabs[newActiveIndex])}));
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   // Check the list of the pending tabs and add the ones that are ready
@@ -274,7 +274,7 @@ export class BottomTabList {
       // "current selection" panels are implemented by BottomTabs and some by
       // details_panel.ts computing vnodes dynamically. Naive implementation
       // will: a) stop showing the old panel (because
-      // globals.state.currentSelection changes). b) not showing the new
+      // globals().state.currentSelection changes). b) not showing the new
       // 'current_selection' tab yet. This will result in temporary shifting
       // focus to another tab (as no tab with 'current_selection' tag will
       // exist).
@@ -308,7 +308,7 @@ export class BottomTabList {
       }
 
       if (args.select === undefined || args.select === true) {
-        globals.dispatch(Actions.setCurrentTab({tab: tabSelectionKey(tab)}));
+        globals().dispatch(Actions.setCurrentTab({tab: tabSelectionKey(tab)}));
       }
     }
   }

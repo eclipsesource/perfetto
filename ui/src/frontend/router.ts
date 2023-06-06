@@ -102,7 +102,7 @@ export class Router {
     const oldRoute = Router.parseUrl(e.oldURL);
     const newRoute = Router.parseUrl(e.newURL);
 
-    if (globals.disableHashBasedRouting && newRoute.page.length === 0 && newRoute.subpage.length === 0) {
+    if (globals().disableHashBasedRouting && newRoute.page.length === 0 && newRoute.subpage.length === 0) {
       // the application that disabled hash based routing 
       // made a change that either removed our routes or was unrelated
       // -> no op
@@ -129,7 +129,7 @@ export class Router {
     const args = Router.buildQueryString(newRoute.args);
     let normalizedFragment = `#!${newRoute.page}${newRoute.subpage}`;
     normalizedFragment += args.length > 0 ? '?' + args : '';
-    if (globals.disableHashBasedRouting) {
+    if (globals().disableHashBasedRouting) {
       normalizedFragment = Router.hashBasedToParamBasedFragment(normalizedFragment);
     }
 
@@ -158,7 +158,7 @@ export class Router {
   }
 
   static buildQueryString(args: RouteArgs): string {
-    return globals.disableHashBasedRouting
+    return globals().disableHashBasedRouting
       ? Router.emptyPreservingBuildQueryString(args)
       : m.buildQueryString(args);
   }
@@ -205,7 +205,7 @@ export class Router {
 
   static navigate(newHash: string) {
     assertTrue(newHash.startsWith(ROUTE_PREFIX));
-    if (!globals.disableHashBasedRouting) {
+    if (!globals().disableHashBasedRouting) {
       window.location.hash = newHash;
     } else {
       // Hash based routing is disabled (usually because perfetto is embedded in an application that uses the hash itself).
@@ -227,7 +227,7 @@ export class Router {
   // Sample output:
   // {page: '/record', subpage: '/gpu', args: {local_cache_key: 'abcd-1234'}}
   static parseFragment(hash: string): Route {
-    if (globals.disableHashBasedRouting) {
+    if (globals().disableHashBasedRouting) {
       hash = Router.paramBasedToHashBasedFragment(hash);
     }
     const prefixLength = ROUTE_PREFIX.length;

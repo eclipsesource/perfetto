@@ -79,7 +79,7 @@ class LogTagChip implements m.ClassComponent<LogTagChipAttrs> {
 
 class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
   removeTag(tag: string) {
-    globals.dispatch(Actions.removeLogTag({tag}));
+    globals().dispatch(Actions.removeLogTag({tag}));
   }
 
   view(vnode: m.Vnode<LogTagsWidgetAttrs>) {
@@ -100,7 +100,7 @@ class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
             // When the user clicks 'Backspace' we delete the previous tag.
             if (e.key === 'Backspace' && tags.length > 0 &&
                 htmlElement.value === '') {
-              globals.dispatch(
+              globals().dispatch(
                   Actions.removeLogTag({tag: tags[tags.length - 1]}));
               return;
             }
@@ -111,7 +111,7 @@ class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
             if (htmlElement.value === '') {
               return;
             }
-            globals.dispatch(
+            globals().dispatch(
                 Actions.addLogTag({tag: htmlElement.value.trim()}));
             htmlElement.value = '';
           },
@@ -133,7 +133,7 @@ class LogTextWidget implements m.ClassComponent {
             // We want to use the value of the input field after it has been
             // updated with the latest key (onkeyup).
             const htmlElement = e.target as HTMLInputElement;
-            globals.dispatch(
+            globals().dispatch(
                 Actions.updateLogFilterText({textEntry: htmlElement.value}));
           },
         }));
@@ -151,7 +151,7 @@ class FilterByTextWidget implements m.ClassComponent<FilterByTextWidgetAttrs> {
         m('i.material-icons',
           {
             onclick: () => {
-              globals.dispatch(Actions.toggleCollapseByTextEntry({}));
+              globals().dispatch(Actions.toggleCollapseByTextEntry({}));
             },
           },
           icon));
@@ -165,15 +165,15 @@ export class LogsFilters implements m.ClassComponent {
         m('.log-label', 'Log Level'),
         m(LogPriorityWidget, {
           options: LOG_PRIORITIES,
-          selectedIndex: globals.state.logFilteringCriteria.minimumLevel,
+          selectedIndex: globals().state.logFilteringCriteria.minimumLevel,
           onSelect: (minimumLevel) => {
-            globals.dispatch(Actions.setMinimumLogLevel({minimumLevel}));
+            globals().dispatch(Actions.setMinimumLogLevel({minimumLevel}));
           },
         }),
-        m(LogTagsWidget, {tags: globals.state.logFilteringCriteria.tags}),
+        m(LogTagsWidget, {tags: globals().state.logFilteringCriteria.tags}),
         m(LogTextWidget),
         m(FilterByTextWidget, {
-          hideNonMatching: globals.state.logFilteringCriteria.hideNonMatching,
+          hideNonMatching: globals().state.logFilteringCriteria.hideNonMatching,
         }));
   }
 }

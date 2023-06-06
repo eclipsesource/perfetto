@@ -127,11 +127,11 @@ export class FlamegraphController extends Controller<'main'> {
       const upids = [];
       if (!area) {
         this.checkCompletionAndPublishFlamegraph(
-            {...globals.flamegraphDetails, isInAreaSelection: false});
+            {...globals().flamegraphDetails, isInAreaSelection: false});
         return;
       }
       for (const trackId of area.tracks) {
-        const trackState = globals.state.tracks[trackId];
+        const trackState = globals().state.tracks[trackId];
         if (!trackState ||
             trackState.kind !== PERF_SAMPLES_PROFILE_TRACK_KIND) {
           continue;
@@ -140,10 +140,10 @@ export class FlamegraphController extends Controller<'main'> {
       }
       if (upids.length === 0) {
         this.checkCompletionAndPublishFlamegraph(
-            {...globals.flamegraphDetails, isInAreaSelection: false});
+            {...globals().flamegraphDetails, isInAreaSelection: false});
         return;
       }
-      globals.dispatch(Actions.openFlamegraph({
+      globals().dispatch(Actions.openFlamegraph({
         upids,
         start: area.start,
         end: area.end,
@@ -151,7 +151,7 @@ export class FlamegraphController extends Controller<'main'> {
         viewingOption: PERF_SAMPLES_KEY,
       }));
     }
-    const selection = globals.state.currentFlamegraphState;
+    const selection = globals().state.currentFlamegraphState;
     if (!selection || !this.shouldRequestData(selection)) {
       return;
     }
@@ -454,8 +454,8 @@ export class FlamegraphController extends Controller<'main'> {
 
   getMinSizeDisplayed(flamegraphData: CallsiteInfo[], rootSize?: number):
       number {
-    const timeState = globals.state.frontendLocalState.visibleState;
-    const dur = globals.stateVisibleTime().duration;
+    const timeState = globals().state.frontendLocalState.visibleState;
+    const dur = globals().stateVisibleTime().duration;
     let width = tpDurationToSeconds(dur / timeState.resolution);
     // TODO(168048193): Remove screen size hack:
     width = Math.max(width, 800);

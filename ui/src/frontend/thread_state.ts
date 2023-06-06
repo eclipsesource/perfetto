@@ -140,7 +140,7 @@ export async function getThreadState(
 
 export function goToSchedSlice(cpu: number, id: SchedSqlId, ts: TPTime) {
   let trackId: string|undefined;
-  for (const track of Object.values(globals.state.tracks)) {
+  for (const track of Object.values(globals().state.tracks)) {
     if (track.kind === 'CpuSliceTrack' &&
         (track.config as {cpu: number}).cpu === cpu) {
       trackId = track.id;
@@ -149,7 +149,7 @@ export function goToSchedSlice(cpu: number, id: SchedSqlId, ts: TPTime) {
   if (trackId === undefined) {
     return;
   }
-  globals.makeSelection(Actions.selectSlice({id, trackId}));
+  globals().makeSelection(Actions.selectSlice({id, trackId}));
   scrollToTrackAndTs(trackId, ts);
 }
 
@@ -176,7 +176,7 @@ export function threadStateToDict(state: ThreadState): Dict {
   const result: {[name: string]: Value|null} = {};
 
   result['Start time'] =
-      value(tpTimeToCode(state.ts - globals.state.traceTime.start));
+      value(tpTimeToCode(state.ts - globals().state.traceTime.start));
   result['Duration'] = value(tpTimeToCode(state.dur));
   result['State'] =
       stateToValue(state.state, state.cpu, state.schedSqlId, state.ts);

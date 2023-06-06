@@ -280,7 +280,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     const {
       visibleTimeScale: timeScale,
       visibleWindowTime: vizTime,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
 
     {
       const windowSizePx = Math.max(1, timeScale.pxSpan.delta);
@@ -308,7 +308,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     const vizSlices = this.getVisibleSlicesInternal(
         vizTime.start.toTPTime('floor'), vizTime.end.toTPTime('ceil'));
 
-    let selection = globals.state.currentSelection;
+    let selection = globals().state.currentSelection;
 
     if (!selection || !this.isSelectionHandled(selection)) {
       selection = null;
@@ -609,7 +609,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     this.slices = slices;
 
     this.sqlState = 'QUERY_DONE';
-    globals.rafScheduler.scheduleRedraw();
+    globals().rafScheduler.scheduleRedraw();
   }
 
   private rowToSliceInternal(row: T['row']): CastInternal<T['slice']> {
@@ -686,13 +686,13 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
     if (slice === lastHoveredSlice) return;
 
     if (this.hoveredSlice === undefined) {
-      globals.dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
+      globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
       this.onSliceOut({slice: assertExists(lastHoveredSlice)});
       this.hoverTooltip = [];
       this.hoverPos = undefined;
     } else {
       const args: OnSliceOverArgs<T['slice']> = {slice: this.hoveredSlice};
-      globals.dispatch(
+      globals().dispatch(
           Actions.setHighlightedSliceId({sliceId: this.hoveredSlice.id}));
       this.onSliceOver(args);
       this.hoverTooltip = args.tooltip || [];
@@ -773,7 +773,7 @@ export abstract class BaseSliceTrack<T extends BaseSliceTrackTypes =
   // having to reimplement it.
   protected highlightHovererdAndSameTitle(slices: Slice[]) {
     for (const slice of slices) {
-      const isHovering = globals.state.highlightedSliceId === slice.id ||
+      const isHovering = globals().state.highlightedSliceId === slice.id ||
           (this.hoveredSlice && this.hoveredSlice.title === slice.title);
       if (isHovering) {
         slice.color = {

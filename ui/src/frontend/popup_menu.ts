@@ -130,7 +130,7 @@ export class PopupMenuButton implements m.ClassComponent<PopupMenuButtonAttrs> {
     } else {
       popupHolder.clear();
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   renderItem(item: PopupMenuItem): m.Child {
@@ -158,7 +158,7 @@ export class PopupMenuButton implements m.ClassComponent<PopupMenuButtonAttrs> {
                   } else {
                     this.expandedGroups.add(item.itemId);
                   }
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 },
               },
               // Show text with up/down arrow, depending on expanded state.

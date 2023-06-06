@@ -47,13 +47,13 @@ function onKeyDown(e: Event) {
   if (mode === SEARCH && txt.value === '' && key === ':') {
     e.preventDefault();
     mode = COMMAND;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
     return;
   }
 
   if (mode === COMMAND && txt.value === '' && key === 'Backspace') {
     mode = SEARCH;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
     return;
   }
 
@@ -81,7 +81,7 @@ function onKeyUp(e: Event) {
     mode = SEARCH;
     txt.value = '';
     txt.blur();
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
     return;
   }
 }
@@ -94,16 +94,16 @@ class Omnibox implements m.ClassComponent {
   }
 
   view() {
-    const msgTTL = globals.state.status.timestamp + 1 - Date.now() / 1e3;
+    const msgTTL = globals().state.status.timestamp + 1 - Date.now() / 1e3;
     const engineIsBusy =
-        globals.state.engine !== undefined && !globals.state.engine.ready;
+        globals().state.engine !== undefined && !globals().state.engine!.ready;
 
     if (msgTTL > 0 || engineIsBusy) {
       setTimeout(
-          () => globals.rafScheduler.scheduleFullRedraw(), msgTTL * 1000);
+          () => globals().rafScheduler.scheduleFullRedraw(), msgTTL * 1000);
       return m(
           `.omnibox.message-mode`,
-          m(`input[placeholder=${globals.state.status.msg}][readonly]`, {
+          m(`input[placeholder=${globals().state.status.msg}][readonly]`, {
             value: '',
           }));
     }
@@ -115,26 +115,26 @@ class Omnibox implements m.ClassComponent {
           placeholder: PLACEHOLDER[mode],
           oninput: (e: InputEvent) => {
             const value = (e.target as HTMLInputElement).value;
-            globals.dispatch(Actions.setOmnibox({
+            globals().dispatch(Actions.setOmnibox({
               omnibox: value,
               mode: commandMode ? 'COMMAND' : 'SEARCH',
             }));
             if (mode === SEARCH) {
               displayStepThrough = value.length >= 4;
-              globals.dispatch(Actions.setSearchIndex({index: -1}));
+              globals().dispatch(Actions.setSearchIndex({index: -1}));
             }
           },
-          value: globals.state.omniboxState.omnibox,
+          value: globals().state.omniboxState.omnibox,
         }),
         displayStepThrough ?
             m(
                 '.stepthrough',
                 m('.current',
                   `${
-                      globals.currentSearchResults.totalResults === 0 ?
+                      globals().currentSearchResults.totalResults === 0 ?
                           '0 / 0' :
-                          `${globals.state.searchIndex + 1} / ${
-                              globals.currentSearchResults.totalResults}`}`),
+                          `${globals().state.searchIndex + 1} / ${
+                              globals().currentSearchResults.totalResults}`}`),
                 m('button',
                   {
                     onclick: () => {
@@ -164,11 +164,11 @@ class Progress implements m.ClassComponent {
 
   oncreate(vnodeDom: m.CVnodeDOM) {
     this.progressBar = vnodeDom.dom as HTMLElement;
-    globals.rafScheduler.addRedrawCallback(this.loading);
+    globals().rafScheduler.addRedrawCallback(this.loading);
   }
 
   onremove() {
-    globals.rafScheduler.removeRedrawCallback(this.loading);
+    globals().rafScheduler.removeRedrawCallback(this.loading);
   }
 
   view() {
@@ -177,8 +177,8 @@ class Progress implements m.ClassComponent {
 
   loadingAnimation() {
     if (this.progressBar === undefined) return;
-    const engine = globals.getCurrentEngine();
-    if ((engine && !engine.ready) || globals.numQueuedQueries > 0 ||
+    const engine = globals().getCurrentEngine();
+    if ((engine && !engine.ready) || globals().numQueuedQueries > 0 ||
         taskTracker.hasPendingTasks()) {
       this.progressBar.classList.add('progress-anim');
     } else {
@@ -196,8 +196,8 @@ class NewVersionNotification implements m.ClassComponent {
         m('button.notification-btn.preferred',
           {
             onclick: () => {
-              globals.frontendLocalState.newVersionAvailable = false;
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().frontendLocalState.newVersionAvailable = false;
+              globals().rafScheduler.scheduleFullRedraw();
             },
           },
           'Dismiss'),
@@ -212,8 +212,8 @@ class HelpPanningNotification implements m.ClassComponent {
     // Do not show the help notification in embedded mode because local storage
     // does not persist for iFrames. The host is responsible for communicating
     // to users that they can press '?' for help.
-    if (globals.embeddedMode || dismissed === 'true' ||
-        !globals.frontendLocalState.showPanningHint) {
+    if (globals().embeddedMode || dismissed === 'true' ||
+        !globals().frontendLocalState.showPanningHint) {
       return;
     }
     return m(
@@ -224,9 +224,9 @@ class HelpPanningNotification implements m.ClassComponent {
         m('button.hint-dismiss-button',
           {
             onclick: () => {
-              globals.frontendLocalState.showPanningHint = false;
+              globals().frontendLocalState.showPanningHint = false;
               localStorage.setItem(DISMISSED_PANNING_HINT_KEY, 'true');
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().rafScheduler.scheduleFullRedraw();
             },
           },
           'Dismiss'),
@@ -236,10 +236,10 @@ class HelpPanningNotification implements m.ClassComponent {
 
 class TraceErrorIcon implements m.ClassComponent {
   view() {
-    if (globals.embeddedMode) return;
+    if (globals().embeddedMode) return;
 
-    const errors = globals.traceErrors;
-    if (!errors && !globals.metricError || mode === COMMAND) return;
+    const errors = globals().traceErrors;
+    if (!errors && !globals().metricError || mode === COMMAND) return;
     const message = errors ? `${errors} import or data loss errors detected.` :
                              `Metric error detected.`;
     const icon = m(
@@ -249,8 +249,8 @@ class TraceErrorIcon implements m.ClassComponent {
       },
       'announcement');
 
-    if (globals.viewOpener) {
-      const viewOpener = globals.viewOpener;
+    if (globals().viewOpener) {
+      const viewOpener = globals().viewOpener!;
       return m('button.error', {onclick: () => viewOpener('#!/info')}, icon);
     }
     return m('a.error', {href: '#!/info'}, icon);
@@ -261,8 +261,8 @@ export class Topbar implements m.ClassComponent {
   view() {
     return m(
         '.topbar',
-        {class: globals.state.sidebarVisible ? '' : 'hide-sidebar'},
-        globals.frontendLocalState.newVersionAvailable ?
+        {class: globals().state.sidebarVisible ? '' : 'hide-sidebar'},
+        globals().frontendLocalState.newVersionAvailable ?
             m(NewVersionNotification) :
             m(Omnibox),
         m(Progress),

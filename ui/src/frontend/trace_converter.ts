@@ -58,12 +58,12 @@ interface ErrorArgs {
 function handleOnMessage(msg: MessageEvent): void {
   const args: Args = msg.data;
   if (args.kind === 'updateStatus') {
-    globals.dispatch(Actions.updateStatus({
+    globals().dispatch(Actions.updateStatus({
       msg: args.status,
       timestamp: Date.now() / 1000,
     }));
   } else if (args.kind === 'updateJobStatus') {
-    globals.setConversionJobStatus(args.name, args.status);
+    globals().setConversionJobStatus(args.name, args.status);
   } else if (args.kind === 'downloadFile') {
     download(new File([new Blob([args.buffer])], args.name));
   } else if (args.kind === 'openTraceInLegacy') {
@@ -77,7 +77,7 @@ function handleOnMessage(msg: MessageEvent): void {
 }
 
 function makeWorkerAndPost(msg: unknown) {
-  const worker = new Worker(globals.root + 'traceconv_bundle.js');
+  const worker = new Worker(globals().root + 'traceconv_bundle.js');
   worker.onmessage = handleOnMessage;
   worker.postMessage(msg);
 }

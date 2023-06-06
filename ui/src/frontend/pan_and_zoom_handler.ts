@@ -227,7 +227,7 @@ export class PanAndZoomHandler {
   }
 
   private onMouseMove(e: MouseEvent) {
-    let pageOffset = globals.state.sidebarVisible && !globals.hideSidebar ?
+    let pageOffset = globals().state.sidebarVisible && !globals().hideSidebar ?
         this.contentOffsetX :
         0;
     
@@ -252,12 +252,12 @@ export class PanAndZoomHandler {
   private onWheel(e: WheelEvent) {
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       this.onPanned(e.deltaX * HORIZONTAL_WHEEL_PAN_SPEED);
-      globals.rafScheduler.scheduleRedraw();
+      globals().rafScheduler.scheduleRedraw();
     } else if (e.ctrlKey && this.mousePositionX) {
       const sign = e.deltaY < 0 ? -1 : 1;
       const deltaY = sign * Math.log2(1 + Math.abs(e.deltaY));
       this.onZoomed(this.mousePositionX, deltaY * WHEEL_ZOOM_SPEED);
-      globals.rafScheduler.scheduleRedraw();
+      globals().rafScheduler.scheduleRedraw();
     }
   }
 

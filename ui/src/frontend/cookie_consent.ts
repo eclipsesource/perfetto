@@ -23,7 +23,7 @@ export class CookieConsent implements m.ClassComponent {
 
   oninit() {
     this.showCookieConsent = true;
-    if (!globals.logging.isEnabled() ||
+    if (!globals().logging.isEnabled() ||
         localStorage.getItem(COOKIE_ACK_KEY) === 'true') {
       this.showCookieConsent = false;
     }
@@ -49,7 +49,7 @@ export class CookieConsent implements m.ClassComponent {
               onclick: () => {
                 this.showCookieConsent = false;
                 localStorage.setItem(COOKIE_ACK_KEY, 'true');
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
             },
             'OK')),

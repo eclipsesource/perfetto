@@ -95,7 +95,7 @@ export class FtracePanel extends Panel<{}> {
     this.pageCount = Math.ceil(visibleRowCount / PAGE_SIZE) + 2;
 
     if (this.page !== prevPage || this.pageCount !== prevPageCount) {
-      globals.dispatch(Actions.updateFtracePagination({
+      globals().dispatch(Actions.updateFtracePagination({
         offset: Math.max(0, this.page) * PAGE_SIZE,
         count: this.pageCount * PAGE_SIZE,
       }));
@@ -106,7 +106,7 @@ export class FtracePanel extends Panel<{}> {
     const sc = this.scrollContainer(dom);
     sc.removeEventListener('scroll', this.onScroll);
 
-    globals.dispatch(Actions.updateFtracePagination({
+    globals().dispatch(Actions.updateFtracePagination({
       offset: 0,
       count: 0,
     }));
@@ -118,16 +118,16 @@ export class FtracePanel extends Panel<{}> {
   };
 
   onRowOver(ts: TPTime) {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts}));
+    globals().dispatch(Actions.setHoverCursorTimestamp({ts}));
   }
 
   onRowOut() {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
+    globals().dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
   }
 
   private renderRowsLabel() {
-    if (globals.ftracePanelData) {
-      const {numEvents} = globals.ftracePanelData;
+    if (globals().ftracePanelData) {
+      const {numEvents} = globals().ftracePanelData!;
       return m('.ftrace-rows-label', `Ftrace Events (${numEvents})`);
     } else {
       return m('.ftrace-rows-label', 'Ftrace Rows');
@@ -135,16 +135,16 @@ export class FtracePanel extends Panel<{}> {
   }
 
   private renderFilterPanel() {
-    if (!globals.ftraceCounters) {
+    if (!globals().ftraceCounters) {
       return null;
     }
 
     const options: MultiSelectOption[] =
-        globals.ftraceCounters.map(({name, count}) => {
+        globals().ftraceCounters!.map(({name, count}) => {
           return {
             id: name,
             name: `${name} (${count})`,
-            checked: !globals.state.ftraceFilter.excludedNames.some(
+            checked: !globals().state.ftraceFilter.excludedNames.some(
                 (excluded: string) => excluded === name),
           };
         });
@@ -160,7 +160,7 @@ export class FtracePanel extends Panel<{}> {
             const excludedNames: StringListPatch[] = diffs.map(
                 ({id, checked}) => [checked ? 'remove' : 'add', id],
             );
-            globals.dispatchMultiple([
+            globals().dispatchMultiple([
               Actions.updateFtraceFilter({excludedNames}),
               Actions.requestTrackReload({}),
             ]);
@@ -171,7 +171,7 @@ export class FtracePanel extends Panel<{}> {
 
   // Render all the rows including the first title row
   private renderRows() {
-    const data = globals.ftracePanelData;
+    const data = globals().ftracePanelData;
     const rows: m.Children = [];
 
     rows.push(m(
@@ -188,7 +188,7 @@ export class FtracePanel extends Panel<{}> {
       for (let i = 0; i < events.length; i++) {
         const {ts, name, cpu, process, args} = events[i];
 
-        const timestamp = formatTPTime(ts - globals.state.traceTime.start);
+        const timestamp = formatTPTime(ts - globals().state.traceTime.start);
 
         const rank = i + offset;
 

@@ -45,16 +45,16 @@ const OVERVIEW_PANEL_FLAG = featureFlags.register({
 // Checks if the mousePos is within 3px of the start or end of the
 // current selected time range.
 function onTimeRangeBoundary(mousePos: number): 'START'|'END'|null {
-  const selection = globals.state.currentSelection;
+  const selection = globals().state.currentSelection;
   if (selection !== null && selection.kind === 'AREA') {
     // If frontend selectedArea exists then we are in the process of editing the
     // time range and need to use that value instead.
-    const area = globals.frontendLocalState.selectedArea ?
-        globals.frontendLocalState.selectedArea :
-        globals.state.areas[selection.areaId];
-    const {visibleTimeScale} = globals.frontendLocalState;
-    const start = visibleTimeScale.tpTimeToPx(area.start);
-    const end = visibleTimeScale.tpTimeToPx(area.end);
+    const area = globals().frontendLocalState.selectedArea ?
+        globals().frontendLocalState.selectedArea :
+        globals().state.areas[selection.areaId];
+    const {visibleTimeScale} = globals().frontendLocalState;
+    const start = visibleTimeScale.tpTimeToPx(area!.start);
+    const end = visibleTimeScale.tpTimeToPx(area!.end);
     const startDrag = mousePos - TRACK_SHELL_WIDTH;
     const startDistance = Math.abs(start - startDrag);
     const endDistance = Math.abs(end - startDrag);
@@ -92,7 +92,7 @@ class TraceViewer implements m.ClassComponent {
   private keepCurrentSelection = false;
 
   oncreate(vnode: m.CVnodeDOM) {
-    const frontendLocalState = globals.frontendLocalState;
+    const frontendLocalState = globals().frontendLocalState;
     const updateDimensions = () => {
       const rect = vnode.dom.getBoundingClientRect();
       frontendLocalState.updateLocalLimits(
@@ -106,7 +106,7 @@ class TraceViewer implements m.ClassComponent {
     // TODO: Do resize handling better.
     this.onResize = () => {
       updateDimensions();
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     };
 
     // Once ResizeObservers are out, we can stop accessing the window here.
@@ -121,7 +121,7 @@ class TraceViewer implements m.ClassComponent {
       onPanned: (pannedPx: number) => {
         const {
           visibleTimeScale,
-        } = globals.frontendLocalState;
+        } = globals().frontendLocalState;
 
         this.keepCurrentSelection = true;
         const tDelta = visibleTimeScale.pxDeltaToDuration(pannedPx);
@@ -129,7 +129,7 @@ class TraceViewer implements m.ClassComponent {
 
         // If the user has panned they no longer need the hint.
         localStorage.setItem(DISMISSED_PANNING_HINT_KEY, 'true');
-        globals.rafScheduler.scheduleRedraw();
+        globals().rafScheduler.scheduleRedraw();
       },
       onZoomed: (zoomedPositionPx: number, zoomRatio: number) => {
         // TODO(hjd): Avoid hardcoding TRACK_SHELL_WIDTH.
@@ -138,7 +138,7 @@ class TraceViewer implements m.ClassComponent {
         const rect = vnode.dom.getBoundingClientRect();
         const centerPoint = zoomPx / (rect.width - TRACK_SHELL_WIDTH);
         frontendLocalState.zoomVisibleWindow(1 - zoomRatio, centerPoint);
-        globals.rafScheduler.scheduleRedraw();
+        globals().rafScheduler.scheduleRedraw();
       },
       editSelection: (currentPx: number) => {
         return onTimeRangeBoundary(currentPx) !== null;
@@ -150,15 +150,15 @@ class TraceViewer implements m.ClassComponent {
           currentX: number,
           currentY: number,
           editing: boolean) => {
-        const traceTime = globals.state.traceTime;
+        const traceTime = globals().state.traceTime;
         const {visibleTimeScale} = frontendLocalState;
         this.keepCurrentSelection = true;
         if (editing) {
-          const selection = globals.state.currentSelection;
+          const selection = globals().state.currentSelection;
           if (selection !== null && selection.kind === 'AREA') {
-            const area = globals.frontendLocalState.selectedArea ?
-                globals.frontendLocalState.selectedArea :
-                globals.state.areas[selection.areaId];
+            const area = globals().frontendLocalState.selectedArea ?
+                globals().frontendLocalState.selectedArea! :
+                globals().state.areas[selection.areaId];
             let newTime =
                 visibleTimeScale.pxToHpTime(currentX - TRACK_SHELL_WIDTH)
                     .toTPTime();
@@ -181,7 +181,7 @@ class TraceViewer implements m.ClassComponent {
                     BigintMath.min(keepTime, newTime), traceTime.start),
                 BigintMath.min(
                     BigintMath.max(keepTime, newTime), traceTime.end),
-                globals.state.areas[selection.areaId].tracks);
+                globals().state.areas[selection.areaId].tracks);
           }
         } else {
           let startPx = Math.min(dragStartX, currentX) - TRACK_SHELL_WIDTH;
@@ -200,29 +200,29 @@ class TraceViewer implements m.ClassComponent {
           frontendLocalState.areaY.start = dragStartY + panelBounds.y - TOPBAR_HEIGHT;
           frontendLocalState.areaY.end = currentY + panelBounds.y - TOPBAR_HEIGHT;
         }
-        globals.rafScheduler.scheduleRedraw();
+        globals().rafScheduler.scheduleRedraw();
       },
       endSelection: (edit: boolean) => {
-        globals.frontendLocalState.areaY.start = undefined;
-        globals.frontendLocalState.areaY.end = undefined;
-        const area = globals.frontendLocalState.selectedArea;
+        globals().frontendLocalState.areaY.start = undefined;
+        globals().frontendLocalState.areaY.end = undefined;
+        const area = globals().frontendLocalState.selectedArea;
         // If we are editing we need to pass the current id through to ensure
         // the marked area with that id is also updated.
         if (edit) {
-          const selection = globals.state.currentSelection;
+          const selection = globals().state.currentSelection;
           if (selection !== null && selection.kind === 'AREA' && area) {
-            globals.dispatch(
+            globals().dispatch(
                 Actions.editArea({area, areaId: selection.areaId}));
           }
         } else if (area) {
-          globals.makeSelection(Actions.selectArea({area}));
+          globals().makeSelection(Actions.selectArea({area}));
         }
         // Now the selection has ended we stored the final selected area in the
         // global state and can remove the in progress selection from the
         // frontendLocalState.
-        globals.frontendLocalState.deselectArea();
+        globals().frontendLocalState.deselectArea();
         // Full redraw to color track shell.
-        globals.rafScheduler.scheduleFullRedraw();
+        globals().rafScheduler.scheduleFullRedraw();
       },
     });
   }
@@ -233,10 +233,10 @@ class TraceViewer implements m.ClassComponent {
   }
 
   view() {
-    const scrollingPanels: AnyAttrsVnode[] = globals.state.scrollingTracks.map(
+    const scrollingPanels: AnyAttrsVnode[] = globals().state.scrollingTracks.map(
         (id) => m(TrackPanel, {key: id, id, selectable: true}));
 
-    for (const group of Object.values(globals.state.trackGroups)) {
+    for (const group of Object.values(globals().state.trackGroups)) {
       const headerPanel = m(TrackGroupPanel, {
         trackGroupId: group.id,
         key: `trackgroup-${group.id}`,
@@ -279,7 +279,7 @@ class TraceViewer implements m.ClassComponent {
                   this.keepCurrentSelection = false;
                   return;
                 }
-                globals.makeSelection(Actions.deselect({}));
+                globals().makeSelection(Actions.deselect({}));
               },
             },
             m('.pinned-panel-container', m(PanelContainer, {
@@ -290,7 +290,7 @@ class TraceViewer implements m.ClassComponent {
                   m(TimeSelectionPanel, {key: 'timeselection'}),
                   m(NotesPanel, {key: 'notes'}),
                   m(TickmarkPanel, {key: 'searchTickmarks'}),
-                  ...globals.state.pinnedTracks.map(
+                  ...globals().state.pinnedTracks.map(
                       (id) => m(TrackPanel, {key: id, id, selectable: true})),
                 ],
                 kind: 'OVERVIEW',

@@ -32,7 +32,7 @@ export class AttributeModalHolder {
   start() {
     this.showModal = true;
     fullscreenModalContainer.createNew(this.renderModal());
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   private renderModal(): ModalDefinition {
@@ -41,7 +41,7 @@ export class AttributeModalHolder {
       content:
           m(ArgumentPopup, {
             knownArguments:
-                globals.state.nonSerializableState.pivotTable.argumentNames,
+                globals().state.nonSerializableState.pivotTable.argumentNames,
             onArgumentChange: (arg) => {
               this.typedArgument = arg;
             },

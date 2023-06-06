@@ -53,7 +53,7 @@ export class TopLevelScrollDetailsTab extends
             this.config.id}`)
         .then((queryResult) => {
           this.data = queryResult.firstRow({});
-          globals.rafScheduler.scheduleFullRedraw();
+          globals().rafScheduler.scheduleFullRedraw();
         });
   }
 

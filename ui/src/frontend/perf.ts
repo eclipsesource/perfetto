@@ -20,7 +20,7 @@ import {globals} from './globals';
 import {PanelContainer} from './panel_container';
 
 // Shorthand for if globals perf debug mode is on.
-export const perfDebug = () => globals.state.perfDebug;
+export const perfDebug = () => globals().state.perfDebug;
 
 // Returns performance.now() if perfDebug is enabled, otherwise 0.
 // This is needed because calling performance.now is generally expensive
@@ -105,10 +105,10 @@ class PerfDisplay {
     const perfDisplayEl = document.querySelector('.perf-stats');
     if (!perfDisplayEl) return;
     m.render(perfDisplayEl, [
-      m('section', globals.rafScheduler.renderPerfStats()),
+      m('section', globals().rafScheduler.renderPerfStats()),
       m('button.close-button',
         {
-          onclick: () => globals.dispatch(Actions.togglePerfDebug({})),
+          onclick: () => globals().dispatch(Actions.togglePerfDebug({})),
         },
         m('i.material-icons', 'close')),
       this.containers.map((c, i) => m('section', c.renderPerfStats(i))),

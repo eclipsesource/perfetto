@@ -29,7 +29,7 @@ export class RecordingSettings implements
     const M = (x: number) => x * 1000 * 60;
     const H = (x: number) => x * 1000 * 60 * 60;
 
-    const cfg = globals.state.recordConfig;
+    const cfg = globals().state.recordConfig;
 
     const recButton = (mode: RecordMode, title: string, img: string) => {
       const checkboxArgs = {
@@ -37,16 +37,16 @@ export class RecordingSettings implements
         onchange: (e: InputEvent) => {
           const checked = (e.target as HTMLInputElement).checked;
           if (!checked) return;
-          const traceCfg = produce(globals.state.recordConfig, (draft) => {
+          const traceCfg = produce(globals().state.recordConfig, (draft) => {
             draft.mode = mode;
           });
-          globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+          globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
         },
       };
       return m(
           `label${cfg.mode === mode ? '.selected' : ''}`,
           m(`input[type=radio][name=rec_mode]`, checkboxArgs),
-          m(`img[src=${globals.root}assets/${img}]`),
+          m(`img[src=${globals().root}assets/${img}]`),
           m('span', title));
     };
 

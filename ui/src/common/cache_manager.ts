@@ -122,14 +122,14 @@ export async function cacheTrace(
   ]);
   await deleteStaleEntries();
   await cachePut(
-      `${globals.cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`, new Response(trace, {headers}));
+      `${globals().cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`, new Response(trace, {headers}));
   return true;
 }
 
 export async function tryGetTrace(traceUuid: string):
     Promise<TraceArrayBufferSource|undefined> {
   await deleteStaleEntries();
-  const response = await cacheMatch(`${globals.cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`);
+  const response = await cacheMatch(`${globals().cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`);
 
   if (!response) return undefined;
   return {

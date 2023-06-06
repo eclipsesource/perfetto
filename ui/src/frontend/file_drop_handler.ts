@@ -42,7 +42,7 @@ export function installFileDropHandler() {
     if (evt.dataTransfer && dragEventHasFiles(evt)) {
       const file = evt.dataTransfer.files[0];
       if (file) {
-        globals.dispatch(Actions.openTraceFromFile({file}));
+        globals().dispatch(Actions.openTraceFromFile({file}));
       }
     }
     evt.preventDefault();

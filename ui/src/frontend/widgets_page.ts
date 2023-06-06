@@ -68,7 +68,7 @@ function PortalButton() {
           label: 'Toggle Portal',
           onclick: () => {
             portalOpen = !portalOpen;
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
         }),
         portalOpen &&
@@ -118,7 +118,7 @@ function ControlledPopup() {
             label: 'Close Popup',
             onclick: () => {
               popupOpen = !popupOpen;
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().rafScheduler.scheduleFullRedraw();
             },
           }),
       );
@@ -220,7 +220,7 @@ class WidgetShowcase implements m.ClassComponent<WidgetShowcaseAttrs> {
       label: key,
       onchange: () => {
         this.optValues[key] = !this.optValues[key];
-        globals.rafScheduler.scheduleFullRedraw();
+        globals().rafScheduler.scheduleFullRedraw();
       },
     });
   }
@@ -236,7 +236,7 @@ class WidgetShowcase implements m.ClassComponent<WidgetShowcaseAttrs> {
           onchange: (e: Event) => {
             const el = e.target as HTMLSelectElement;
             this.optValues[key] = el.value;
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
         },
         optionElements);
@@ -419,7 +419,7 @@ export const WidgetsPage = createPage({
               diffs.forEach(({id, checked}) => {
                 options[id] = checked;
               });
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().rafScheduler.scheduleFullRedraw();
             },
             ...rest,
           }),

@@ -62,17 +62,17 @@ export function runAnalyzeQuery(query: string) {
         return;
       }
       state.queryResult = resp;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     });
   }
 }
 
 function getEngine(): EngineProxy|undefined {
-  const engineId = globals.getCurrentEngine()?.id;
+  const engineId = globals().getCurrentEngine()?.id;
   if (engineId === undefined) {
     return undefined;
   }
-  const engine = globals.engines.get(engineId)?.getProxy('AnalyzePage');
+  const engine = globals().engines.get(engineId)?.getProxy('AnalyzePage');
   return engine;
 }
 
@@ -162,7 +162,7 @@ class QueryInput implements m.ClassComponent {
         Math.min(Math.max(textareaLines, INPUT_MIN_LINES), INPUT_MAX_LINES);
     this.displayLines = clampedNumLines;
     state.enteredText = textareaValue;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   // This method exists because unfortunatley setting custom properties on an
@@ -218,7 +218,7 @@ export const AnalyzePage = createPage({
           onClose: () => {
             state.executedQuery = undefined;
             state.queryResult = undefined;
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
         }),
         m(QueryHistoryComponent));

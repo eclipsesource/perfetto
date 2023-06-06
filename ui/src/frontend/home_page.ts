@@ -27,7 +27,7 @@ export const HomePage = createPage({
         m(
             '.home-page-center',
             m('.home-page-title', 'Perfetto'),
-            m(`img.logo[src=${globals.root}assets/logo-3d.png]`),
+            m(`img.logo[src=${globals().root}assets/logo-3d.png]`),
             m(
                 'div.channel-select',
                 m('div',

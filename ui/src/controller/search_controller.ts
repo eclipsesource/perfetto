@@ -69,13 +69,13 @@ export class SearchController extends Controller<'main'> {
       return;
     }
 
-    const visibleState = globals.state.frontendLocalState.visibleState;
-    const omniboxState = globals.state.omniboxState;
+    const visibleState = globals().state.frontendLocalState.visibleState;
+    const omniboxState = globals().state.omniboxState;
     if (visibleState === undefined || omniboxState === undefined ||
         omniboxState.mode === 'COMMAND') {
       return;
     }
-    const newSpan = globals.stateVisibleTime();
+    const newSpan = globals().stateVisibleTime();
     const newSearch = omniboxState.omnibox;
     const newResolution = visibleState.resolution;
     if (this.previousSpan.contains(newSpan) &&
@@ -197,7 +197,7 @@ export class SearchController extends Controller<'main'> {
     // TODO(hjd): we should avoid recomputing this every time. This will be
     // easier once the track table has entries for all the tracks.
     const cpuToTrackId = new Map();
-    for (const track of Object.values(globals.state.tracks)) {
+    for (const track of Object.values(globals().state.tracks)) {
       if (track.kind === 'CpuSliceTrack') {
         cpuToTrackId.set((track.config as {cpu: number}).cpu, track.id);
         continue;
@@ -273,9 +273,9 @@ export class SearchController extends Controller<'main'> {
       if (it.source === 'cpu') {
         trackId = cpuToTrackId.get(it.sourceId);
       } else if (it.source === 'track') {
-        trackId = globals.state.uiTrackIdByTraceTrackId[it.sourceId];
+        trackId = globals().state.uiTrackIdByTraceTrackId[it.sourceId];
       } else if (it.source === 'log') {
-        const logTracks = Object.values(globals.state.tracks)
+        const logTracks = Object.values(globals().state.tracks)
                               .filter((t) => t.kind === 'AndroidLogTrack');
         if (logTracks.length > 0) {
           trackId = logTracks[0].id;

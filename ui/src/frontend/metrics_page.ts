@@ -20,7 +20,7 @@ import {createPage} from './pages';
 import {Button} from './widgets/button';
 
 function getCurrSelectedMetric() {
-  const {availableMetrics, selectedIndex} = globals.state.metrics;
+  const {availableMetrics, selectedIndex} = globals().state.metrics;
   if (!availableMetrics) return undefined;
   if (selectedIndex === undefined) return undefined;
   return availableMetrics[selectedIndex];
@@ -28,7 +28,7 @@ function getCurrSelectedMetric() {
 
 class MetricResult implements m.ClassComponent {
   view() {
-    const metricResult = globals.metricResult;
+    const metricResult = globals().metricResult;
     if (metricResult === undefined) return undefined;
     const currSelection = getCurrSelectedMetric();
     if (!(metricResult && metricResult.name === currSelection)) {
@@ -46,7 +46,7 @@ class MetricResult implements m.ClassComponent {
 
 class MetricPicker implements m.ClassComponent {
   view() {
-    const {availableMetrics, selectedIndex} = globals.state.metrics;
+    const {availableMetrics, selectedIndex} = globals().state.metrics;
     if (availableMetrics === undefined) return 'Loading metrics...';
     if (availableMetrics.length === 0) return 'No metrics available';
     if (selectedIndex === undefined) {
@@ -57,16 +57,16 @@ class MetricPicker implements m.ClassComponent {
       'Select a metric:',
       m('select',
         {
-          selectedIndex: globals.state.metrics.selectedIndex,
+          selectedIndex: globals().state.metrics.selectedIndex,
           onchange: (e: InputEvent) => {
-            globals.dispatch(Actions.setMetricSelectedIndex(
+            globals().dispatch(Actions.setMetricSelectedIndex(
                 {index: (e.target as HTMLSelectElement).selectedIndex}));
           },
         },
         availableMetrics.map(
             (metric) => m('option', {value: metric, key: metric}, metric))),
       m(Button, {
-        onclick: () => globals.dispatch(Actions.requestSelectedMetric({})),
+        onclick: () => globals().dispatch(Actions.requestSelectedMetric({})),
         label: 'Run',
       }),
     ]);

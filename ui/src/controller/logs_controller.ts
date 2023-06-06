@@ -226,10 +226,10 @@ export class LogsController extends Controller<'main'> {
   }
 
   private async updateLogTracks() {
-    const newSpan = globals.stateVisibleTime();
+    const newSpan = globals().stateVisibleTime();
     const oldSpan = this.span;
 
-    const pagination = globals.state.logsPagination;
+    const pagination = globals().state.logsPagination;
     // This can occur when loading old traces.
     // TODO(hjd): Fix the problem of accessing state from a previous version of
     // the UI in a general way.
@@ -242,13 +242,13 @@ export class LogsController extends Controller<'main'> {
     const oldPagination = this.pagination;
 
     const newFilteringCriteria =
-        this.logFilteringCriteria !== globals.state.logFilteringCriteria;
+        this.logFilteringCriteria !== globals().state.logFilteringCriteria;
     const needBoundsUpdate = !oldSpan.equals(newSpan) || newFilteringCriteria;
     const needEntriesUpdate =
         !oldPagination.contains(requestedPagination) || needBoundsUpdate;
 
     if (newFilteringCriteria) {
-      this.logFilteringCriteria = globals.state.logFilteringCriteria;
+      this.logFilteringCriteria = globals().state.logFilteringCriteria;
       await this.engine.query('drop view if exists filtered_logs');
 
       const globMatch = LogsController.composeGlobMatch(

@@ -77,7 +77,7 @@ export class ReorderableCellGroup implements
                   e.dataTransfer.setDragImage(placeholderElement, 0, 0);
                 }
 
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
               ondragover: (e: DragEvent) => {
                 let target = e.target as HTMLElement;
@@ -107,7 +107,7 @@ export class ReorderableCellGroup implements
 
 
                 if (redraw) {
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 }
               },
               ondragenter: (e: DragEvent) => {
@@ -129,7 +129,7 @@ export class ReorderableCellGroup implements
                 }
 
                 this.draggingTo = -1;
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
               ondragend: () => {
                 if (this.draggingTo !== this.draggingFrom &&
@@ -140,7 +140,7 @@ export class ReorderableCellGroup implements
 
                 this.draggingFrom = -1;
                 this.draggingTo = -1;
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
             },
             cell.content));

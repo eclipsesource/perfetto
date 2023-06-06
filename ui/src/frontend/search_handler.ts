@@ -19,27 +19,27 @@ import {globals} from './globals';
 function setToPrevious(current: number) {
   let index = current - 1;
   if (index < 0) {
-    index = globals.currentSearchResults.totalResults - 1;
+    index = globals().currentSearchResults.totalResults - 1;
   }
-  globals.dispatch(Actions.setSearchIndex({index}));
+  globals().dispatch(Actions.setSearchIndex({index}));
 }
 
 function setToNext(current: number) {
   const index =
-      (current + 1) % globals.currentSearchResults.totalResults;
-  globals.dispatch(Actions.setSearchIndex({index}));
+      (current + 1) % globals().currentSearchResults.totalResults;
+  globals().dispatch(Actions.setSearchIndex({index}));
 }
 
 export function executeSearch(reverse = false) {
-  const index = globals.state.searchIndex;
-  const vizWindow = globals.stateTraceTimeTP();
+  const index = globals().state.searchIndex;
+  const vizWindow = globals().stateTraceTimeTP();
   const startNs = vizWindow.start;
   const endNs = vizWindow.end;
-  const currentTs = globals.currentSearchResults.tsStarts[index];
+  const currentTs = globals().currentSearchResults.tsStarts[index];
 
   // If the value of |globals.currentSearchResults.totalResults| is 0,
   // it means that the query is in progress or no results are found.
-  if (globals.currentSearchResults.totalResults === 0) {
+  if (globals().currentSearchResults.totalResults === 0) {
     return;
   }
 
@@ -48,21 +48,21 @@ export function executeSearch(reverse = false) {
   if (index === -1 || currentTs < startNs || currentTs > endNs) {
     if (reverse) {
       const [smaller] =
-          searchSegment(globals.currentSearchResults.tsStarts, endNs);
+          searchSegment(globals().currentSearchResults.tsStarts, endNs);
       // If there is no item in the viewport just go to the previous.
       if (smaller === -1) {
         setToPrevious(index);
       } else {
-        globals.dispatch(Actions.setSearchIndex({index: smaller}));
+        globals().dispatch(Actions.setSearchIndex({index: smaller}));
       }
     } else {
       const [, larger] =
-          searchSegment(globals.currentSearchResults.tsStarts, startNs);
+          searchSegment(globals().currentSearchResults.tsStarts, startNs);
       // If there is no item in the viewport just go to the next.
       if (larger === -1) {
         setToNext(index);
       } else {
-        globals.dispatch(Actions.setSearchIndex({index: larger}));
+        globals().dispatch(Actions.setSearchIndex({index: larger}));
       }
     }
   } else {
@@ -77,22 +77,22 @@ export function executeSearch(reverse = false) {
 }
 
 function selectCurrentSearchResult() {
-  const searchIndex = globals.state.searchIndex;
-  const source = globals.currentSearchResults.sources[searchIndex];
-  const currentId = globals.currentSearchResults.sliceIds[searchIndex];
-  const trackId = globals.currentSearchResults.trackIds[searchIndex];
+  const searchIndex = globals().state.searchIndex;
+  const source = globals().currentSearchResults.sources[searchIndex];
+  const currentId = globals().currentSearchResults.sliceIds[searchIndex];
+  const trackId = globals().currentSearchResults.trackIds[searchIndex];
 
   if (currentId === undefined) return;
 
   if (source === 'cpu') {
-    globals.dispatch(
+    globals().dispatch(
         Actions.selectSlice({id: currentId, trackId, scroll: true}));
   } else if (source === 'log') {
-    globals.dispatch(Actions.selectLog({id: currentId, trackId, scroll: true}));
+    globals().dispatch(Actions.selectLog({id: currentId, trackId, scroll: true}));
   } else {
     // Search results only include slices from the slice table for now.
     // When we include annotations we need to pass the correct table.
-    globals.dispatch(Actions.selectChromeSlice(
+    globals().dispatch(Actions.selectChromeSlice(
         {id: currentId, trackId, table: 'slice', scroll: true}));
   }
 }

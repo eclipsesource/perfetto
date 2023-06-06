@@ -49,17 +49,17 @@ export class FtraceController extends Controller<'main'> {
 
   run() {
     if (this.shouldUpdate()) {
-      this.oldSpan = globals.frontendLocalState.visibleWindowTime;
-      this.oldFtraceFilter = globals.state.ftraceFilter;
-      this.oldPagination = globals.state.ftracePagination;
-      if (globals.state.ftracePagination.count > 0) {
+      this.oldSpan = globals().frontendLocalState.visibleWindowTime;
+      this.oldFtraceFilter = globals().state.ftraceFilter;
+      this.oldPagination = globals().state.ftracePagination;
+      if (globals().state.ftracePagination.count > 0) {
         this.lookupFtraceEventsRateLimited();
       }
     }
   }
 
   private lookupFtraceEventsRateLimited = ratelimit(() => {
-    const {offset, count} = globals.state.ftracePagination;
+    const {offset, count} = globals().state.ftracePagination;
     // The formatter doesn't like formatted chained methods :(
     const promise = this.lookupFtraceEvents(offset, count);
     promise.then(({events, offset, numEvents}: RetVal) => {
@@ -69,18 +69,18 @@ export class FtraceController extends Controller<'main'> {
 
   private shouldUpdate(): boolean {
     // Has the visible window moved?
-    const visibleWindow = globals.frontendLocalState.visibleWindowTime;
+    const visibleWindow = globals().frontendLocalState.visibleWindowTime;
     if (!this.oldSpan.equals(visibleWindow)) {
       return true;
     }
 
     // Has the pagination changed?
-    if (this.oldPagination !== globals.state.ftracePagination) {
+    if (this.oldPagination !== globals().state.ftracePagination) {
       return true;
     }
 
     // Has the filter changed?
-    if (this.oldFtraceFilter !== globals.state.ftraceFilter) {
+    if (this.oldFtraceFilter !== globals().state.ftraceFilter) {
       return true;
     }
 
@@ -88,8 +88,8 @@ export class FtraceController extends Controller<'main'> {
   }
 
   async lookupFtraceEvents(offset: number, count: number): Promise<RetVal> {
-    const appState = globals.state;
-    const {start, end} = globals.stateVisibleTime();
+    const appState = globals().state;
+    const {start, end} = globals().stateVisibleTime();
 
     const excludeList = appState.ftraceFilter.excludedNames;
     const excludeListSql = excludeList.map((s) => `'${s}'`).join(',');

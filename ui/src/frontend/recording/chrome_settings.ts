@@ -42,9 +42,9 @@ class ChromeCategoriesSelection implements
     // If we are attempting to record via the Chrome extension, we receive the
     // list of actually supported categories via DevTools. Otherwise, we fall
     // back to an integrated list of categories from a recent version of Chrome.
-    let categories = globals.state.chromeCategories ||
+    let categories = globals().state.chromeCategories ||
         extractChromeCategories(attrs.dataSources);
-    if (!categories || !isChromeTarget(globals.state.recordingTarget)) {
+    if (!categories || !isChromeTarget(globals().state.recordingTarget)) {
       categories = getBuiltinChromeCategoryList();
     }
 

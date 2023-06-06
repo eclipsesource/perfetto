@@ -105,7 +105,7 @@ class AndroidLogTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const {visibleTimeScale, windowSpan} = globals.frontendLocalState;
+    const {visibleTimeScale, windowSpan} = globals().frontendLocalState;
 
     const data = this.data();
 

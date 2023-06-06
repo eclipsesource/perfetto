@@ -56,7 +56,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     this.trackGroupId = attrs.trackGroupId;
     const trackCreator = trackRegistry.get(this.summaryTrackState.kind);
     const engineId = this.summaryTrackState.engineId;
-    const engine = globals.engines.get(engineId);
+    const engine = globals().engines.get(engineId);
     if (engine !== undefined) {
       this.summaryTrack =
           trackCreator.create({trackId: this.summaryTrackState.id, engine});
@@ -64,11 +64,11 @@ export class TrackGroupPanel extends Panel<Attrs> {
   }
 
   get trackGroupState(): TrackGroupState {
-    return assertExists(globals.state.trackGroups[this.trackGroupId]);
+    return assertExists(globals().state.trackGroups[this.trackGroupId]);
   }
 
   get summaryTrackState(): TrackState {
-    return assertExists(globals.state.tracks[this.trackGroupState.tracks[0]]);
+    return assertExists(globals().state.tracks[this.trackGroupState.tracks[0]]);
   }
 
   view({attrs}: m.CVnode<Attrs>) {
@@ -81,21 +81,21 @@ export class TrackGroupPanel extends Panel<Attrs> {
     // The shell should be highlighted if the current search result is inside
     // this track group.
     let highlightClass = '';
-    const searchIndex = globals.state.searchIndex;
+    const searchIndex = globals().state.searchIndex;
     if (searchIndex !== -1) {
-      const trackId = globals.currentSearchResults.trackIds[searchIndex];
-      const parentTrackId = getContainingTrackId(globals.state, trackId);
+      const trackId = globals().currentSearchResults.trackIds[searchIndex];
+      const parentTrackId = getContainingTrackId(globals().state, trackId);
       if (parentTrackId === attrs.trackGroupId) {
         highlightClass = 'flash';
       }
     }
 
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
 
-    const trackGroup = globals.state.trackGroups[attrs.trackGroupId];
+    const trackGroup = globals().state.trackGroups[attrs.trackGroupId];
     let checkBox = BLANK_CHECKBOX;
     if (selection !== null && selection.kind === 'AREA') {
-      const selectedArea = globals.state.areas[selection.areaId];
+      const selectedArea = globals().state.areas[selection.areaId];
       if (selectedArea.tracks.includes(attrs.trackGroupId) &&
           trackGroup.tracks.every((id) => selectedArea.tracks.includes(id))) {
         checkBox = CHECKBOX;
@@ -118,7 +118,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
         m(`.shell`,
           {
             onclick: (e: MouseEvent) => {
-              globals.dispatch(Actions.toggleTrackGroupCollapsed({
+              globals().dispatch(Actions.toggleTrackGroupCollapsed({
                 trackGroupId: attrs.trackGroupId,
               })),
                   e.stopPropagation();
@@ -142,7 +142,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
               m('i.material-icons.track-button',
                 {
                   onclick: (e: MouseEvent) => {
-                    globals.dispatch(Actions.toggleTrackSelection(
+                    globals().dispatch(Actions.toggleTrackSelection(
                         {id: attrs.trackGroupId, isTrackGroup: true}));
                     e.stopPropagation();
                   },
@@ -187,10 +187,10 @@ export class TrackGroupPanel extends Panel<Attrs> {
   }
 
   highlightIfTrackSelected(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    const {visibleTimeScale} = globals.frontendLocalState;
-    const selection = globals.state.currentSelection;
+    const {visibleTimeScale} = globals().frontendLocalState;
+    const selection = globals().state.currentSelection;
     if (!selection || selection.kind !== 'AREA') return;
-    const selectedArea = globals.state.areas[selection.areaId];
+    const selectedArea = globals().state.areas[selection.areaId];
     const selectedAreaDuration = selectedArea.end - selectedArea.start;
     if (selectedArea.tracks.includes(this.trackGroupId)) {
       ctx.fillStyle = 'rgba(131, 152, 230, 0.3)';
@@ -226,53 +226,53 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
     this.highlightIfTrackSelected(ctx, size);
 
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     // Draw vertical line when hovering on the notes panel.
-    if (globals.state.hoveredNoteTimestamp !== -1n) {
+    if (globals().state.hoveredNoteTimestamp !== -1n) {
       drawVerticalLineAtTime(
           ctx,
           visibleTimeScale,
-          globals.state.hoveredNoteTimestamp,
+          globals().state.hoveredNoteTimestamp,
           size.height,
           `#aaa`);
     }
-    if (globals.state.hoverCursorTimestamp !== -1n) {
+    if (globals().state.hoverCursorTimestamp !== -1n) {
       drawVerticalLineAtTime(
           ctx,
           visibleTimeScale,
-          globals.state.hoverCursorTimestamp,
+          globals().state.hoverCursorTimestamp,
           size.height,
           `#344596`);
     }
 
-    if (globals.state.currentSelection !== null) {
-      if (globals.state.currentSelection.kind === 'SLICE' &&
-          globals.sliceDetails.wakeupTs !== undefined) {
+    if (globals().state.currentSelection !== null) {
+      if (globals().state.currentSelection!.kind === 'SLICE' &&
+          globals().sliceDetails.wakeupTs !== undefined) {
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.sliceDetails.wakeupTs,
+            globals().sliceDetails.wakeupTs!,
             size.height,
             `black`);
       }
     }
     // All marked areas should have semi-transparent vertical lines
     // marking the start and end.
-    for (const note of Object.values(globals.state.notes)) {
+    for (const note of Object.values(globals().state.notes)) {
       if (note.noteType === 'AREA') {
         const transparentNoteColor =
             'rgba(' + hex.rgb(note.color.substr(1)).toString() + ', 0.65)';
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.state.areas[note.areaId].start,
+            globals().state.areas[note.areaId].start,
             size.height,
             transparentNoteColor,
             1);
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.state.areas[note.areaId].end,
+            globals().state.areas[note.areaId].end,
             size.height,
             transparentNoteColor,
             1);

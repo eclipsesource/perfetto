@@ -21,7 +21,7 @@ const changedPaths = new Set<string>();
 
 export function initLiveReloadIfLocalhost() {
   if (!location.origin.startsWith('http://localhost:')) return;
-  if (globals.embeddedMode) return;
+  if (globals().embeddedMode) return;
 
   const monitor = new EventSource('/live_reload');
   monitor.onmessage = (msg) => {

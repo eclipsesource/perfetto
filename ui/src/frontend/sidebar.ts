@@ -120,7 +120,7 @@ const GITILES_URL =
 let lastTabTitle = '';
 
 function getBugReportUrl(): string {
-  if (globals.isInternalUser) {
+  if (globals().isInternalUser) {
     return 'https://goto.google.com/perfetto-ui-bug';
   } else {
     return 'https://github.com/google/perfetto/issues/new';
@@ -142,7 +142,7 @@ const WIDGETS_PAGE_IN_NAV_FLAG = featureFlags.register({
 });
 
 function shouldShowHiringBanner(): boolean {
-  return globals.isInternalUser && HIRING_BANNER_FLAG.get();
+  return globals().isInternalUser && HIRING_BANNER_FLAG.get();
 }
 
 function createCannedQuery(query: string, title: string): (_: Event) => void {
@@ -215,7 +215,7 @@ const SECTIONS: Section[] = [
         a: shareTrace,
         i: 'share',
         internalUserOnly: true,
-        isPending: () => globals.getConversionJobStatus('create_permalink') ===
+        isPending: () => globals().getConversionJobStatus('create_permalink') ===
             ConversionJobStatus.InProgress,
       },
       {
@@ -240,14 +240,14 @@ const SECTIONS: Section[] = [
         t: 'Switch to legacy UI',
         a: openCurrentTraceWithOldUI,
         i: 'filter_none',
-        isPending: () => globals.getConversionJobStatus('open_in_legacy') ===
+        isPending: () => globals().getConversionJobStatus('open_in_legacy') ===
             ConversionJobStatus.InProgress,
       },
       {
         t: 'Convert to .json',
         a: convertTraceToJson,
         i: 'file_download',
-        isPending: () => globals.getConversionJobStatus('convert_json') ===
+        isPending: () => globals().getConversionJobStatus('convert_json') ===
             ConversionJobStatus.InProgress,
         checkDownloadDisabled: true,
       },
@@ -256,8 +256,8 @@ const SECTIONS: Section[] = [
         t: 'Convert to .systrace',
         a: convertTraceToSystrace,
         i: 'file_download',
-        isVisible: () => globals.hasFtrace,
-        isPending: () => globals.getConversionJobStatus('convert_systrace') ===
+        isVisible: () => globals().hasFtrace,
+        isPending: () => globals().getConversionJobStatus('convert_systrace') ===
             ConversionJobStatus.InProgress,
         checkDownloadDisabled: true,
       },
@@ -385,7 +385,7 @@ function downloadTraceFromUrl(url: string): Promise<File> {
       xhr.responseType = 'blob';
       xhr.onprogress = (progress) => {
         const percent = (100 * progress.loaded / progress.total).toFixed(1);
-        globals.dispatch(Actions.updateStatus({
+        globals().dispatch(Actions.updateStatus({
           msg: `Downloading trace ${percent}%`,
           timestamp: Date.now() / 1000,
         }));
@@ -399,7 +399,7 @@ function downloadTraceFromUrl(url: string): Promise<File> {
 
 export async function getCurrentTrace(): Promise<Blob> {
   // Caller must check engine exists.
-  const engine = assertExists(globals.getCurrentEngine());
+  const engine = assertExists(globals().getCurrentEngine());
   const src = engine.source;
   if (src.type === 'ARRAY_BUFFER') {
     return new Blob([src.buffer]);
@@ -415,7 +415,7 @@ export async function getCurrentTrace(): Promise<Blob> {
 function openCurrentTraceWithOldUI(e: Event) {
   e.preventDefault();
   assertTrue(isTraceLoaded());
-  globals.logging.logEvent('Trace Actions', 'Open current trace in legacy UI');
+  globals().logging.logEvent('Trace Actions', 'Open current trace in legacy UI');
   if (!isTraceLoaded) return;
   getCurrentTrace()
       .then((file) => {
@@ -429,7 +429,7 @@ function openCurrentTraceWithOldUI(e: Event) {
 function convertTraceToSystrace(e: Event) {
   e.preventDefault();
   assertTrue(isTraceLoaded());
-  globals.logging.logEvent('Trace Actions', 'Convert to .systrace');
+  globals().logging.logEvent('Trace Actions', 'Convert to .systrace');
   if (!isTraceLoaded) return;
   getCurrentTrace()
       .then((file) => {
@@ -443,7 +443,7 @@ function convertTraceToSystrace(e: Event) {
 function convertTraceToJson(e: Event) {
   e.preventDefault();
   assertTrue(isTraceLoaded());
-  globals.logging.logEvent('Trace Actions', 'Convert to .json');
+  globals().logging.logEvent('Trace Actions', 'Convert to .json');
   if (!isTraceLoaded) return;
   getCurrentTrace()
       .then((file) => {
@@ -455,14 +455,14 @@ function convertTraceToJson(e: Event) {
 }
 
 export function isTraceLoaded(): boolean {
-  return globals.getCurrentEngine() !== undefined;
+  return globals().getCurrentEngine() !== undefined;
 }
 
 function openTraceUrl(url: string): (e: Event) => void {
   return (e) => {
-    globals.logging.logEvent('Trace Actions', 'Open example trace');
+    globals().logging.logEvent('Trace Actions', 'Open example trace');
     e.preventDefault();
-    globals.dispatch(Actions.openTraceFromUrl({url}));
+    globals().dispatch(Actions.openTraceFromUrl({url}));
   };
 }
 
@@ -480,13 +480,13 @@ function onInputElementFileSelectionChanged(e: Event) {
     return;
   }
 
-  globals.logging.logEvent('Trace Actions', 'Open trace from file');
-  globals.dispatch(Actions.openTraceFromFile({file}));
+  globals().logging.logEvent('Trace Actions', 'Open trace from file');
+  globals().dispatch(Actions.openTraceFromFile({file}));
 }
 
 async function openWithLegacyUi(file: File) {
   // Switch back to the old catapult UI.
-  globals.logging.logEvent('Trace Actions', 'Open trace in Legacy UI');
+  globals().logging.logEvent('Trace Actions', 'Open trace in Legacy UI');
   if (await isLegacyTrace(file)) {
     openFileWithLegacyTraceViewer(file);
     return;
@@ -575,7 +575,7 @@ function navigateViewer(e: Event) {
 
 function shareTrace(e: Event) {
   e.preventDefault();
-  const engine = assertExists(globals.getCurrentEngine());
+  const engine = assertExists(globals().getCurrentEngine());
   const traceUrl = (engine.source as (TraceArrayBufferSource)).url || '';
 
   // If the trace is not shareable (has been pushed via postMessage()) but has
@@ -604,17 +604,17 @@ function shareTrace(e: Event) {
       `Upload UI state and generate a permalink. ` +
       `The trace will be accessible by anybody with the permalink.`);
   if (result) {
-    globals.logging.logEvent('Trace Actions', 'Create permalink');
-    globals.dispatch(Actions.createPermalink({isRecordingConfig: false}));
+    globals().logging.logEvent('Trace Actions', 'Create permalink');
+    globals().dispatch(Actions.createPermalink({isRecordingConfig: false}));
   }
 }
 
 function downloadTrace(e: Event) {
   e.preventDefault();
   if (!isDownloadable() || !isTraceLoaded()) return;
-  globals.logging.logEvent('Trace Actions', 'Download trace');
+  globals().logging.logEvent('Trace Actions', 'Download trace');
 
-  const engine = globals.getCurrentEngine();
+  const engine = globals().getCurrentEngine();
   if (!engine) return;
   let url = '';
   let fileName = `trace${TRACE_SUFFIX}`;
@@ -643,21 +643,21 @@ function downloadTrace(e: Event) {
 }
 
 function getCurrentEngine(): Engine|undefined {
-  const engineId = globals.getCurrentEngine()?.id;
+  const engineId = globals().getCurrentEngine()?.id;
   if (engineId === undefined) return undefined;
-  return globals.engines.get(engineId);
+  return globals().engines.get(engineId);
 }
 
 function highPrecisionTimersAvailable(): boolean {
   // High precision timers are available either when the page is cross-origin
   // isolated or when the trace processor is a standalone binary.
   return window.crossOriginIsolated ||
-      globals.getCurrentEngine()?.mode === 'HTTP_RPC';
+      globals().getCurrentEngine()?.mode === 'HTTP_RPC';
 }
 
 function recordMetatrace(e: Event) {
   e.preventDefault();
-  globals.logging.logEvent('Trace Actions', 'Record metatrace');
+  globals().logging.logEvent('Trace Actions', 'Record metatrace');
 
   const engine = getCurrentEngine();
   if (!engine) return;
@@ -699,7 +699,7 @@ Alternatively, connect to a trace_processor_shell --httpd instance.
 
 async function finaliseMetatrace(e: Event) {
   e.preventDefault();
-  globals.logging.logEvent('Trace Actions', 'Finalise metatrace');
+  globals().logging.logEvent('Trace Actions', 'Finalise metatrace');
 
   const jsEvents = disableMetatracingAndGetTrace();
 
@@ -723,7 +723,7 @@ const EngineRPCWidget: m.Component = {
     let failed = false;
     let mode: EngineMode|undefined;
 
-    const engine = globals.state.engine;
+    const engine = globals().state.engine;
     if (engine !== undefined) {
       mode = engine.mode;
       if (engine.failed !== undefined) {
@@ -739,8 +739,8 @@ const EngineRPCWidget: m.Component = {
     // RPC server is shut down after we load the UI and cached httpRpcState)
     // this will eventually become  consistent once the engine is created.
     if (mode === undefined) {
-      if (globals.frontendLocalState.httpRpcState.connected &&
-          globals.state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
+      if (globals().frontendLocalState.httpRpcState.connected &&
+          globals().state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
         mode = 'HTTP_RPC';
       } else {
         mode = 'WASM';
@@ -760,7 +760,7 @@ const EngineRPCWidget: m.Component = {
         `.dbg-info-square${cssClass}`,
         {title},
         m('div', label),
-        m('div', `${failed ? 'FAIL' : globals.numQueuedQueries}`));
+        m('div', `${failed ? 'FAIL' : globals().numQueuedQueries}`));
   },
 };
 
@@ -769,7 +769,7 @@ const ServiceWorkerWidget: m.Component = {
     let cssClass = '';
     let title = 'Service Worker: ';
     let label = 'N/A';
-    const ctl = globals.serviceWorkerController;
+    const ctl = globals().serviceWorkerController;
     if ((!('serviceWorker' in navigator))) {
       label = 'N/A';
       title += 'not supported by the browser (requires HTTPS)';
@@ -791,8 +791,8 @@ const ServiceWorkerWidget: m.Component = {
     }
 
     const toggle = async () => {
-      if (globals.serviceWorkerController.bypassed) {
-        globals.serviceWorkerController.setBypass(false);
+      if (globals().serviceWorkerController.bypassed) {
+        globals().serviceWorkerController.setBypass(false);
         return;
       }
       showModal({
@@ -813,7 +813,7 @@ const ServiceWorkerWidget: m.Component = {
             text: 'Disable and reload',
             primary: true,
             action: () => {
-              globals.serviceWorkerController.setBypass(true).then(
+              globals().serviceWorkerController.setBypass(true).then(
                   () => location.reload());
             },
           },
@@ -836,7 +836,7 @@ const SidebarFooter: m.Component = {
         '.sidebar-footer',
         m('button',
           {
-            onclick: () => globals.dispatch(Actions.togglePerfDebug({})),
+            onclick: () => globals().dispatch(Actions.togglePerfDebug({})),
           },
           m('i.material-icons',
             {title: 'Toggle Perf Debug Mode'},
@@ -872,9 +872,9 @@ class HiringBanner implements m.ClassComponent {
 
 export class Sidebar implements m.ClassComponent {
   private _redrawWhileAnimating =
-      new Animation(() => globals.rafScheduler.scheduleFullRedraw());
+      new Animation(() => globals().rafScheduler.scheduleFullRedraw());
   view() {
-    if (globals.hideSidebar) return null;
+    if (globals().hideSidebar) return null;
     const vdomSections = [];
     for (const section of SECTIONS) {
       if (section.hideIfNoTraceLoaded && !isTraceLoaded()) continue;
@@ -895,7 +895,7 @@ export class Sidebar implements m.ClassComponent {
           attrs.onclick = (e) => e.preventDefault();
           css = '.pending';
         }
-        if (item.internalUserOnly && !globals.isInternalUser) {
+        if (item.internalUserOnly && !globals().isInternalUser) {
           continue;
         }
         if (item.checkMetatracingEnabled || item.checkMetatracingDisabled) {
@@ -928,7 +928,7 @@ export class Sidebar implements m.ClassComponent {
             'li', m(`a${css}`, attrs, m('i.material-icons', item.i), item.t)));
       }
       if (section.appendOpenedTraceTitle) {
-        const engine = globals.state.engine;
+        const engine = globals().state.engine;
         if (engine !== undefined) {
           let traceTitle = '';
           let traceUrl = '';
@@ -971,7 +971,7 @@ export class Sidebar implements m.ClassComponent {
               {
                 onclick: () => {
                   section.expanded = !section.expanded;
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 },
               },
               m('h1', {title: section.summary}, section.title),
@@ -981,7 +981,7 @@ export class Sidebar implements m.ClassComponent {
     return m(
         'nav.sidebar',
         {
-          class: globals.state.sidebarVisible ? 'show-sidebar' : 'hide-sidebar',
+          class: globals().state.sidebarVisible ? 'show-sidebar' : 'hide-sidebar',
           // 150 here matches --sidebar-timing in the css.
           // TODO(hjd): Should link to the CSS variable.
           ontransitionstart: () => this._redrawWhileAnimating.start(150),
@@ -990,16 +990,16 @@ export class Sidebar implements m.ClassComponent {
         shouldShowHiringBanner() ? m(HiringBanner) : null,
         m(
             `header.${getCurrentChannel()}`,
-            m(`img[src=${globals.root}assets/brand.png].brand`),
+            m(`img[src=${globals().root}assets/brand.png].brand`),
             m('button.sidebar-button',
               {
                 onclick: () => {
-                  globals.dispatch(Actions.toggleSidebar({}));
+                  globals().dispatch(Actions.toggleSidebar({}));
                 },
               },
               m('i.material-icons',
                 {
-                  title: globals.state.sidebarVisible ? 'Hide menu' :
+                  title: globals().state.sidebarVisible ? 'Hide menu' :
                                                         'Show menu',
                 },
                 'menu')),

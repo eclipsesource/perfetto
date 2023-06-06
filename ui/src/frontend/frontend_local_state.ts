@@ -89,7 +89,7 @@ export class TimeWindow {
   // Offset represents the center of the zoom as a normalized value between 0
   // and 1 where 0 is the start of the time window and 1 is the end
   zoom(ratio: number, offset: number) {
-    const traceDuration = globals.stateTraceTime().duration;
+    const traceDuration = globals().stateTraceTime().duration;
     const minDuration = Math.min(this.MIN_DURATION_NS, traceDuration.nanos);
     const newDurationNanos = Math.max(this._durationNanos * ratio, minDuration);
     // Delta between new and old duration
@@ -128,7 +128,7 @@ export class TimeWindow {
 
   // Limit the zoom and pan
   private preventClip() {
-    const traceTimeSpan = globals.stateTraceTime();
+    const traceTimeSpan = globals().stateTraceTime();
     const traceDurationNanos = traceTimeSpan.duration.nanos;
 
     if (this._durationNanos > traceDurationNanos) {
@@ -191,7 +191,7 @@ export class FrontendLocalState {
 
   setHttpRpcState(httpRpcState: HttpRpcState) {
     this.httpRpcState = httpRpcState;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   addVisibleTrack(trackId: string) {
@@ -208,7 +208,7 @@ export class FrontendLocalState {
     if (this.prevVisibleTracks.size !== this.visibleTracks.size ||
         ![...this.prevVisibleTracks].every(
             (value) => this.visibleTracks.has(value))) {
-      globals.dispatch(
+      globals().dispatch(
           Actions.setVisibleTracks({tracks: Array.from(this.visibleTracks)}));
       this.prevVisibleTracks = new Set(this.visibleTracks);
     }
@@ -252,12 +252,12 @@ export class FrontendLocalState {
         `Impossible select area: start [${start}] >= end [${end}]`);
     this.showPanningHint = true;
     this._selectedArea = {start, end, tracks},
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   deselectArea() {
     this._selectedArea = undefined;
-    globals.rafScheduler.scheduleRedraw();
+    globals().rafScheduler.scheduleRedraw();
   }
 
   get selectedArea(): Area|undefined {
@@ -265,11 +265,11 @@ export class FrontendLocalState {
   }
 
   private ratelimitedUpdateVisible = ratelimit(() => {
-    globals.dispatch(Actions.setVisibleTraceTime(this._visibleState));
+    globals().dispatch(Actions.setVisibleTraceTime(this._visibleState));
   }, 50);
 
   private updateLocalTime(ts: Span<HighPrecisionTime>) {
-    const traceBounds = globals.stateTraceTime();
+    const traceBounds = globals().stateTraceTime();
     const start = ts.start.clamp(traceBounds.start, traceBounds.end);
     const end = ts.end.clamp(traceBounds.start, traceBounds.end);
     this.visibleWindow.update(new HighPrecisionTimeSpan(start, end));
@@ -278,7 +278,7 @@ export class FrontendLocalState {
 
   private updateResolution() {
     this._visibleState.lastUpdate = Date.now() / 1000;
-    this._visibleState.resolution = globals.getCurResolution();
+    this._visibleState.resolution = globals().getCurResolution();
     this.ratelimitedUpdateVisible();
   }
 
@@ -286,7 +286,7 @@ export class FrontendLocalState {
     this._visibleState.lastUpdate = Date.now() / 1000;
     this._visibleState.start = this.visibleWindowTime.start.toTPTime();
     this._visibleState.end = this.visibleWindowTime.end.toTPTime();
-    this._visibleState.resolution = globals.getCurResolution();
+    this._visibleState.resolution = globals().getCurResolution();
     this.ratelimitedUpdateVisible();
   }
 

@@ -182,7 +182,7 @@ class ThreadStateTrack extends Track<Config, Data> {
       visibleTimeScale: timeScale,
       visibleWindowTime,
       windowSpan,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const data = this.data();
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
@@ -227,7 +227,7 @@ class ThreadStateTrack extends Track<Config, Data> {
       const rectEnd = timeScale.tpTimeToPx(tEnd);
       const rectWidth = rectEnd - rectStart;
 
-      const currentSelection = globals.state.currentSelection;
+      const currentSelection = globals().state.currentSelection;
       const isSelected = currentSelection &&
           currentSelection.kind === 'THREAD_STATE' &&
           currentSelection.id === data.ids[i];
@@ -274,12 +274,12 @@ class ThreadStateTrack extends Track<Config, Data> {
   onMouseClick({x}: {x: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(x);
     const index = search(data.starts, time.toTPTime());
     if (index === -1) return false;
     const id = data.ids[index];
-    globals.makeSelection(
+    globals().makeSelection(
         Actions.selectThreadState({id, trackId: this.trackState.id}));
     return true;
   }

@@ -63,18 +63,18 @@ export interface ProbeAttrs {
 export class Probe implements m.ClassComponent<ProbeAttrs> {
   view({attrs, children}: m.CVnode<ProbeAttrs>) {
     const onToggle = (enabled: boolean) => {
-      const traceCfg = produce(globals.state.recordConfig, (draft) => {
+      const traceCfg = produce(globals().state.recordConfig, (draft) => {
         attrs.setEnabled(draft, enabled);
       });
-      globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+      globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
     };
 
-    const enabled = attrs.isEnabled(globals.state.recordConfig);
+    const enabled = attrs.isEnabled(globals().state.recordConfig);
 
     return m(
         `.probe${attrs.compact ? '.compact' : ''}${enabled ? '.enabled' : ''}`,
         attrs.img && m('img', {
-          src: `${globals.root}assets/${attrs.img}`,
+          src: `${globals().root}assets/${attrs.img}`,
           onclick: () => onToggle(!enabled),
         }),
         m('label',
@@ -121,13 +121,13 @@ export interface ToggleAttrs {
 export class Toggle implements m.ClassComponent<ToggleAttrs> {
   view({attrs}: m.CVnode<ToggleAttrs>) {
     const onToggle = (enabled: boolean) => {
-      const traceCfg = produce(globals.state.recordConfig, (draft) => {
+      const traceCfg = produce(globals().state.recordConfig, (draft) => {
         attrs.setEnabled(draft, enabled);
       });
-      globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+      globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
     };
 
-    const enabled = attrs.isEnabled(globals.state.recordConfig);
+    const enabled = attrs.isEnabled(globals().state.recordConfig);
 
     return m(
         `.toggle${enabled ? '.enabled' : ''}${attrs.cssClass || ''}`,
@@ -164,10 +164,10 @@ export interface SliderAttrs {
 
 export class Slider implements m.ClassComponent<SliderAttrs> {
   onValueChange(attrs: SliderAttrs, newVal: number) {
-    const traceCfg = produce(globals.state.recordConfig, (draft) => {
+    const traceCfg = produce(globals().state.recordConfig, (draft) => {
       attrs.set(draft, newVal);
     });
-    globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+    globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
   }
 
   onTimeValueChange(attrs: SliderAttrs, hms: string) {
@@ -186,7 +186,7 @@ export class Slider implements m.ClassComponent<SliderAttrs> {
   view({attrs}: m.CVnode<SliderAttrs>) {
     const id = attrs.title.replace(/[^a-z0-9]/gmi, '_').toLowerCase();
     const maxIdx = attrs.values.length - 1;
-    const val = attrs.get(globals.state.recordConfig);
+    const val = attrs.get(globals().state.recordConfig);
     let min = attrs.min || 1;
     if (attrs.zeroIsDefault) {
       min = Math.min(0, min);
@@ -266,15 +266,15 @@ export class Dropdown implements m.ClassComponent<DropdownAttrs> {
       const item = assertExists(dom.selectedOptions.item(i));
       selKeys.push(item.value);
     }
-    const traceCfg = produce(globals.state.recordConfig, (draft) => {
+    const traceCfg = produce(globals().state.recordConfig, (draft) => {
       attrs.set(draft, selKeys);
     });
-    globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+    globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
   }
 
   view({attrs}: m.CVnode<DropdownAttrs>) {
     const options: m.Children = [];
-    const selItems = attrs.get(globals.state.recordConfig);
+    const selItems = attrs.get(globals().state.recordConfig);
     let numSelected = 0;
     const entries = [...attrs.options.entries()];
     const f = attrs.sort === undefined ? defaultSort : attrs.sort;
@@ -317,10 +317,10 @@ export interface TextareaAttrs {
 
 export class Textarea implements m.ClassComponent<TextareaAttrs> {
   onChange(attrs: TextareaAttrs, dom: HTMLTextAreaElement) {
-    const traceCfg = produce(globals.state.recordConfig, (draft) => {
+    const traceCfg = produce(globals().state.recordConfig, (draft) => {
       attrs.set(draft, dom.value);
     });
-    globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+    globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
   }
 
   view({attrs}: m.CVnode<TextareaAttrs>) {
@@ -333,7 +333,7 @@ export class Textarea implements m.ClassComponent<TextareaAttrs> {
           onchange: (e: Event) =>
               this.onChange(attrs, e.target as HTMLTextAreaElement),
           placeholder: attrs.placeholder,
-          value: attrs.get(globals.state.recordConfig),
+          value: attrs.get(globals().state.recordConfig),
         }));
   }
 }
@@ -374,7 +374,7 @@ export class CategoriesCheckboxList implements
     m.ClassComponent<CategoriesCheckboxListParams> {
   updateValue(
       attrs: CategoriesCheckboxListParams, value: string, enabled: boolean) {
-    const traceCfg = produce(globals.state.recordConfig, (draft) => {
+    const traceCfg = produce(globals().state.recordConfig, (draft) => {
       const values = attrs.get(draft);
       const index = values.indexOf(value);
       if (enabled && index === -1) {
@@ -384,11 +384,11 @@ export class CategoriesCheckboxList implements
         values.splice(index, 1);
       }
     });
-    globals.dispatch(Actions.setRecordConfig({config: traceCfg}));
+    globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
   }
 
   view({attrs}: m.CVnode<CategoriesCheckboxListParams>) {
-    const enabled = new Set(attrs.get(globals.state.recordConfig));
+    const enabled = new Set(attrs.get(globals().state.recordConfig));
     return m(
         '.categories-list',
         m('h3',
@@ -396,20 +396,20 @@ export class CategoriesCheckboxList implements
           m('button.config-button',
             {
               onclick: () => {
-                const config = produce(globals.state.recordConfig, (draft) => {
+                const config = produce(globals().state.recordConfig, (draft) => {
                   attrs.set(draft, Array.from(attrs.categories.keys()));
                 });
-                globals.dispatch(Actions.setRecordConfig({config}));
+                globals().dispatch(Actions.setRecordConfig({config}));
               },
             },
             'All'),
           m('button.config-button',
             {
               onclick: () => {
-                const config = produce(globals.state.recordConfig, (draft) => {
+                const config = produce(globals().state.recordConfig, (draft) => {
                   attrs.set(draft, []);
                 });
-                globals.dispatch(Actions.setRecordConfig({config}));
+                globals().dispatch(Actions.setRecordConfig({config}));
               },
             },
             'None')),

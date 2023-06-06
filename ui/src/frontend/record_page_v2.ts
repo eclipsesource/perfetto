@@ -112,7 +112,7 @@ function RecordingPlatformSelection() {
           onclick: () => {
             shouldDisplayTargetModal = true;
             fullscreenModalContainer.createNew(addNewTargetModal());
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
         },
         m('button', 'Add new recording target'),
@@ -177,7 +177,7 @@ export function targetSelection(): m.Vnode|undefined {
 // user action, such as: "Recording in progress for X seconds" in the recording
 // page header.
 function RecordingStatusLabel() {
-  const recordingStatus = globals.state.recordingStatus;
+  const recordingStatus = globals().state.recordingStatus;
   if (!recordingStatus) return undefined;
   return m('label', recordingStatus);
 }
@@ -196,7 +196,7 @@ function Instructions(cssClass: string) {
           m('button.permalinkconfig',
             {
               onclick: () => {
-                globals.dispatch(
+                globals().dispatch(
                     Actions.createPermalink({isRecordingConfig: true}));
               },
             },
@@ -263,7 +263,7 @@ function RecordingNotes() {
         `collect the trace using ADB.`));
 
   if (!recordConfigUtils
-           .fetchLatestRecordCommand(globals.state.recordConfig, targetInfo)
+           .fetchLatestRecordCommand(globals().state.recordConfig, targetInfo)
            .hasDataSources) {
     notes.push(
         m('.note',
@@ -299,7 +299,7 @@ function RecordingNotes() {
     default:
   }
 
-  if (globals.state.recordConfig.mode === 'LONG_TRACE') {
+  if (globals().state.recordConfig.mode === 'LONG_TRACE') {
     notes.unshift(msgLongTraces);
   }
 
@@ -324,7 +324,7 @@ function RecordingSnippet(targetInfo: TargetInfo) {
 
 function getRecordCommand(targetInfo: TargetInfo): string {
   const recordCommand = recordConfigUtils.fetchLatestRecordCommand(
-      globals.state.recordConfig, targetInfo);
+      globals().state.recordConfig, targetInfo);
 
   const pbBase64 = recordCommand ? recordCommand.configProtoBase64 : '';
   const pbtx = recordCommand ? recordCommand.configProtoText : '';
@@ -356,7 +356,7 @@ function RecordingButton() {
   const targetInfo = assertExists(controller.getTargetInfo());
   const hasDataSources =
       recordConfigUtils
-          .fetchLatestRecordCommand(globals.state.recordConfig, targetInfo)
+          .fetchLatestRecordCommand(globals().state.recordConfig, targetInfo)
           .hasDataSources;
   if (!hasDataSources) {
     return undefined;
@@ -455,7 +455,7 @@ function recordMenu(routePage: string) {
         class: controller.getState() > RecordingState.TARGET_INFO_DISPLAYED ?
             'disabled' :
             '',
-        onclick: () => globals.rafScheduler.scheduleFullRedraw(),
+        onclick: () => globals().rafScheduler.scheduleFullRedraw(),
       },
       m('header', 'Trace config'),
       m('ul',

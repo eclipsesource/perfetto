@@ -204,7 +204,7 @@ export class TickGenerator implements Iterable<Tick> {
 // Gets the timescale associated with the current visible window.
 export function timeScaleForVisibleWindow(
     startPx: number, endPx: number): TimeScale {
-  return globals.frontendLocalState.getTimeScale(startPx, endPx);
+  return globals().frontendLocalState.getTimeScale(startPx, endPx);
 }
 
 export function drawGridLines(
@@ -214,13 +214,13 @@ export function drawGridLines(
   ctx.strokeStyle = TRACK_BORDER_COLOR;
   ctx.lineWidth = 1;
 
-  const {earliest, latest} = globals.frontendLocalState.visibleWindow;
+  const {earliest, latest} = globals().frontendLocalState.visibleWindow;
   const span = new TPTimeSpan(earliest, latest);
   if (width > TRACK_SHELL_WIDTH && span.duration > 0n) {
     const maxMajorTicks = getMaxMajorTicks(width - TRACK_SHELL_WIDTH);
     const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, width);
     for (const {type, time} of new TickGenerator(
-             span, maxMajorTicks, globals.state.traceTime.start)) {
+             span, maxMajorTicks, globals().state.traceTime.start)) {
       const px = Math.floor(map.tpTimeToPx(time));
       if (type === TickType.MAJOR) {
         ctx.beginPath();

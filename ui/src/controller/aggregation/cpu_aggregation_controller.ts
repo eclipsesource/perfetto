@@ -27,7 +27,7 @@ export class CpuAggregationController extends AggregationController {
 
     const selectedCpus = [];
     for (const trackId of area.tracks) {
-      const track = globals.state.tracks[trackId];
+      const track = globals().state.tracks[trackId];
       // Track will be undefined for track groups.
       if (track !== undefined && track.kind === CPU_SLICE_TRACK_KIND) {
         selectedCpus.push((track.config as Config).cpu);

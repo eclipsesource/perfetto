@@ -265,8 +265,8 @@ export class RecordingPageController {
       throw new RecordingError('Recording page state transition out of order.');
     }
     this.setState(state);
-    globals.dispatch(Actions.setRecordingStatus({status: undefined}));
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().dispatch(Actions.setRecordingStatus({status: undefined}));
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   maybeClearRecordingState(tracingSessionWrapper: TracingSessionWrapper): void {
@@ -280,7 +280,7 @@ export class RecordingPageController {
     if (this.tracingSessionWrapper !== tracingSessionWrapper) {
       return;
     }
-    globals.dispatch(Actions.openTraceFromBuffer({
+    globals().dispatch(Actions.openTraceFromBuffer({
       title: 'Recorded trace',
       buffer: trace.buffer,
       fileName: `trace_${currentDateHourAndMinute()}${TRACE_SUFFIX}`,
@@ -295,7 +295,7 @@ export class RecordingPageController {
     // For the 'Recording in progress for 7000ms we don't show a
     // modal.'
     if (message.startsWith(RECORDING_IN_PROGRESS)) {
-      globals.dispatch(Actions.setRecordingStatus({status: message}));
+      globals().dispatch(Actions.setRecordingStatus({status: message}));
     } else {
       // For messages such as 'Please allow USB debugging on your
       // device, which require a user action, we show a modal.
@@ -353,11 +353,11 @@ export class RecordingPageController {
 
     if (!this.target) {
       this.setState(RecordingState.NO_TARGET);
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
       return;
     }
     this.setState(RecordingState.TARGET_SELECTED);
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
 
     this.tracingSessionWrapper = this.createTracingSessionWrapper(this.target);
     this.tracingSessionWrapper.fetchTargetInfo();
@@ -389,13 +389,13 @@ export class RecordingPageController {
   onStartRecordingPressed(): void {
     assertTrue(RecordingState.TARGET_INFO_DISPLAYED === this.state);
     location.href = '#!/record/instructions';
-    autosaveConfigStore.save(globals.state.recordConfig);
+    autosaveConfigStore.save(globals().state.recordConfig);
 
     const target = this.getTarget();
     const targetInfo = target.getInfo();
-    globals.logging.logEvent(
+    globals().logging.logEvent(
         'Record Trace', `Record trace (${targetInfo.targetType})`);
-    const traceConfig = genTraceConfig(globals.state.recordConfig, targetInfo);
+    const traceConfig = genTraceConfig(globals().state.recordConfig, targetInfo);
 
     this.tracingSessionWrapper = this.createTracingSessionWrapper(target);
     this.tracingSessionWrapper.start(traceConfig);
@@ -439,7 +439,7 @@ export class RecordingPageController {
     // We redraw if:
     // 1. We received a correct buffer usage value.
     // 2. We receive a RecordingError.
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   initFactories() {
@@ -480,7 +480,7 @@ export class RecordingPageController {
     // If the change happens for an existing target, the controller keeps the
     // currently selected target in focus.
     if (this.target && allTargets.includes(this.target)) {
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
       return;
     }
     // If the change happens to a new target or the controller does not have a
@@ -497,10 +497,10 @@ export class RecordingPageController {
     this.bufferUsagePercentage = 0;
     this.tracingSessionWrapper = undefined;
     this.setState(RecordingState.TARGET_INFO_DISPLAYED);
-    globals.dispatch(Actions.setRecordingStatus({status: undefined}));
+    globals().dispatch(Actions.setRecordingStatus({status: undefined}));
     // Redrawing because this method has changed the RecordingState, which will
     // affect the display of the record_page.
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   private setState(state: RecordingState) {

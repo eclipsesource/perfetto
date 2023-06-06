@@ -98,14 +98,14 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     const {
       visibleTimeScale,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;
 
     for (let i = 0; i < data.tsStarts.length; i++) {
       const centerX = data.tsStarts[i];
-      const selection = globals.state.currentSelection;
+      const selection = globals().state.currentSelection;
       const isHovered = this.hoveredTs === centerX;
       const isSelected = selection !== null &&
           selection.kind === 'PERF_SAMPLES' &&
@@ -142,7 +142,7 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
   onMouseMove({x, y}: {x: number, y: number}) {
     const data = this.data();
     if (data === undefined) return;
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
     const index =
@@ -157,7 +157,7 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
   onMouseClick({x, y}: {x: number, y: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
 
     const time = visibleTimeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
@@ -167,7 +167,7 @@ class PerfSamplesProfileTrack extends Track<Config, Data> {
 
     if (index !== -1) {
       const ts = data.tsStarts[index];
-      globals.makeSelection(Actions.selectPerfSamples({
+      globals().makeSelection(Actions.selectPerfSamples({
         id: index,
         upid: this.config.upid,
         leftTs: ts,

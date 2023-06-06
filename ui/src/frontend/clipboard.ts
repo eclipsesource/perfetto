@@ -21,7 +21,7 @@ export function onClickCopy(url: string) {
   return (e: Event) => {
     e.preventDefault();
     copyToClipboard(url);
-    globals.dispatch(Actions.updateStatus(
+    globals().dispatch(Actions.updateStatus(
         {msg: 'Link copied into the clipboard', timestamp: Date.now() / 1000}));
   };
 }

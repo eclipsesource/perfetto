@@ -124,7 +124,7 @@ export class TreeNode implements m.ClassComponent<TreeNodeAttrs> {
       onclick: () => {
         this.collapsed = !this.isCollapsed(vnode);
         onCollapseChanged(this.collapsed, attrs);
-        globals.rafScheduler.scheduleFullRedraw();
+        globals().rafScheduler.scheduleFullRedraw();
       },
     });
   }
@@ -205,12 +205,12 @@ export class LazyTreeNode implements m.ClassComponent<LazyTreeNodeAttrs> {
               fetchData().then((result) => {
                 if (!this.collapsed) {
                   this.renderChildren = result;
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 }
               });
             }
             this.collapsed = collapsed;
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
         },
         this.renderChildren());

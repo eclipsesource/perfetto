@@ -27,7 +27,7 @@ import {taskTracker} from './task_tracker';
 export function maybeOpenTraceFromRoute(route: Route) {
   if (route.args.s) {
     // /?s=xxxx for permalinks.
-    globals.dispatch(Actions.loadPermalink({hash: route.args.s}));
+    globals().dispatch(Actions.loadPermalink({hash: route.args.s}));
     return;
   }
 
@@ -76,13 +76,13 @@ export function maybeOpenTraceFromRoute(route: Route) {
  * 3. '' -> URL with a ?local_cache_key=xxx arg:
  *  - Same as case 2.
  * 4. URL with local_cache_key=1 -> URL with local_cache_key=2:
- *  a) If 2 != uuid of the trace currently loaded (globals.state.traceUuid):
+ *  a) If 2 != uuid of the trace currently loaded (globals().state.traceUuid):
  *  - Ask the user if they intend to switch trace and load 2.
  *  b) If 2 == uuid of current trace (e.g., after a new trace has loaded):
  *  - no effect (except redrawing).
  * 5. URL with local_cache_key -> URL without local_cache_key:
  *  - Redirect to ?local_cache_key=1234 where 1234 is the UUID of the previous
- *    URL (this might or might not match globals.state.traceUuid).
+ *    URL (this might or might not match globals().state.traceUuid).
  *
  * Backward navigation cases:
  * 6. URL without local_cache_key <- URL with local_cache_key:
@@ -93,7 +93,7 @@ export function maybeOpenTraceFromRoute(route: Route) {
  *  - Same as case 5: re-append the local_cache_key.
  */
 async function maybeOpenCachedTrace(traceUuid: string) {
-  if (traceUuid === globals.state.traceUuid) {
+  if (traceUuid === globals().state.traceUuid) {
     // Do nothing, matches the currently loaded trace.
     return;
   }
@@ -106,13 +106,13 @@ async function maybeOpenCachedTrace(traceUuid: string) {
   }
 
   // This handles the case when a trace T1 is loaded and then the url is set to
-  // ?local_cache_key=T2. In that case globals.state.traceUuid remains set to T1
+  // ?local_cache_key=T2. In that case globals().state.traceUuid remains set to T1
   // until T2 has been loaded by the trace processor (can take several seconds).
   // This early out prevents to re-trigger the openTraceFromXXX() action if the
   // URL changes (e.g. if the user navigates back/fwd) while the new trace is
   // being loaded.
-  if (globals.state.engine !== undefined) {
-    const eng = globals.state.engine;
+  if (globals().state.engine !== undefined) {
+    const eng = globals().state.engine!;
     if (eng.source.type === 'ARRAY_BUFFER' && eng.source.uuid === traceUuid) {
       return;
     }
@@ -124,7 +124,7 @@ async function maybeOpenCachedTrace(traceUuid: string) {
 
   const navigateToOldTraceUuid = () => {
     Router.navigate(
-        `#!/viewer?local_cache_key=${globals.state.traceUuid || ''}`);
+        `#!/viewer?local_cache_key=${globals().state.traceUuid || ''}`);
   };
 
   if (!maybeTrace) {
@@ -150,8 +150,8 @@ async function maybeOpenCachedTrace(traceUuid: string) {
   // the trace without showing any further dialog. This is the case of tab
   // discarding, reloading or pasting a url with a local_cache_key in an empty
   // instance.
-  if (globals.state.traceUuid === undefined) {
-    globals.dispatch(Actions.openTraceFromBuffer(maybeTrace));
+  if (globals().state.traceUuid === undefined) {
+    globals().dispatch(Actions.openTraceFromBuffer(maybeTrace));
     return;
   }
 
@@ -172,7 +172,7 @@ async function maybeOpenCachedTrace(traceUuid: string) {
           'If you continue another trace will be loaded and the UI ' +
               'state will be cleared.'),
         m('pre',
-          `Old trace: ${globals.state.traceUuid || '<no trace>'}\n` +
+          `Old trace: ${globals().state.traceUuid || '<no trace>'}\n` +
               `New trace: ${traceUuid}`),
         ),
     buttons: [
@@ -182,7 +182,7 @@ async function maybeOpenCachedTrace(traceUuid: string) {
         primary: true,
         action: () => {
           hasOpenedNewTrace = true;
-          globals.dispatch(Actions.openTraceFromBuffer(maybeTrace));
+          globals().dispatch(Actions.openTraceFromBuffer(maybeTrace));
         },
       },
       {text: 'Cancel'},
@@ -210,26 +210,26 @@ function loadTraceFromUrl(url: string) {
     const request = fetch(url)
                         .then((response) => response.blob())
                         .then((blob) => {
-                          globals.dispatch(Actions.openTraceFromFile({
+                          globals().dispatch(Actions.openTraceFromFile({
                             file: new File([blob], fileName),
                           }));
                         })
                         .catch((e) => alert(`Could not load local trace ${e}`));
     taskTracker.trackPromise(request, 'Downloading local trace');
   } else {
-    globals.dispatch(Actions.openTraceFromUrl({url}));
+    globals().dispatch(Actions.openTraceFromUrl({url}));
   }
 }
 
 function openTraceFromAndroidBugTool() {
   // TODO(hjd): Unify updateStatus and TaskTracker
-  globals.dispatch(Actions.updateStatus(
+  globals().dispatch(Actions.updateStatus(
       {msg: 'Loading trace from ABT extension', timestamp: Date.now() / 1000}));
   const loadInfo = loadAndroidBugToolInfo();
   taskTracker.trackPromise(loadInfo, 'Loading trace from ABT extension');
   loadInfo
       .then((info) => {
-        globals.dispatch(Actions.openTraceFromFile({
+        globals().dispatch(Actions.openTraceFromFile({
           file: info.file,
         }));
       })

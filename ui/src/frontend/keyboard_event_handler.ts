@@ -32,7 +32,7 @@ type Direction = 'Forward'|'Backward';
 // pan and zoom handler. Returns true if the event was handled.
 export function handleKey(e: KeyboardEvent, down: boolean): boolean {
   const key = e.key.toLowerCase();
-  const selection = globals.state.currentSelection;
+  const selection = globals().state.currentSelection;
   const noModifiers = !(e.ctrlKey || e.metaKey || e.altKey || e.shiftKey);
   const ctrlOrMeta = (e.ctrlKey || e.metaKey) && !(e.altKey || e.shiftKey);
   // No other modifiers other than possibly Shift.
@@ -40,7 +40,7 @@ export function handleKey(e: KeyboardEvent, down: boolean): boolean {
 
   if (down && 'm' === key && maybeShift) {
     if (selection && selection.kind === 'AREA') {
-      globals.dispatch(Actions.toggleMarkCurrentArea({persistent: e.shiftKey}));
+      globals().dispatch(Actions.toggleMarkCurrentArea({persistent: e.shiftKey}));
     } else if (selection) {
       lockSliceSpan(e.shiftKey);
     }
@@ -53,12 +53,12 @@ export function handleKey(e: KeyboardEvent, down: boolean): boolean {
   if (down && 'a' === key && ctrlOrMeta) {
     let tracksToSelect: string[] = [];
 
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (selection !== null && selection.kind === 'AREA') {
-      const area = globals.state.areas[selection.areaId];
+      const area = globals().state.areas[selection.areaId];
       const coversEntireTimeRange =
-          globals.state.traceTime.start === area.start &&
-          globals.state.traceTime.end === area.end;
+          globals().state.traceTime.start === area.start &&
+          globals().state.traceTime.end === area.end;
       if (!coversEntireTimeRange) {
         // If the current selection is an area which does not cover the entire
         // time range, preserve the list of selected tracks and expand the time
@@ -67,14 +67,14 @@ export function handleKey(e: KeyboardEvent, down: boolean): boolean {
       } else {
         // If the entire time range is already covered, update the selection to
         // cover all tracks.
-        tracksToSelect = Object.keys(globals.state.tracks);
+        tracksToSelect = Object.keys(globals().state.tracks);
       }
     } else {
       // If the current selection is not an area, select all.
-      tracksToSelect = Object.keys(globals.state.tracks);
+      tracksToSelect = Object.keys(globals().state.tracks);
     }
-    const {start, end} = globals.state.traceTime;
-    globals.dispatch(Actions.selectArea({
+    const {start, end} = globals().state.traceTime;
+    globals().dispatch(Actions.selectArea({
       area: {
         start,
         end,
@@ -85,7 +85,7 @@ export function handleKey(e: KeyboardEvent, down: boolean): boolean {
     return true;
   }
   if (down && 'b' === key && ctrlOrMeta) {
-    globals.dispatch(Actions.toggleSidebar({}));
+    globals().dispatch(Actions.toggleSidebar({}));
     return true;
   }
   if (down && '?' === key && maybeShift) {
@@ -98,9 +98,9 @@ export function handleKey(e: KeyboardEvent, down: boolean): boolean {
     return true;
   }
   if (down && 'escape' === key) {
-    globals.frontendLocalState.deselectArea();
-    globals.makeSelection(Actions.deselect({}));
-    globals.dispatch(Actions.removeNote({id: '0'}));
+    globals().frontendLocalState.deselectArea();
+    globals().makeSelection(Actions.deselect({}));
+    globals().dispatch(Actions.removeNote({id: '0'}));
     return true;
   }
   if (down && ']' === key && ctrlOrMeta) {
@@ -146,54 +146,54 @@ function findAnotherFlowExcept(boundFlows: Flow[], flowId: number): number {
 
 // Change focus to the next flow event (matching the direction)
 function focusOtherFlow(direction: Direction) {
-  if (!globals.state.currentSelection ||
-      globals.state.currentSelection.kind !== 'CHROME_SLICE') {
+  if (!globals().state.currentSelection ||
+      globals().state.currentSelection!.kind !== 'CHROME_SLICE') {
     return;
   }
-  const sliceId = globals.state.currentSelection.id;
+  const sliceId = (globals().state.currentSelection! as any).id;
   if (sliceId === -1) {
     return;
   }
 
-  const boundFlows = globals.connectedFlows.filter(
+  const boundFlows = globals().connectedFlows.filter(
       (flow) => flow.begin.sliceId === sliceId && direction === 'Forward' ||
           flow.end.sliceId === sliceId && direction === 'Backward');
 
   if (direction === 'Backward') {
     const nextFlowId =
-        findAnotherFlowExcept(boundFlows, globals.state.focusedFlowIdLeft);
-    globals.dispatch(Actions.setHighlightedFlowLeftId({flowId: nextFlowId}));
+        findAnotherFlowExcept(boundFlows, globals().state.focusedFlowIdLeft);
+    globals().dispatch(Actions.setHighlightedFlowLeftId({flowId: nextFlowId}));
   } else {
     const nextFlowId =
-        findAnotherFlowExcept(boundFlows, globals.state.focusedFlowIdRight);
-    globals.dispatch(Actions.setHighlightedFlowRightId({flowId: nextFlowId}));
+        findAnotherFlowExcept(boundFlows, globals().state.focusedFlowIdRight);
+    globals().dispatch(Actions.setHighlightedFlowRightId({flowId: nextFlowId}));
   }
 }
 
 // Select the slice connected to the flow in focus
 function moveByFocusedFlow(direction: Direction): void {
-  if (!globals.state.currentSelection ||
-      globals.state.currentSelection.kind !== 'CHROME_SLICE') {
+  if (!globals().state.currentSelection ||
+      globals().state.currentSelection!.kind !== 'CHROME_SLICE') {
     return;
   }
 
-  const sliceId = globals.state.currentSelection.id;
+  const sliceId = (globals().state.currentSelection! as any).id;
   const flowId =
-      (direction === 'Backward' ? globals.state.focusedFlowIdLeft :
-                                  globals.state.focusedFlowIdRight);
+      (direction === 'Backward' ? globals().state.focusedFlowIdLeft :
+                                  globals().state.focusedFlowIdRight);
 
   if (sliceId === -1 || flowId === -1) {
     return;
   }
 
   // Find flow that is in focus and select corresponding slice
-  for (const flow of globals.connectedFlows) {
+  for (const flow of globals().connectedFlows) {
     if (flow.id === flowId) {
       const flowPoint = (direction === 'Backward' ? flow.begin : flow.end);
       const uiTrackId =
-          globals.state.uiTrackIdByTraceTrackId[flowPoint.trackId];
+          globals().state.uiTrackIdByTraceTrackId[flowPoint.trackId];
       if (uiTrackId) {
-        globals.makeSelection(Actions.selectChromeSlice({
+        globals().makeSelection(Actions.selectChromeSlice({
           id: flowPoint.sliceId,
           trackId: uiTrackId,
           table: 'slice',
@@ -205,13 +205,13 @@ function moveByFocusedFlow(direction: Direction): void {
 }
 
 function findTimeRangeOfSelection(): {startTs: TPTime, endTs: TPTime} {
-  const selection = globals.state.currentSelection;
+  const selection = globals().state.currentSelection;
   let startTs = -1n;
   let endTs = -1n;
   if (selection === null) {
     return {startTs, endTs};
   } else if (selection.kind === 'SLICE' || selection.kind === 'CHROME_SLICE') {
-    const slice = globals.sliceDetails;
+    const slice = globals().sliceDetails;
     if (slice.ts && slice.dur !== undefined && slice.dur > 0) {
       startTs = slice.ts;
       endTs = startTs + slice.dur;
@@ -224,7 +224,7 @@ function findTimeRangeOfSelection(): {startTs: TPTime, endTs: TPTime} {
                                   startTs + INSTANT_FOCUS_DURATION;
     }
   } else if (selection.kind === 'THREAD_STATE') {
-    const threadState = globals.threadStateDetails;
+    const threadState = globals().threadStateDetails;
     if (threadState.ts && threadState.dur) {
       startTs = threadState.ts;
       endTs = startTs + threadState.dur;
@@ -233,13 +233,13 @@ function findTimeRangeOfSelection(): {startTs: TPTime, endTs: TPTime} {
     startTs = selection.leftTs;
     endTs = selection.rightTs;
   } else if (selection.kind === 'AREA') {
-    const selectedArea = globals.state.areas[selection.areaId];
+    const selectedArea = globals().state.areas[selection.areaId];
     if (selectedArea) {
       startTs = selectedArea.start;
       endTs = selectedArea.end;
     }
   } else if (selection.kind === 'NOTE') {
-    const selectedNote = globals.state.notes[selection.id];
+    const selectedNote = globals().state.notes[selection.id];
     // Notes can either be default or area notes. Area notes are handled
     // above in the AREA case.
     if (selectedNote && selectedNote.noteType === 'DEFAULT') {
@@ -266,17 +266,17 @@ function findTimeRangeOfSelection(): {startTs: TPTime, endTs: TPTime} {
 function lockSliceSpan(persistent = false) {
   const range = findTimeRangeOfSelection();
   if (range.startTs !== -1n && range.endTs !== -1n &&
-      globals.state.currentSelection !== null) {
-    const tracks = globals.state.currentSelection.trackId ?
-        [globals.state.currentSelection.trackId] :
+      globals().state.currentSelection !== null) {
+    const tracks = globals().state.currentSelection!.trackId ?
+        [globals().state.currentSelection!.trackId!] :
         [];
     const area: Area = {start: range.startTs, end: range.endTs, tracks};
-    globals.dispatch(Actions.markArea({area, persistent}));
+    globals().dispatch(Actions.markArea({area, persistent}));
   }
 }
 
 export function findCurrentSelection() {
-  const selection = globals.state.currentSelection;
+  const selection = globals().state.currentSelection;
   if (selection === null) return;
 
   const range = findTimeRangeOfSelection();

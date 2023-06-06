@@ -108,13 +108,13 @@ class HeapSettings implements m.ClassComponent<RecordingSectionAttrs> {
           title: 'Continuous dumps phase',
           description: 'Time before first dump',
           cssClass: `.thin${
-              globals.state.recordConfig.hpContinuousDumpsInterval === 0 ?
+              globals().state.recordConfig.hpContinuousDumpsInterval === 0 ?
                   '.greyed-out' :
                   ''}`,
           values: valuesForMS,
           unit: 'ms',
           min: 0,
-          disabled: globals.state.recordConfig.hpContinuousDumpsInterval === 0,
+          disabled: globals().state.recordConfig.hpContinuousDumpsInterval === 0,
           set: (cfg, val) => cfg.hpContinuousDumpsPhase = val,
           get: (cfg) => cfg.hpContinuousDumpsPhase,
         } as SliderAttrs),
@@ -188,13 +188,13 @@ class JavaHeapDumpSettings implements m.ClassComponent<RecordingSectionAttrs> {
           title: 'Continuous dumps phase',
           description: 'Time before first dump',
           cssClass: `.thin${
-              globals.state.recordConfig.jpContinuousDumpsInterval === 0 ?
+              globals().state.recordConfig.jpContinuousDumpsInterval === 0 ?
                   '.greyed-out' :
                   ''}`,
           values: valuesForMS,
           unit: 'ms',
           min: 0,
-          disabled: globals.state.recordConfig.jpContinuousDumpsInterval === 0,
+          disabled: globals().state.recordConfig.jpContinuousDumpsInterval === 0,
           set: (cfg, val) => cfg.jpContinuousDumpsPhase = val,
           get: (cfg) => cfg.jpContinuousDumpsPhase,
         } as SliderAttrs),

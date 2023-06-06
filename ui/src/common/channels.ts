@@ -45,5 +45,5 @@ export function setChannel(channel: string): void {
   getCurrentChannel();  // Cache the current channel before mangling next one.
   nextChannel = channel;
   localStorage.setItem(CHANNEL_KEY, channel);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals().rafScheduler.scheduleFullRedraw();
 }

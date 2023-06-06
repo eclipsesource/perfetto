@@ -50,7 +50,7 @@ export class LogPanel extends Panel<{}> {
 
     if (this.visibleRowOffset !== prevOffset ||
         this.visibleRowCount !== prevCount) {
-      globals.dispatch(Actions.updateLogsPagination({
+      globals().dispatch(Actions.updateLogsPagination({
         offset: this.visibleRowOffset,
         count: this.visibleRowCount,
       }));
@@ -64,31 +64,31 @@ export class LogPanel extends Panel<{}> {
         'scroll', this.onScroll.bind(this), {passive: true});
     // TODO(stevegolton): Type assersions are a source of bugs.
     // Let's try to find another way of doing this.
-    this.bounds = globals.trackDataStore.get(LogBoundsKey) as LogBounds;
-    this.entries = globals.trackDataStore.get(LogEntriesKey) as LogEntries;
+    this.bounds = globals().trackDataStore.get(LogBoundsKey) as LogBounds;
+    this.entries = globals().trackDataStore.get(LogEntriesKey) as LogEntries;
     this.recomputeVisibleRowsAndUpdate();
   }
 
   onbeforeupdate(_: m.CVnodeDOM) {
     // TODO(stevegolton): Type assersions are a source of bugs.
     // Let's try to find another way of doing this.
-    this.bounds = globals.trackDataStore.get(LogBoundsKey) as LogBounds;
-    this.entries = globals.trackDataStore.get(LogEntriesKey) as LogEntries;
+    this.bounds = globals().trackDataStore.get(LogBoundsKey) as LogBounds;
+    this.entries = globals().trackDataStore.get(LogEntriesKey) as LogEntries;
     this.recomputeVisibleRowsAndUpdate();
   }
 
   onScroll() {
     if (this.scrollContainer === undefined) return;
     this.recomputeVisibleRowsAndUpdate();
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   onRowOver(ts: TPTime) {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts}));
+    globals().dispatch(Actions.setHoverCursorTimestamp({ts}));
   }
 
   onRowOut() {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
+    globals().dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
   }
 
   private totalRows():
@@ -101,7 +101,7 @@ export class LogPanel extends Panel<{}> {
       firstVisibleLogTs,
       lastVisibleLogTs,
     } = this.bounds;
-    const vis = globals.frontendLocalState.visibleWindowTime;
+    const vis = globals().frontendLocalState.visibleWindowTime;
 
     const visibleLogSpan =
         new HighPrecisionTimeSpan(firstVisibleLogTs, lastVisibleLogTs);
@@ -155,7 +155,7 @@ export class LogPanel extends Panel<{}> {
                 'onmouseover': this.onRowOver.bind(this, ts),
                 'onmouseout': this.onRowOut.bind(this),
               },
-              m('.cell', formatTPTime(ts - globals.state.traceTime.start)),
+              m('.cell', formatTPTime(ts - globals().state.traceTime.start)),
               m('.cell', priorityLetter || '?'),
               m('.cell', tags[i]),
               hasProcessNames ? m('.cell.with-process', processNames[i]) :

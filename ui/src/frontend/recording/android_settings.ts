@@ -80,7 +80,7 @@ function isDataSourceDescriptor(descriptor: unknown):
 
 class AtraceAppsList implements m.ClassComponent {
   view() {
-    if (globals.state.recordConfig.allAtraceApps) {
+    if (globals().state.recordConfig.allAtraceApps) {
       return m('div');
     }
 

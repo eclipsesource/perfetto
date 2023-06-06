@@ -31,10 +31,10 @@ interface StatsSectionAttrs {
 }
 
 function getEngine(name: string): EngineProxy|undefined {
-  const currentEngine = globals.getCurrentEngine();
+  const currentEngine = globals().getCurrentEngine();
   if (currentEngine === undefined) return undefined;
   const engineId = currentEngine.id;
-  return globals.engines.get(engineId)?.getProxy(name);
+  return globals().engines.get(engineId)?.getProxy(name);
 }
 
 // Generic class that generate a <section> + <table> from the stats table.
@@ -54,7 +54,7 @@ class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
               order by name, idx`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -96,12 +96,12 @@ class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
 
 class MetricErrors implements m.ClassComponent {
   view() {
-    if (!globals.metricError) return;
+    if (!globals().metricError) return;
     return m(
         `section.errors`,
         m('h2', `Metric Errors`),
         m('h3', `One or more metrics were not computed successfully:`),
-        m('div.metric-error', globals.metricError));
+        m('div.metric-error', globals().metricError));
   }
 }
 
@@ -132,7 +132,7 @@ class TraceMetadata implements m.ClassComponent {
           order by priority desc, name`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -191,7 +191,7 @@ class AndroidGameInterventionList implements m.ClassComponent {
                 from android_game_intervention_list`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -279,7 +279,7 @@ class PackageList implements m.ClassComponent {
                 profileable_from_shell from package_list`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     });
   }
 

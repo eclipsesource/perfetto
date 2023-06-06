@@ -57,7 +57,7 @@ export class AggregationPanel extends Panel<AggregationPanelAttrs> {
   }
 
   formatColumnHeading(col: Column, id: string) {
-    const pref = globals.state.aggregatePreferences[id];
+    const pref = globals().state.aggregatePreferences[id];
     let sortIcon = '';
     if (pref && pref.sorting && pref.sorting.column === col.columnId) {
       sortIcon = pref.sorting.direction === 'DESC' ? 'arrow_drop_down' :
@@ -67,7 +67,7 @@ export class AggregationPanel extends Panel<AggregationPanelAttrs> {
         'th',
         {
           onclick: () => {
-            globals.dispatch(
+            globals().dispatch(
                 Actions.updateAggregateSorting({id, column: col.columnId}));
           },
         },
@@ -109,9 +109,9 @@ export class AggregationPanel extends Panel<AggregationPanelAttrs> {
   }
 
   showTimeRange() {
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (selection === null || selection.kind !== 'AREA') return undefined;
-    const selectedArea = globals.state.areas[selection.areaId];
+    const selectedArea = globals().state.areas[selection.areaId];
     const rangeDurationMs =
         tpTimeToMillis(selectedArea.end - selectedArea.start);
     return m('.time-range', `Selected range: ${rangeDurationMs.toFixed(6)} ms`);

@@ -69,7 +69,7 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
   constructor(args: NewTrackArgs) {
     this.trackId = args.trackId;
     this.engine = args.engine;
-    this.lastTrackState = assertExists(globals.state.tracks[this.trackId]);
+    this.lastTrackState = assertExists(globals().state.tracks[this.trackId]);
   }
 
   // Last call the track will receive. Called just before the last reference to
@@ -85,7 +85,7 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
     // next animation frame that would remove the Track object. If a mouse event
     // is dispatched in the meanwhile (or a promise is resolved), we need to be
     // able to access the state. Hence the caching logic here.
-    const trackState = globals.state.tracks[this.trackId];
+    const trackState = globals().state.tracks[this.trackId];
     if (trackState === undefined) {
       return this.lastTrackState;
     }
@@ -101,7 +101,7 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
     if (this.frontendOnly) {
       return undefined;
     }
-    return globals.trackDataStore.get(this.trackId) as Data;
+    return globals().trackDataStore.get(this.trackId) as Data;
   }
 
   getHeight(): number {
@@ -129,9 +129,9 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
   onFullRedraw(): void {}
 
   render(ctx: CanvasRenderingContext2D) {
-    globals.frontendLocalState.addVisibleTrack(this.trackState.id);
+    globals().frontendLocalState.addVisibleTrack(this.trackState.id);
     if (this.data() === undefined && !this.frontendOnly) {
-      const {visibleWindowTime, visibleTimeScale} = globals.frontendLocalState;
+      const {visibleWindowTime, visibleTimeScale} = globals().frontendLocalState;
       const startPx =
           Math.floor(visibleTimeScale.hpTimeToPx(visibleWindowTime.start));
       const endPx =
@@ -178,7 +178,7 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
     y -= 10;
 
     // Ensure the box is on screen:
-    const endPx = globals.frontendLocalState.visibleTimeScale.pxSpan.end;
+    const endPx = globals().frontendLocalState.visibleTimeScale.pxSpan.end;
     if (x + width > endPx) {
       x -= x + width - endPx;
     }

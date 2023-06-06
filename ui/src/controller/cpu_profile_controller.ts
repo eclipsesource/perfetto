@@ -34,7 +34,7 @@ export class CpuProfileController extends Controller<'main'> {
   }
 
   run() {
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (!selection || selection.kind !== 'CPU_PROFILE_SAMPLE') {
       return;
     }

@@ -48,12 +48,12 @@ export class MetricsController extends Controller<'main'> {
         throw e;
       }
     }
-    globals.dispatch(Actions.resetMetricRequest({name}));
+    globals().dispatch(Actions.resetMetricRequest({name}));
     this.currentlyRunningMetric = undefined;
   }
 
   run() {
-    const {requestedMetric} = globals.state.metrics;
+    const {requestedMetric} = globals().state.metrics;
     if (!requestedMetric) return;
     this.computeMetric(requestedMetric);
   }

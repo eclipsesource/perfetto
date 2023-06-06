@@ -23,9 +23,9 @@ import {SlicePanel} from './slice_panel';
 
 export class SliceDetailsPanel extends SlicePanel {
   view() {
-    const sliceInfo = globals.sliceDetails;
+    const sliceInfo = globals().sliceDetails;
     if (sliceInfo.utid === undefined) return;
-    const threadInfo = globals.threads.get(sliceInfo.utid);
+    const threadInfo = globals().threads.get(sliceInfo.utid);
 
     return m(
         '.details-panel',
@@ -45,7 +45,7 @@ export class SliceDetailsPanel extends SlicePanel {
     return m(
         '.half-width-panel.slice-details-latency-panel',
         m('img.slice-details-image', {
-          src: `${globals.root}assets/scheduling_latency.png`,
+          src: `${globals().root}assets/scheduling_latency.png`,
         }),
         this.renderWakeupText(sliceInfo),
         this.renderDisplayLatencyText(sliceInfo),
@@ -56,12 +56,12 @@ export class SliceDetailsPanel extends SlicePanel {
     if (sliceInfo.wakerUtid === undefined) {
       return null;
     }
-    const threadInfo = globals.threads.get(sliceInfo.wakerUtid!);
+    const threadInfo = globals().threads.get(sliceInfo.wakerUtid!);
     if (!threadInfo) {
       return null;
     }
     const timestamp =
-        tpTimeToCode(sliceInfo.wakeupTs! - globals.state.traceTime.start);
+        tpTimeToCode(sliceInfo.wakeupTs! - globals().state.traceTime.start);
     return m(
         '.slice-details-wakeup-text',
         m('', `Wakeup @ ${timestamp} on CPU ${sliceInfo.wakerCpu} by`),
@@ -111,7 +111,7 @@ export class SliceDetailsPanel extends SlicePanel {
         m('tr',
           m('th', `Start time`),
           m('td',
-            `${tpTimeToCode(sliceInfo.ts - globals.state.traceTime.start)}`)),
+            `${tpTimeToCode(sliceInfo.ts - globals().state.traceTime.start)}`)),
         m('tr',
           m('th', `Duration`),
           m('td', this.computeDuration(sliceInfo.ts, sliceInfo.dur))),
@@ -148,9 +148,9 @@ export class SliceDetailsPanel extends SlicePanel {
   }
 
   goToThread() {
-    const sliceInfo = globals.sliceDetails;
+    const sliceInfo = globals().sliceDetails;
     if (sliceInfo.utid === undefined) return;
-    const threadInfo = globals.threads.get(sliceInfo.utid);
+    const threadInfo = globals().threads.get(sliceInfo.utid);
 
     if (sliceInfo.id === undefined || sliceInfo.ts === undefined ||
         sliceInfo.dur === undefined || sliceInfo.cpu === undefined ||
@@ -159,7 +159,7 @@ export class SliceDetailsPanel extends SlicePanel {
     }
 
     let trackId: string|number|undefined;
-    for (const track of Object.values(globals.state.tracks)) {
+    for (const track of Object.values(globals().state.tracks)) {
       if (track.kind === 'ThreadStateTrack' &&
           (track.config as {utid: number}).utid === threadInfo.utid) {
         trackId = track.id;
@@ -167,7 +167,7 @@ export class SliceDetailsPanel extends SlicePanel {
     }
 
     if (trackId && sliceInfo.threadStateId) {
-      globals.makeSelection(Actions.selectThreadState({
+      globals().makeSelection(Actions.selectThreadState({
         id: sliceInfo.threadStateId,
         trackId: trackId.toString(),
       }));

@@ -27,7 +27,7 @@ export abstract class DragStrategy {
 
   protected updateGlobals(tStart: HighPrecisionTime, tEnd: HighPrecisionTime) {
     const vizTime = new HighPrecisionTimeSpan(tStart, tEnd);
-    globals.frontendLocalState.updateVisibleTime(vizTime);
-    globals.rafScheduler.scheduleRedraw();
+    globals().frontendLocalState.updateVisibleTime(vizTime);
+    globals().rafScheduler.scheduleRedraw();
   }
 }

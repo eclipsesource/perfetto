@@ -103,7 +103,7 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
       return m(
           'tr',
           {
-            onclick: () => this.highlightSlice(row, globals.state.currentTab),
+            onclick: () => this.highlightSlice(row, globals().state.currentTab),
             // TODO(altimin): Consider improving the logic here (e.g. delay?) to
             // account for cases when dblclick fires late.
             ondblclick: () => this.highlightSlice(row),
@@ -137,7 +137,7 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
     const sliceStart = BigInt(row.ts);
     // row.dur can be negative. Clamp to 1ns.
     const sliceDur = BigintMath.max(BigInt(row.dur), 1n);
-    const uiTrackId = globals.state.uiTrackIdByTraceTrackId[trackId];
+    const uiTrackId = globals().state.uiTrackIdByTraceTrackId[trackId];
     if (uiTrackId !== undefined) {
       reveal(uiTrackId, sliceStart, sliceStart + sliceDur, true);
       const sliceId = getSliceId(row);
@@ -153,7 +153,7 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
       trackId: uiTrackId,
       table: 'slice',
     });
-    globals.makeSelection(action, nextTab);
+    globals().makeSelection(action, nextTab);
   }
 }
 

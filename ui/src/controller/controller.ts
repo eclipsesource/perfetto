@@ -53,7 +53,7 @@ export abstract class Controller<StateType> {
   // Invokes the current controller subtree, recursing into children.
   // While doing so handles lifecycle of child controllers.
   // This method should be called only by the runControllers() method in
-  // globals.ts. Exposed publicly for testing.
+  // globals().ts. Exposed publicly for testing.
   invoke(): boolean {
     if (this._inRunner) throw new Error('Reentrancy in Controller');
     this._stateChanged = false;

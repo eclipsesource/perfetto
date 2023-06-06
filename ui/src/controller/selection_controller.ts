@@ -71,7 +71,7 @@ export class SelectionController extends Controller<'main'> {
   }
 
   run() {
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (!selection || selection.kind === 'AREA') return;
 
     const selectWithId =
@@ -267,7 +267,7 @@ export class SelectionController extends Controller<'main'> {
     }
 
     // Check selection is still the same on completion of query.
-    if (selection === globals.state.currentSelection) {
+    if (selection === globals().state.currentSelection) {
       publishSliceDetails(selected);
     }
   }
@@ -309,7 +309,7 @@ export class SelectionController extends Controller<'main'> {
     // TODO(hjd): If we had a consistent mapping from TP track_id
     // UI track id for slice tracks this would be unnecessary.
     let trackId = '';
-    for (const track of Object.values(globals.state.tracks)) {
+    for (const track of Object.values(globals().state.tracks)) {
       if (track.kind === SLICE_TRACK_KIND &&
           (track.config as {trackId: number}).trackId === Number(trackIdTp)) {
         trackId = track.id;
@@ -332,7 +332,7 @@ export class SelectionController extends Controller<'main'> {
     `;
     const result = await this.args.engine.query(query);
 
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (result.numRows() > 0 && selection) {
       const row = result.firstRow({
         ts: LONG,
@@ -359,7 +359,7 @@ export class SelectionController extends Controller<'main'> {
     WHERE sched.id = ${id}`;
     const result = await this.args.engine.query(sqlQuery);
     // Check selection is still the same on completion of query.
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (result.numRows() > 0 && selection) {
       const row = result.firstRow({
         ts: LONG,
@@ -416,11 +416,11 @@ export class SelectionController extends Controller<'main'> {
           IFNULL(value, 0) as value
         FROM counter WHERE ts < ${ts} and track_id = ${trackId}`);
     const previousValue = previous.firstRow({value: NUM}).value;
-    const endTs = rightTs !== -1n ? rightTs : globals.state.traceTime.end;
+    const endTs = rightTs !== -1n ? rightTs : globals().state.traceTime.end;
     const delta = value - previousValue;
     const duration = endTs - ts;
-    const uiTrackId = globals.state.uiTrackIdByTraceTrackId[trackId];
-    const name = uiTrackId ? globals.state.tracks[uiTrackId].name : undefined;
+    const uiTrackId = globals().state.uiTrackIdByTraceTrackId[trackId];
+    const name = uiTrackId ? globals().state.tracks[uiTrackId].name : undefined;
     return {startTime: ts, value, delta, duration, name};
   }
 

@@ -48,7 +48,7 @@ class SelectWidget implements m.ClassComponent<SelectWidgetAttrs> {
               onchange: (e: InputEvent) => {
                 const value = (e.target as HTMLSelectElement).value;
                 attrs.onSelect(value);
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
             },
             attrs.options.map((o) => {
@@ -131,7 +131,7 @@ export const FlagsPage = createPage({
               {
                 onclick: () => {
                   featureFlags.resetAll();
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 },
               },
               'Reset all below'),

@@ -237,7 +237,7 @@ export class FlowEventsController extends Controller<'main'> {
   }
 
   areaSelected(areaId: string) {
-    const area = globals.state.areas[areaId];
+    const area = globals().state.areas[areaId];
     if (this.lastSelectedKind === 'AREA' && this.lastSelectedArea &&
         this.lastSelectedArea.tracks.join(',') === area.tracks.join(',') &&
         this.lastSelectedArea.end === area.end &&
@@ -251,7 +251,7 @@ export class FlowEventsController extends Controller<'main'> {
     const trackIds: number[] = [];
 
     for (const uiTrackId of area.tracks) {
-      const track = globals.state.tracks[uiTrackId];
+      const track = globals().state.tracks[uiTrackId];
       if (track === undefined) {
         continue;
       }
@@ -309,7 +309,7 @@ export class FlowEventsController extends Controller<'main'> {
   }
 
   refreshVisibleFlows() {
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (!selection) {
       this.lastSelectedKind = 'NONE';
       publishConnectedFlows([]);

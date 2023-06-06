@@ -22,7 +22,7 @@ interface CounterDetailsPanelAttrs {}
 
 export class CounterDetailsPanel extends Panel<CounterDetailsPanelAttrs> {
   view() {
-    const counterInfo = globals.counterDetails;
+    const counterInfo = globals().counterDetails;
     if (counterInfo && counterInfo.startTime &&
         counterInfo.name !== undefined && counterInfo.value !== undefined &&
         counterInfo.delta !== undefined && counterInfo.duration !== undefined) {
@@ -40,7 +40,7 @@ export class CounterDetailsPanel extends Panel<CounterDetailsPanelAttrs> {
                        `${
                            tpTimeToCode(
                                counterInfo.startTime -
-                               globals.state.traceTime.start)}`)),
+                               globals().state.traceTime.start)}`)),
                    m('tr',
                      m('th', `Value`),
                      m('td', `${counterInfo.value.toLocaleString()}`)),

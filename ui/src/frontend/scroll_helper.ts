@@ -27,14 +27,14 @@ import {globals} from './globals';
 // center |ts|, keeping the same zoom level.
 export function horizontalScrollToTs(ts: TPTime) {
   const time = HighPrecisionTime.fromTPTime(ts);
-  const visibleWindow = globals.frontendLocalState.visibleWindowTime;
+  const visibleWindow = globals().frontendLocalState.visibleWindowTime;
   if (!visibleWindow.contains(time)) {
     // TODO(hjd): This is an ugly jump, we should do a smooth pan instead.
     const halfDuration = visibleWindow.duration.divide(2);
     const newStart = time.sub(halfDuration);
     const newWindow = new HighPrecisionTimeSpan(
         newStart, newStart.add(visibleWindow.duration));
-    globals.frontendLocalState.updateVisibleTime(newWindow);
+    globals().frontendLocalState.updateVisibleTime(newWindow);
   }
 }
 
@@ -53,8 +53,8 @@ export function horizontalScrollToTs(ts: TPTime) {
 export function focusHorizontalRange(
     start: TPTime, end: TPTime, viewPercentage?: number) {
   console.log('focusHorizontalRange', start, end);
-  const visible = globals.frontendLocalState.visibleWindowTime;
-  const trace = globals.stateTraceTime();
+  const visible = globals().frontendLocalState.visibleWindowTime;
+  const trace = globals().stateTraceTime();
   const select = HighPrecisionTimeSpan.fromTpTime(start, end);
 
   if (viewPercentage !== undefined) {
@@ -69,13 +69,13 @@ export function focusHorizontalRange(
     const paddingPercentage = 1.0 - viewPercentage;
     const paddingTime = select.duration.multiply(paddingPercentage);
     const halfPaddingTime = paddingTime.divide(2);
-    globals.frontendLocalState.updateVisibleTime(select.pad(halfPaddingTime));
+    globals().frontendLocalState.updateVisibleTime(select.pad(halfPaddingTime));
     return;
   }
   // If the range is too large to fit on the current zoom level, resize.
   if (select.duration.gt(visible.duration.multiply(0.5))) {
     const paddedRange = select.pad(select.duration.multiply(2));
-    globals.frontendLocalState.updateVisibleTime(paddedRange);
+    globals().frontendLocalState.updateVisibleTime(paddedRange);
     return;
   }
   // Calculate the new visible window preserving the zoom level.
@@ -100,9 +100,9 @@ export function focusHorizontalRange(
   // level.
   if (view.start.eq(visible.start) && view.end.eq(visible.end)) {
     const padded = select.pad(select.duration.multiply(2));
-    globals.frontendLocalState.updateVisibleTime(padded);
+    globals().frontendLocalState.updateVisibleTime(padded);
   } else {
-    globals.frontendLocalState.updateVisibleTime(view);
+    globals().frontendLocalState.updateVisibleTime(view);
   }
 }
 
@@ -122,7 +122,7 @@ export function verticalScrollToTrack(
   }
 
   let trackGroup = null;
-  const trackGroupId = getContainingTrackId(globals.state, trackIdString);
+  const trackGroupId = getContainingTrackId(globals().state, trackIdString);
   if (trackGroupId) {
     trackGroup = document.querySelector('#track_' + trackGroupId);
   }
@@ -136,8 +136,8 @@ export function verticalScrollToTrack(
   // group and scroll to the track or just scroll to the track group.
   if (openGroup) {
     // After the track exists in the dom, it will be scrolled to.
-    globals.frontendLocalState.scrollToTrackId = trackId;
-    globals.dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
+    globals().frontendLocalState.scrollToTrackId = trackId;
+    globals().dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
     return;
   } else {
     trackGroup.scrollIntoView({behavior: 'smooth', block: 'nearest'});

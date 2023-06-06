@@ -30,7 +30,7 @@ import {AggregationController} from './aggregation_controller';
 export function getSelectedTrackIds(area: Area): number[] {
   const selectedTrackIds = [];
   for (const trackId of area.tracks) {
-    const track = globals.state.tracks[trackId];
+    const track = globals().state.tracks[trackId];
     // Track will be undefined for track groups.
     if (track !== undefined) {
       if (track.kind === SLICE_TRACK_KIND) {

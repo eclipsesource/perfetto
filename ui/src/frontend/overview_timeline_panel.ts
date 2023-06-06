@@ -53,8 +53,8 @@ export class OverviewTimelinePanel extends Panel {
     if (newWidth > 0) { // It may be zero when temporarily not visible
       this.width = newWidth;
     }
-    this.traceTime = globals.stateTraceTimeTP();
-    const traceTime = globals.stateTraceTime();
+    this.traceTime = globals().stateTraceTimeTP();
+    const traceTime = globals().stateTraceTime();
     const pxSpan = new PxSpan(TRACK_SHELL_WIDTH, this.width);
     this.timeScale = TimeScale.fromHPTimeSpan(traceTime, pxSpan);
     if (this.gesture === undefined) {
@@ -91,7 +91,7 @@ export class OverviewTimelinePanel extends Panel {
     if (size.width > TRACK_SHELL_WIDTH && this.traceTime.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(this.width - TRACK_SHELL_WIDTH);
       const tickGen = new TickGenerator(
-          this.traceTime, maxMajorTicks, globals.state.traceTime.start);
+          this.traceTime, maxMajorTicks, globals().state.traceTime.start);
       // Set a background of color --perfetto-overview-background
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--perfetto-overview-background').trim() || 'white';
       ctx.fillRect(TRACK_SHELL_WIDTH, headerHeight, this.width, size.height - headerHeight);
@@ -104,7 +104,7 @@ export class OverviewTimelinePanel extends Panel {
         if (xPos > this.width) break;
         if (type === TickType.MAJOR) {
           ctx.fillRect(xPos - 1, 0, 1, headerHeight - 5);
-          const sec = tpTimeToSeconds(time - globals.state.traceTime.start);
+          const sec = tpTimeToSeconds(time - globals().state.traceTime.start);
           ctx.fillText(sec.toFixed(tickGen.digits) + ' s', xPos + 5, 18);
         } else if (type == TickType.MEDIUM) {
           ctx.fillRect(xPos - 1, 0, 1, 8);
@@ -115,12 +115,12 @@ export class OverviewTimelinePanel extends Panel {
     }
 
     // Draw mini-tracks with quanitzed density for each process.
-    if (globals.overviewStore.size > 0) {
-      const numTracks = globals.overviewStore.size;
+    if (globals().overviewStore.size > 0) {
+      const numTracks = globals().overviewStore.size;
       let y = 0;
       const trackHeight = (tracksHeight - 1) / numTracks;
-      for (const key of globals.overviewStore.keys()) {
-        const loads = globals.overviewStore.get(key)!;
+      for (const key of globals().overviewStore.keys()) {
+        const loads = globals().overviewStore.get(key)!;
         for (let i = 0; i < loads.length; i++) {
           const xStart = Math.floor(this.timeScale.tpTimeToPx(loads[i].start));
           const xEnd = Math.ceil(this.timeScale.tpTimeToPx(loads[i].end));
@@ -218,7 +218,7 @@ export class OverviewTimelinePanel extends Panel {
   }
 
   private static extractBounds(timeScale: TimeScale): [number, number] {
-    const vizTime = globals.frontendLocalState.visibleWindowTime;
+    const vizTime = globals().frontendLocalState.visibleWindowTime;
     return [
       Math.floor(timeScale.hpTimeToPx(vizTime.start)),
       Math.ceil(timeScale.hpTimeToPx(vizTime.end)),

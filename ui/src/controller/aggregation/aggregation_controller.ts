@@ -57,7 +57,7 @@ export abstract class AggregationController extends Controller<'main'> {
   }
 
   run() {
-    const selection = globals.state.currentSelection;
+    const selection = globals().state.currentSelection;
     if (selection === null || selection.kind !== 'AREA') {
       publishAggregateData({
         data: {
@@ -71,7 +71,7 @@ export abstract class AggregationController extends Controller<'main'> {
       return;
     }
     const aggregatePreferences =
-        globals.state.aggregatePreferences[this.args.kind];
+        globals().state.aggregatePreferences[this.args.kind];
 
     const sortingChanged = aggregatePreferences &&
         this.previousSorting !== aggregatePreferences.sorting;
@@ -111,7 +111,7 @@ export abstract class AggregationController extends Controller<'main'> {
 
     const defs = this.getColumnDefinitions();
     const colIds = defs.map((col) => col.columnId);
-    const pref = globals.state.aggregatePreferences[this.kind];
+    const pref = globals().state.aggregatePreferences[this.kind];
     let sorting = `${this.getDefaultSorting().column} ${
         this.getDefaultSorting().direction}`;
     if (pref && pref.sorting) {

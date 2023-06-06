@@ -39,7 +39,7 @@ export class TimeAxisPanel extends Panel {
     ctx.font = '10px Roboto Condensed';
     ctx.textAlign = 'left';
 
-    const startTime = tpTimeToString(globals.state.traceTime.start);
+    const startTime = tpTimeToString(globals().state.traceTime.start);
     ctx.fillText(startTime + ' +', 6, 11);
 
     ctx.save();
@@ -48,15 +48,15 @@ export class TimeAxisPanel extends Panel {
     ctx.clip();
 
     // Draw time axis.
-    const span = globals.frontendLocalState.visibleWindow.timestampSpan;
+    const span = globals().frontendLocalState.visibleWindow.timestampSpan;
     if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
       const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
       const tickGen =
-          new TickGenerator(span, maxMajorTicks, globals.state.traceTime.start);
+          new TickGenerator(span, maxMajorTicks, globals().state.traceTime.start);
       for (const {type, time} of tickGen) {
         const position = Math.floor(map.tpTimeToPx(time));
-        const sec = tpTimeToSeconds(time - globals.state.traceTime.start);
+        const sec = tpTimeToSeconds(time - globals().state.traceTime.start);
         if (type === TickType.MAJOR) {
           ctx.fillRect(position, 0, 1, size.height);
           ctx.fillText(sec.toFixed(tickGen.digits) + ' s', position + 5, 10);

@@ -167,7 +167,7 @@ export function generateQueryFromState(state: PivotTableState):
   `;
 
   const whereClause = state.constrainToArea ?
-      `where ${areaFilter(globals.state.areas[state.selectionArea.areaId])}` :
+      `where ${areaFilter(globals().state.areas[state.selectionArea.areaId])}` :
       '';
   const text = `
     select

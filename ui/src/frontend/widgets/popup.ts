@@ -278,13 +278,13 @@ export class Popup implements m.ClassComponent<PopupAttrs> {
     if (this.isOpen) {
       this.isOpen = false;
       this.onChange(this.isOpen);
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     }
   }
 
   private togglePopup() {
     this.isOpen = !this.isOpen;
     this.onChange(this.isOpen);
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 }

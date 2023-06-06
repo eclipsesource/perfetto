@@ -67,7 +67,7 @@ export class HistoryItemComponent implements
                 onclick: () => {
                   queryHistoryStorage.setStarred(
                       vnode.attrs.index, !vnode.attrs.entry.starred);
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 },
               },
               m(Icon, {icon: STAR, filled: vnode.attrs.entry.starred}),
@@ -81,7 +81,7 @@ export class HistoryItemComponent implements
             {
               onclick: () => {
                 queryHistoryStorage.remove(vnode.attrs.index);
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
             },
             m(Icon, {icon: 'delete'}))),

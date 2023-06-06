@@ -79,7 +79,7 @@ export class QueryResultTab extends BottomTab<QueryResultTabConfig> {
     } else {
       const result = await runQuery(this.config.query, this.engine);
       this.queryResponse = result;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
       if (result.error !== undefined) {
         return;
       }
@@ -90,7 +90,7 @@ export class QueryResultTab extends BottomTab<QueryResultTabConfig> {
     if (uuid !== '') {
       this.sqlViewName = await this.createViewForDebugTrack(uuid);
       if (this.sqlViewName) {
-        globals.rafScheduler.scheduleFullRedraw();
+        globals().rafScheduler.scheduleFullRedraw();
       }
     }
   }

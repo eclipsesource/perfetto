@@ -89,7 +89,7 @@ export class Modal implements m.ClassComponent<ModalDefinition> {
     // The next view pass will kick-off the modalFadeOut CSS animation by
     // appending the .modal-hidden CSS class.
     this.requestClose = true;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   view(vnode: m.Vnode<ModalDefinition>) {
@@ -196,7 +196,7 @@ class ModalImpl implements m.ClassComponent<ModalImplAttrs> {
   onremove() {
     if (this.onClose !== undefined) {
       this.onClose();
-      globals.rafScheduler.scheduleFullRedraw();
+      globals().rafScheduler.scheduleFullRedraw();
     }
   }
 
@@ -221,7 +221,7 @@ class ModalImpl implements m.ClassComponent<ModalImplAttrs> {
 
 // This is deliberately NOT a Mithril component. We want to manage the lifetime
 // independently (outside of Mithril), so we can render from outside the current
-// vdom sub-tree. ModalContainer instances should be singletons / globals.
+// vdom sub-tree. ModalContainer instances should be singletons / globals().
 export class ModalContainer {
   private attrs?: ModalDefinition;
   private generation = 1; // Start with a generation > `closeGeneration`.
@@ -248,7 +248,7 @@ export class ModalContainer {
               thiz.closeGeneration = thiz.generation;
               if (thiz.attrs?.onClose !== undefined) {
                 thiz.attrs.onClose();
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               }
             },
             close: thiz.closeGeneration === thiz.generation ? true :
@@ -276,7 +276,7 @@ export class ModalContainer {
 
   close() {
     this.closeGeneration = this.generation;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 }
 
@@ -295,6 +295,6 @@ export async function showModal(attrs: ModalDefinition): Promise<void> {
     ...attrs,
     onClose: () => promise.resolve(),
   });
-  globals.rafScheduler.scheduleFullRedraw();
+  globals().rafScheduler.scheduleFullRedraw();
   return promise;
 }

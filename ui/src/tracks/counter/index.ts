@@ -278,7 +278,7 @@ class CounterTrack extends Track<Config, Data> {
     const {
       visibleTimeScale: timeScale,
       windowSpan,
-    } = globals.frontendLocalState;
+    } = globals().frontendLocalState;
     const data = this.data();
 
     // Can't possibly draw anything.
@@ -483,7 +483,7 @@ class CounterTrack extends Track<Config, Data> {
     const data = this.data();
     if (data === undefined) return;
     this.mousePos = pos;
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(pos.x);
 
     const values = this.config.scale === 'DELTA_FROM_PREVIOUS' ?
@@ -503,7 +503,7 @@ class CounterTrack extends Track<Config, Data> {
   onMouseClick({x}: {x: number}): boolean {
     const data = this.data();
     if (data === undefined) return false;
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = globals().frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.timestamps, time.toTPTime());
     if (left === -1) {
@@ -511,7 +511,7 @@ class CounterTrack extends Track<Config, Data> {
     } else {
       const counterId = data.lastIds[left];
       if (counterId === -1) return true;
-      globals.makeSelection(Actions.selectCounter({
+      globals().makeSelection(Actions.selectCounter({
         leftTs: data.timestamps[left],
         rightTs: right !== -1 ? data.timestamps[right] : -1n,
         id: counterId,

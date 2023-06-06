@@ -84,7 +84,7 @@ export class TopLevelScrollTrack extends
   }
 
   onSliceClick(args: OnSliceClickArgs<TopLevelScrollTrackTypes['slice']>) {
-    globals.dispatch(Actions.selectTopLevelScrollSlice({
+    globals().dispatch(Actions.selectTopLevelScrollSlice({
       id: args.slice.id,
       sqlTableName: this.tableName,
       start: args.slice.start,

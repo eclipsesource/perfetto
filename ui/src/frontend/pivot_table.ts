@@ -109,20 +109,20 @@ export class PivotTable extends Panel<PivotTableAttrs> {
   constructor() {
     super();
     this.attributeModalHolder = new AttributeModalHolder((arg) => {
-      globals.dispatch(Actions.setPivotTablePivotSelected({
+      globals().dispatch(Actions.setPivotTablePivotSelected({
         column: {kind: 'argument', argument: arg},
         selected: true,
       }));
-      globals.dispatch(
+      globals().dispatch(
           Actions.setPivotTableQueryRequested({queryRequested: true}));
     });
   }
 
   get pivotState() {
-    return globals.state.nonSerializableState.pivotTable;
+    return globals().state.nonSerializableState.pivotTable;
   }
   get constrainToArea() {
-    return globals.state.nonSerializableState.pivotTable.constrainToArea;
+    return globals().state.nonSerializableState.pivotTable.constrainToArea;
   }
 
   renderCanvas(): void {}
@@ -168,7 +168,7 @@ export class PivotTable extends Panel<PivotTableAttrs> {
           {
             onclick: () => {
               tree.isCollapsed = !tree.isCollapsed;
-              globals.rafScheduler.scheduleFullRedraw();
+              globals().rafScheduler.scheduleFullRedraw();
             },
           },
           m('i.material-icons',
@@ -278,9 +278,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
       itemType: 'regular',
       text: order === 'DESC' ? 'Highest first' : 'Lowest first',
       callback() {
-        globals.dispatch(
+        globals().dispatch(
             Actions.setPivotTableSortColumn({aggregationIndex, order}));
-        globals.dispatch(
+        globals().dispatch(
             Actions.setPivotTableQueryRequested({queryRequested: true}));
       },
     };
@@ -301,9 +301,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
       itemType: 'regular',
       text: nameOverride ?? readableColumnName(aggregation.column),
       callback: () => {
-        globals.dispatch(
+        globals().dispatch(
             Actions.addPivotTableAggregation({aggregation, after: index}));
-        globals.dispatch(
+        globals().dispatch(
             Actions.setPivotTableQueryRequested({queryRequested: true}));
       },
     };
@@ -334,7 +334,7 @@ export class PivotTable extends Panel<PivotTableAttrs> {
       aggregation: Aggregation, index: number,
       removeItem: boolean): ReorderableCell {
     const popupItems: PopupMenuItem[] = [];
-    const state = globals.state.nonSerializableState.pivotTable;
+    const state = globals().state.nonSerializableState.pivotTable;
     if (aggregation.sortDirection === undefined) {
       popupItems.push(
           this.sortingItem(index, 'DESC'), this.sortingItem(index, 'ASC'));
@@ -355,9 +355,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
           itemType: 'regular',
           text: otherAgg,
           callback() {
-            globals.dispatch(Actions.setPivotTableAggregationFunction(
+            globals().dispatch(Actions.setPivotTableAggregationFunction(
                 {index, function: otherAgg}));
-            globals.dispatch(
+            globals().dispatch(
                 Actions.setPivotTableQueryRequested({queryRequested: true}));
           },
         });
@@ -369,8 +369,8 @@ export class PivotTable extends Panel<PivotTableAttrs> {
         itemType: 'regular',
         text: 'Remove',
         callback: () => {
-          globals.dispatch(Actions.removePivotTableAggregation({index}));
-          globals.dispatch(
+          globals().dispatch(Actions.removePivotTableAggregation({index}));
+          globals().dispatch(
               Actions.setPivotTableQueryRequested({queryRequested: true}));
         },
       });
@@ -423,9 +423,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
         itemType: 'regular',
         text: 'Remove',
         callback() {
-          globals.dispatch(Actions.setPivotTablePivotSelected(
+          globals().dispatch(Actions.setPivotTablePivotSelected(
               {column: pivot, selected: false}));
-          globals.dispatch(
+          globals().dispatch(
               Actions.setPivotTableQueryRequested({queryRequested: true}));
         },
       });
@@ -447,9 +447,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
           itemType: 'regular',
           text: columnName,
           callback() {
-            globals.dispatch(
+            globals().dispatch(
                 Actions.setPivotTablePivotSelected({column, selected: true}));
-            globals.dispatch(
+            globals().dispatch(
                 Actions.setPivotTableQueryRequested({queryRequested: true}));
           },
         });
@@ -471,7 +471,7 @@ export class PivotTable extends Panel<PivotTableAttrs> {
   }
 
   renderResultsTable(attrs: PivotTableAttrs) {
-    const state = globals.state.nonSerializableState.pivotTable;
+    const state = globals().state.nonSerializableState.pivotTable;
     if (state.queryResult === null) {
       return m('div', 'Loading...');
     }
@@ -486,7 +486,7 @@ export class PivotTable extends Panel<PivotTableAttrs> {
     }
 
     this.renderTree(
-        globals.state.areas[attrs.selectionArea.areaId],
+        globals().state.areas[attrs.selectionArea.areaId],
         [],
         tree,
         state.queryResult,
@@ -516,9 +516,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
               cells: pivotTableHeaders,
               onReorder: (
                   from: number, to: number, direction: DropDirection) => {
-                globals.dispatch(
+                globals().dispatch(
                     Actions.changePivotTablePivotOrder({from, to, direction}));
-                globals.dispatch(Actions.setPivotTableQueryRequested(
+                globals().dispatch(Actions.setPivotTableQueryRequested(
                     {queryRequested: true}));
               },
             }),
@@ -526,9 +526,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
               cells: aggregationTableHeaders,
               onReorder:
                   (from: number, to: number, direction: DropDirection) => {
-                    globals.dispatch(Actions.changePivotTableAggregationOrder(
+                    globals().dispatch(Actions.changePivotTableAggregationOrder(
                         {from, to, direction}));
-                    globals.dispatch(Actions.setPivotTableQueryRequested(
+                    globals().dispatch(Actions.setPivotTableQueryRequested(
                         {queryRequested: true}));
                   },
             }),
@@ -540,9 +540,9 @@ export class PivotTable extends Panel<PivotTableAttrs> {
                       'Query data for the whole timeline' :
                       'Constrain to selected area',
                   callback: () => {
-                    globals.dispatch(Actions.setPivotTableConstrainToArea(
+                    globals().dispatch(Actions.setPivotTableConstrainToArea(
                         {constrain: !state.constrainToArea}));
-                    globals.dispatch(Actions.setPivotTableQueryRequested(
+                    globals().dispatch(Actions.setPivotTableQueryRequested(
                         {queryRequested: true}));
                   },
                 }],

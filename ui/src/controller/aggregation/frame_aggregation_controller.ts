@@ -29,7 +29,7 @@ export class FrameAggregationController extends AggregationController {
 
     const selectedSqlTrackIds = [];
     for (const trackId of area.tracks) {
-      const track = globals.state.tracks[trackId];
+      const track = globals().state.tracks[trackId];
       // Track will be undefined for track groups.
       if (track !== undefined &&
           track.kind === ACTUAL_FRAMES_SLICE_TRACK_KIND) {

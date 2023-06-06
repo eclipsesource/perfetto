@@ -57,7 +57,7 @@ function getDetailsHeight() {
 }
 
 function getFullScreenHeight(dom?: Element) {
-  for(const selector of globals.frontendLocalState.detailsFullScreenSelectors) {
+  for(const selector of globals().frontendLocalState.detailsFullScreenSelectors) {
     const element = dom?.closest(selector) || document.querySelector(selector);
     if(element != null) {
       return element.clientHeight;
@@ -67,7 +67,7 @@ function getFullScreenHeight(dom?: Element) {
 }
 
 function hasLogs(): boolean {
-  const data = globals.trackDataStore.get(LogExistsKey) as LogExists;
+  const data = globals().trackDataStore.get(LogExistsKey) as LogExists;
   return data && data.exists;
 }
 
@@ -119,7 +119,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
     this.isClosed = newHeight <= DRAG_HANDLE_HEIGHT_PX;
     this.isFullscreen = newHeight >= this.fullscreenHeight;
     this.resize(newHeight);
-    globals.rafScheduler.scheduleFullRedraw();
+    globals().rafScheduler.scheduleFullRedraw();
   }
 
   onDragStart(_x: number, _y: number) {
@@ -140,7 +140,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
           '.tab',
           {
             onclick: () => {
-              globals.dispatch(Actions.setCurrentTab({tab: tab.key}));
+              globals().dispatch(Actions.setCurrentTab({tab: tab.key}));
             },
           },
           tab.name);
@@ -155,7 +155,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
                 this.isClosed = false;
                 this.isFullscreen = true;
                 this.resize(getFullScreenHeight(this.dom));
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
               title: 'Open fullscreen',
               disabled: this.isFullscreen,
@@ -176,7 +176,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
                   this.previousHeight = this.height;
                   this.resize(DRAG_HANDLE_HEIGHT_PX);
                 }
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
               title,
             },
@@ -186,7 +186,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
 
 function handleSelectionChange(newSelection?: Selection, _?: Selection): void {
   const currentSelectionTag = CURRENT_SELECTION_TAG;
-  const bottomTabList = globals.bottomTabList;
+  const bottomTabList = globals().bottomTabList;
   if (!bottomTabList) return;
   if (newSelection === undefined) {
     bottomTabList.closeTabByTag(currentSelectionTag);
@@ -254,8 +254,8 @@ export class DetailsPanel implements m.ClassComponent {
 
     const detailsPanels: DetailsPanel[] = [];
 
-    if (globals.bottomTabList) {
-      for (const tab of globals.bottomTabList.getTabs()) {
+    if (globals().bottomTabList) {
+      for (const tab of globals().bottomTabList!.getTabs()) {
         detailsPanels.push({
           key: tab.tag ?? tab.uuid,
           name: tab.getTitle(),
@@ -264,14 +264,14 @@ export class DetailsPanel implements m.ClassComponent {
       }
     }
 
-    const curSelection = globals.state.currentSelection;
+    const curSelection = globals().state.currentSelection;
     if (curSelection) {
       switch (curSelection.kind) {
         case 'NOTE':
           // Handled in handleSelectionChange.
           break;
         case 'AREA':
-          if (globals.flamegraphDetails.isInAreaSelection) {
+          if (globals().flamegraphDetails.isInAreaSelection) {
             detailsPanels.push({
               key: 'flamegraph_selection',
               name: 'Flamegraph Selection',
@@ -333,7 +333,7 @@ export class DetailsPanel implements m.ClassComponent {
       });
     }
 
-    const trackGroup = globals.state.trackGroups['ftrace-track-group'];
+    const trackGroup = globals().state.trackGroups['ftrace-track-group'];
     if (trackGroup) {
       const {collapsed} = trackGroup;
       if (!collapsed) {
@@ -345,7 +345,7 @@ export class DetailsPanel implements m.ClassComponent {
       }
     }
 
-    if (globals.state.nonSerializableState.pivotTable.selectionArea !==
+    if (globals().state.nonSerializableState.pivotTable.selectionArea !==
         undefined) {
       detailsPanels.push({
         key: 'pivot_table',
@@ -353,12 +353,12 @@ export class DetailsPanel implements m.ClassComponent {
         vnode: m(PivotTable, {
           key: 'pivot_table',
           selectionArea:
-              globals.state.nonSerializableState.pivotTable.selectionArea,
+              globals().state.nonSerializableState.pivotTable.selectionArea!,
         }),
       });
     }
 
-    if (globals.connectedFlows.length > 0) {
+    if (globals().connectedFlows.length > 0) {
       detailsPanels.push({
         key: 'bound_flows',
         name: 'Flow Events',
@@ -366,7 +366,7 @@ export class DetailsPanel implements m.ClassComponent {
       });
     }
 
-    for (const [key, value] of globals.aggregateDataStore.entries()) {
+    for (const [key, value] of globals().aggregateDataStore.entries()) {
       if (!isEmptyData(value)) {
         detailsPanels.push({
           key: value.tabName,
@@ -377,7 +377,7 @@ export class DetailsPanel implements m.ClassComponent {
     }
 
     // Add this after all aggregation panels, to make it appear after 'Slices'
-    if (globals.selectedFlows.length > 0) {
+    if (globals().selectedFlows.length > 0) {
       detailsPanels.push({
         key: 'selected_flows',
         name: 'Flow Events',
@@ -386,7 +386,7 @@ export class DetailsPanel implements m.ClassComponent {
     }
 
     let currentTabDetails =
-        detailsPanels.find((tab) => tab.key === globals.state.currentTab);
+        detailsPanels.find((tab) => tab.key === globals().state.currentTab);
     if (currentTabDetails === undefined && detailsPanels.length > 0) {
       currentTabDetails = detailsPanels[0];
     }

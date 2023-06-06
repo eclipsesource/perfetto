@@ -30,7 +30,7 @@ export function initAnalytics() {
   // local storage.
   if ((window.location.origin.startsWith('http://localhost:') ||
        window.location.origin.endsWith('.perfetto.dev')) &&
-      !globals.testing && !globals.embeddedMode) {
+      !globals().testing && !globals().embeddedMode) {
     return new AnalyticsImpl();
   }
   return new NullAnalytics();
@@ -93,7 +93,7 @@ class AnalyticsImpl implements Analytics {
     const route = Router.parseUrl(window.location.href).page || '/';
     console.log(
         `GA initialized. route=${route}`,
-        `isInternalUser=${globals.isInternalUser}`);
+        `isInternalUser=${globals().isInternalUser}`);
     // GA's reccomendation for SPAs is to disable automatic page views and
     // manually send page_view events. See:
     // https://developers.google.com/analytics/devguides/collection/gtagjs/pages#manual_pageviews
@@ -104,7 +104,7 @@ class AnalyticsImpl implements Analytics {
       referrer: document.referrer.split('?')[0],
       send_page_view: false,
       page_title: PAGE_TITLE,
-      dimension1: globals.isInternalUser ? '1' : '0',
+      dimension1: globals().isInternalUser ? '1' : '0',
       dimension2: VERSION,
       dimension3: getCurrentChannel(),
     });

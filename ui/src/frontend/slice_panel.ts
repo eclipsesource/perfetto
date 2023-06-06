@@ -35,7 +35,7 @@ function getDisplayName(name: string|undefined, id: number|undefined): string|
 
 export abstract class SlicePanel extends Panel {
   protected computeDuration(ts: TPTime, dur: TPDuration): string {
-    return dur === -1n ? `${globals.state.traceTime.end - ts} (Did not end)` :
+    return dur === -1n ? `${globals().state.traceTime.end - ts} (Did not end)` :
                          tpTimeToCode(dur);
   }
 
