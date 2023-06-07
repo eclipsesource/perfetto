@@ -19,6 +19,24 @@ import { assertTrue } from "../base/logging";
 
 export const TRACK_GROUP_KIND = '__track_group__';
 
+/**
+ * The result of a track or track group filter predicate.
+ * For a top-level tracks (in the scrolling group) and for
+ * a track group, at least one |include| result is required
+ * in order for it to be created. If any filter returns
+ * |exclude| then the track or track group is not created.
+ * A filter that has no opinion on the track or track group
+ * should return a |pass| vote.
+ * 
+ * Tracks that are included in a track group that is not
+ * the top-level scrolling group will not be created if
+ * any filter returns an |exclude| vote for it. Also, if
+ * its group is filtered out, then any |include| result
+ * is ignored because the track then is infeasible.
+ * Moreover, for a track group that is included by the
+ * filters, its member tracks are also included by default
+ * if no filter explicitly returns an |exclude| for them.
+ */
 export type FilterAction = 'include' | 'exclude' | 'pass';
 
 export type Filter = TrackFilter | TrackGroupFilter;

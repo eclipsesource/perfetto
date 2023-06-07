@@ -156,8 +156,6 @@ class TrackDecider {
   private utidToUuid = new Map<number, string>();
   private tracksToAdd: AddTrackArgs[] = [];
   private trackGroupsToAdd: AddTrackGroupArgs[] = [];
-  private addTrackGroupActions: DeferredAction[] = [];
-  private rejected: AddTrackLikeArgs[] = [];
 
   constructor(engineId: string, engine: Engine) {
     this.engineId = engineId;
@@ -1852,29 +1850,32 @@ class TrackDecider {
       }
     }
 
-    if (filterTracks) {
-      this.filterTracks();
-    }  
+    const actions: DeferredAction[] = [];
+    const rejected = filterTracks ? this.filterTracks() : [];
 
-    this.addTrackGroupActions.push(
+    actions.push(
         ...this.trackGroupsToAdd.map(Actions.addTrackGroup));
-    this.addTrackGroupActions.push(
-        Actions.addTracks({tracks: this.tracksToAdd}));
+    actions.push(Actions.addTracks({tracks: this.tracksToAdd}));
 
     const threadOrderingMetadata = await this.computeThreadOrderingMetadata();
-    this.addTrackGroupActions.push(
-        Actions.setUtidToTrackSortKey({threadOrderingMetadata}));
+    actions.push(Actions.setUtidToTrackSortKey({threadOrderingMetadata}));
 
     this.applyDefaultCounterScale();
 
-    return { actions: this.addTrackGroupActions, rejected: this.rejected };
+    return { actions, rejected };
   }
 
-  // Filter tracks and track groups. Any tracks belonging to an excluded
-  // group are themselves excluded regardless of track-specific filters.
-  // Any tracks not otherwise excluded that belong to an included group
-  // are implicitly included.
-  private filterTracks(): void {
+  /**
+   * Filter tracks and track groups. Any tracks belonging to an excluded
+   * group are themselves excluded regardless of track-specific filters.
+   * Any tracks not otherwise excluded that belong to an included group
+   * are implicitly included.
+   * 
+   * @returns the tracks and track groups rejected by the filter
+   */
+  private filterTracks(): AddTrackLikeArgs[] {
+    const rejected: AddTrackLikeArgs[] = [];
+
     const includedTrackGroupIds = new Set<string>();
     const excludedTrackGroupIds = new Set<string>();
     const includedTrackGroupSummaryTrackIds = new Set<string>();
@@ -1886,7 +1887,7 @@ class TrackDecider {
         includedTrackGroupIds.add(group.id);
         includedTrackGroupSummaryTrackIds.add(group.summaryTrackId);
       } else {
-        this.rejected.push(group);
+        rejected.push(group);
         excludedTrackGroupIds.add(group.id);
         excludedTrackGroupSummaryTrackIds.add(group.summaryTrackId);
       }
@@ -1904,11 +1905,13 @@ class TrackDecider {
     const trackFilter = (track: AddTrackArgs) => {
       const included = shouldCreateTrack(track, includedByGroup) && !excludedByGroup(track);
       if (!included) {
-        this.rejected.push(track);
+        rejected.push(track);
       }
       return included;
     };
     this.tracksToAdd = this.tracksToAdd.filter(trackFilter);
+
+    return rejected;
   }
 
   // Some process counter tracks are tied to specific threads based on their

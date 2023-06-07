@@ -91,11 +91,11 @@ export interface AddTrackGroupArgs {
 export type AddTrackLikeArgs = AddTrackArgs | AddTrackGroupArgs;
 
 export function isAddTrackArgs(args: AddTrackLikeArgs): args is AddTrackArgs {
-  return 'kind' in args && 'config' in args;
+  return 'kind' in args && 'trackSortKey' in args && 'config' in args;
 }
 
 export function isAddTrackGroupArgs(args: AddTrackLikeArgs): args is AddTrackGroupArgs {
-  return 'summaryTrackId' in args;
+  return 'summaryTrackId' in args; // 'collapsed' is a boolean and so quasi-defaulted
 }
 
 export interface PostedTrace {
