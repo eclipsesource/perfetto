@@ -54,14 +54,14 @@ import {ViewerPage} from './viewer_page';
 import {WidgetsPage} from './widgets_page';
 
 export {ViewerPage} from './viewer_page';
-export {globals} from './globals';
+export {globals, registerNewGlobal} from './globals';
 
 const EXTENSION_ID = 'lfmkphfpdbjijhpomgecfikhfohaoine';
 
 class FrontendApi {
   private state: State;
 
-  constructor() {
+  constructor(private context = '') {
     this.state = createEmptyState();
   }
 
@@ -82,19 +82,19 @@ class FrontendApi {
     }
 
     // Update overall state.
-    globals().state = this.state;
+    globals(this.context).state = this.state;
 
     // If the visible time in the global state has been updated more recently
     // than the visible time handled by the frontend @ 60fps, update it. This
     // typically happens when restoring the state from a permalink.
-    globals().frontendLocalState.mergeState(this.state.frontendLocalState);
+    globals(this.context).frontendLocalState.mergeState(this.state.frontendLocalState);
 
     // Only redraw if something other than the frontendLocalState changed.
     let key: keyof State;
     for (key in this.state) {
       if (key !== 'frontendLocalState' && key !== 'visibleTracks' &&
           oldState[key] !== this.state[key]) {
-        globals().rafScheduler.scheduleFullRedraw();
+        globals(this.context).rafScheduler.scheduleFullRedraw();
         break;
       }
     }
@@ -112,7 +112,7 @@ class FrontendApi {
       // Need to avoid reentering the controller so move this to a
       // separate task.
       setTimeout(() => {
-        runControllers();
+        runControllers(this.context);
       }, 0);
     }
   }
@@ -319,6 +319,36 @@ function main() {
   for (const plugin of pluginRegistry.values()) {
     pluginManager.activatePlugin(plugin.pluginId);
   }
+}
+
+export function setupFurtherFrontend(context: string) {
+  const extensionLocalChannel = new MessageChannel();
+  initController(extensionLocalChannel.port1, context);
+
+  const dispatch = (action: DeferredAction) => {
+    furtherFrontendApi.dispatchMultiple([action]);
+  };
+
+  const router = new Router({
+    '/': HomePage,
+    '/viewer': ViewerPage,
+    '/record': RECORDING_V2_FLAG.get() ? RecordPageV2 : RecordPage,
+    '/query': AnalyzePage,
+    '/flags': FlagsPage,
+    '/metrics': MetricsPage,
+    '/info': TraceInfoPage,
+    '/widgets': WidgetsPage,
+  });
+  router.onRouteChanged = (route) => {
+    globals(context).rafScheduler.scheduleFullRedraw();
+    maybeOpenTraceFromRoute(route);
+  };
+
+  globals(context).initialize(dispatch, router);
+  globals(context).serviceWorkerController.install();
+
+  const furtherFrontendApi = new FrontendApi(context);
+  globals(context).publishRedraw = () => globals(context).rafScheduler.scheduleFullRedraw();
 }
 
 

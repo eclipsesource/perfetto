@@ -29,9 +29,12 @@ export class AppController extends Controller<'main'> {
   // on a worker, and isn't able to directly send messages to the extension.
   private extensionPort: MessagePort;
 
-  constructor(extensionPort: MessagePort) {
+  private context: string;
+
+  constructor(extensionPort: MessagePort, context = '') {
     super('main');
     this.extensionPort = extensionPort;
+    this.context = context;
   }
 
   // This is the root method that is called every time the controller tree is
@@ -41,14 +44,14 @@ export class AppController extends Controller<'main'> {
   //   re-triggering the controllers.
   run() {
     const childControllers: ControllerInitializerAny[] =
-        [Child('permalink', PermalinkController, {})];
+        [Child('permalink', PermalinkController, {context: this.context})];
     if (!RECORDING_V2_FLAG.get()) {
       childControllers.push(Child(
-          'record', RecordController, {extensionPort: this.extensionPort}));
+          'record', RecordController, {extensionPort: this.extensionPort, context: this.context}));
     }
-    if (globals().state.engine !== undefined) {
-      const engineCfg = globals().state.engine!;
-      childControllers.push(Child(engineCfg.id, TraceController, engineCfg.id));
+    if (globals(this.context).state.engine !== undefined) {
+      const engineCfg = globals(this.context).state.engine!;
+      childControllers.push(Child(engineCfg.id, TraceController, {engineId: engineCfg.id, context: this.context}));
     }
     return childControllers;
   }

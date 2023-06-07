@@ -775,5 +775,15 @@ export function globals(context = ''): Globals {
   if (_globals === undefined) {
     throw Error('No Globals found for given context key');
   }
+  if (context === '') {
+    console.trace();
+  }
   return _globals;
+}
+
+export function registerNewGlobal(context: string, global: Globals) {
+  if (allGlobals.has(context)) {
+    throw new Error('A Globals object with this context key is present already')
+  }
+  allGlobals.set(context, global);
 }

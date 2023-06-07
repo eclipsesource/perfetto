@@ -212,19 +212,21 @@ function showJsonWarning() {
 export class TraceController extends Controller<States> {
   private readonly engineId: string;
   private engine?: Engine;
+  private context: string;
 
-  constructor(engineId: string) {
+  constructor(args: {engineId: string, context: string}) {
     super('init');
-    this.engineId = engineId;
+    this.engineId = args.engineId;
+    this.context = args.context;
   }
 
   run() {
-    const engineCfg = assertExists(globals().state.engine);
+    const engineCfg = assertExists(globals(this.context).state.engine);
     switch (this.state) {
       case 'init':
         this.loadTrace()
             .then((mode) => {
-              globals().dispatch(Actions.setEngineReady({
+              globals(this.context).dispatch(Actions.setEngineReady({
                 engineId: this.engineId,
                 ready: true,
                 mode,
@@ -251,8 +253,8 @@ export class TraceController extends Controller<States> {
         const childControllers: Children = [];
 
         // Create a TrackController for each track.
-        for (const trackId of Object.keys(globals().state.tracks)) {
-          const trackCfg = globals().state.tracks[trackId];
+        for (const trackId of Object.keys(globals(this.context).state.tracks)) {
+          const trackCfg = globals(this.context).state.tracks[trackId];
           if (trackCfg.engineId !== this.engineId) continue;
           if (!trackControllerRegistry.has(trackCfg.kind)) continue;
           const trackCtlFactory = trackControllerRegistry.get(trackCfg.kind);
@@ -260,7 +262,7 @@ export class TraceController extends Controller<States> {
           childControllers.push(Child(trackId, trackCtlFactory, trackArgs));
         }
 
-        for (const argName of globals().state.visualisedArgs) {
+        for (const argName of globals(this.context).state.visualisedArgs) {
           childControllers.push(
             Child(argName, VisualisedArgController, {argName, engine}));
         }
@@ -337,7 +339,7 @@ export class TraceController extends Controller<States> {
   }
 
   onDestroy() {
-    globals().engines.delete(this.engineId);
+    globals(this.context).engines.delete(this.engineId);
   }
 
   private async loadTrace(): Promise<EngineMode> {
@@ -346,20 +348,20 @@ export class TraceController extends Controller<States> {
     // HTTP RPC mode (i.e. trace_processor_shell -D).
     let engineMode: EngineMode;
     let useRpc = false;
-    if (globals().state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
-      useRpc = (await HttpRpcEngine.checkConnection(globals().httpRpcEnginePort)).connected;
+    if (globals(this.context).state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
+      useRpc = (await HttpRpcEngine.checkConnection(globals(this.context).httpRpcEnginePort)).connected;
     }
     let engine;
     if (useRpc) {
       console.log('Opening trace using native accelerator over HTTP+RPC');
       engineMode = 'HTTP_RPC';
-      engine = new HttpRpcEngine(this.engineId, LoadingManager.getInstance, globals().httpRpcEnginePort);
+      engine = new HttpRpcEngine(this.engineId, LoadingManager.getInstance, globals(this.context).httpRpcEnginePort);
       engine.errorHandler = (err) => {
-        globals().dispatch(
+        globals(this.context).dispatch(
             Actions.setEngineFailed({mode: 'HTTP_RPC', failure: `${err}`}));
         throw err;
       };
-      globals().httpRpcEngineCustomizer?.(engine);
+      globals(this.context).httpRpcEngineCustomizer?.(engine);
     } else {
       console.log('Opening trace using built-in WASM engine');
       engineMode = 'WASM';
@@ -378,15 +380,15 @@ export class TraceController extends Controller<States> {
       this.engine.enableMetatrace(
         assertExists(getEnabledMetatracingCategories()));
     }
-    globals().bottomTabList = new BottomTabList(engine.getProxy('BottomTabList'));
+    globals(this.context).bottomTabList = new BottomTabList(engine.getProxy('BottomTabList'));
 
-    globals().engines.set(this.engineId, engine);
-    globals().dispatch(Actions.setEngineReady({
+    globals(this.context).engines.set(this.engineId, engine);
+    globals(this.context).dispatch(Actions.setEngineReady({
       engineId: this.engineId,
       ready: false,
       mode: engineMode,
     }));
-    const engineCfg = assertExists(globals().state.engine);
+    const engineCfg = assertExists(globals(this.context).state.engine);
     assertTrue(engineCfg.id === this.engineId);
     let traceStream: TraceStream | undefined;
     if (engineCfg.source.type === 'FILE') {
@@ -453,7 +455,7 @@ export class TraceController extends Controller<States> {
     if (!shownJsonWarning) {
       // When in embedded mode, the host app will control which trace format
       // it passes to Perfetto, so we don't need to show this warning.
-      if (isJsonTrace && !globals().embeddedMode) {
+      if (isJsonTrace && !globals(this.context).embeddedMode) {
         showJsonWarning();
         // Save that the warning has been shown. Value is irrelevant since only
         // the presence of key is going to be checked.
@@ -463,7 +465,7 @@ export class TraceController extends Controller<States> {
 
     const emptyOmniboxState = {
       omnibox: '',
-      mode: globals().state.omniboxState.mode || 'SEARCH',
+      mode: globals(this.context).state.omniboxState.mode || 'SEARCH',
     };
 
     const actions: DeferredAction[] = [
@@ -473,7 +475,7 @@ export class TraceController extends Controller<States> {
     ];
 
     const visibleTimeSpan = await computeVisibleTime(
-        traceTime.start, traceTime.end, isJsonTrace, this.engine);
+        traceTime.start, traceTime.end, isJsonTrace, this.engine, this.context);
     // We don't know the resolution at this point. However this will be
     // replaced in 50ms so a guess is fine.
     const resolution = visibleTimeSpan.duration.divide(1000).toTPTime();
@@ -484,7 +486,7 @@ export class TraceController extends Controller<States> {
       resolution: BigintMath.max(resolution, 1n),
     }));
 
-    globals().dispatchMultiple(actions);
+    globals(this.context).dispatchMultiple(actions);
     Router.navigate(`#!/viewer?local_cache_key=${traceUuid}`);
 
     // Make sure the helper views are available before we start adding tracks.
@@ -492,7 +494,7 @@ export class TraceController extends Controller<States> {
 
     {
       // When we reload from a permalink don't create extra tracks:
-      const {pinnedTracks, tracks} = globals().state;
+      const {pinnedTracks, tracks} = globals(this.context).state;
       if (!pinnedTracks.length && !Object.keys(tracks).length) {
         await this.listTracks();
       }
@@ -518,8 +520,8 @@ export class TraceController extends Controller<States> {
       publishFtraceCounters(counters);
     }
 
-    globals().dispatch(Actions.sortThreadTracks({}));
-    globals().dispatch(Actions.maybeExpandOnlyTrackGroup({}));
+    globals(this.context).dispatch(Actions.sortThreadTracks({}));
+    globals(this.context).dispatch(Actions.maybeExpandOnlyTrackGroup({}));
 
     await this.selectFirstHeapProfile();
     if (PERF_SAMPLE_FLAG.get()) {
@@ -529,8 +531,8 @@ export class TraceController extends Controller<States> {
     // If the trace was shared via a permalink, it might already have a
     // selection. Emit onSelectionChanged to ensure that the components (like
     // current selection details) react to it.
-    if (globals().state.currentSelection !== null) {
-      onSelectionChanged(globals().state.currentSelection!, undefined);
+    if (globals(this.context).state.currentSelection !== null) {
+      onSelectionChanged(globals(this.context).state.currentSelection!, undefined);
     }
 
     // Trace Processor doesn't support the reliable range feature for JSON
@@ -538,7 +540,7 @@ export class TraceController extends Controller<States> {
     if (!isJsonTrace && ENABLE_CHROME_RELIABLE_RANGE_ANNOTATION_FLAG.get()) {
       const reliableRangeStart = await computeTraceReliableRangeStart(engine);
       if (reliableRangeStart > 0) {
-        globals().dispatch(Actions.addAutomaticNote({
+        globals(this.context).dispatch(Actions.addAutomaticNote({
           timestamp: reliableRangeStart,
           color: '#ff0000',
           text: 'Reliable Range Start',
@@ -559,9 +561,9 @@ export class TraceController extends Controller<States> {
     if (profile.numRows() !== 1) return;
     const row = profile.firstRow({upid: NUM});
     const upid = row.upid;
-    const leftTs = globals().state.traceTime.start;
-    const rightTs = globals().state.traceTime.end;
-    globals().dispatch(Actions.selectPerfSamples(
+    const leftTs = globals(this.context).state.traceTime.start;
+    const rightTs = globals(this.context).state.traceTime.end;
+    globals(this.context).dispatch(Actions.selectPerfSamples(
         {id: 0, upid, leftTs, rightTs, type: ProfileType.PERF_SAMPLE}));
   }
 
@@ -583,14 +585,14 @@ export class TraceController extends Controller<States> {
     const ts = row.ts;
     const type = profileType(row.type);
     const upid = row.upid;
-    globals().dispatch(Actions.selectHeapProfile({id: 0, upid, ts, type}));
+    globals(this.context).dispatch(Actions.selectHeapProfile({id: 0, upid, ts, type}));
   }
 
   private async listTracks() {
     this.updateStatus('Loading tracks');
     const engine = assertExists<Engine>(this.engine);
     const actions = await decideTracks(this.engineId, engine);
-    globals().dispatchMultiple(actions);
+    globals(this.context).dispatchMultiple(actions);
   }
 
   private async listThreads() {
@@ -712,7 +714,7 @@ export class TraceController extends Controller<States> {
       return '';
     }
     const traceUuid = result.firstRow({uuid: STR}).uuid;
-    const engineConfig = assertExists(globals().state.engine);
+    const engineConfig = assertExists(globals(this.context).state.engine);
     assertTrue(engineConfig.id === this.engineId);
     if (!(await cacheTrace(engineConfig.source, traceUuid))) {
       // If the trace is not cacheable (cacheable means it has been opened from
@@ -783,7 +785,7 @@ export class TraceController extends Controller<States> {
     for (const it = metricsResult.iter({name: STR}); it.valid(); it.next()) {
       availableMetrics.push(it.name);
     }
-    globals().dispatch(Actions.setAvailableMetrics({availableMetrics}));
+    globals(this.context).dispatch(Actions.setAvailableMetrics({availableMetrics}));
 
     const availableMetricsSet = new Set<string>(availableMetrics);
     for (const [flag, metric] of FLAGGED_METRICS) {
@@ -902,7 +904,7 @@ export class TraceController extends Controller<States> {
   }
 
   private updateStatus(msg: string): void {
-    globals().dispatch(Actions.updateStatus({
+    globals(this.context).dispatch(Actions.updateStatus({
       msg,
       timestamp: Date.now() / 1000,
     }));
@@ -918,10 +920,10 @@ async function computeTraceReliableRangeStart(engine: Engine): Promise<TPTime> {
 }
 
 async function computeVisibleTime(
-    traceStart: TPTime, traceEnd: TPTime, isJsonTrace: boolean, engine: Engine):
+    traceStart: TPTime, traceEnd: TPTime, isJsonTrace: boolean, engine: Engine, context: string):
     Promise<Span<HighPrecisionTime>> {
   // if we have non-default visible state, update the visible time to it
-  const previousVisibleState = globals().stateVisibleTime();
+  const previousVisibleState = globals(context).stateVisibleTime();
   const defaultTraceSpan =
       new TPTimeSpan(defaultTraceTime.start, defaultTraceTime.end);
   if (!(previousVisibleState.start === defaultTraceSpan.start &&
