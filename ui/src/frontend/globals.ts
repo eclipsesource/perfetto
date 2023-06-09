@@ -269,7 +269,7 @@ class Globals {
   private _httpRpcEngineCustomizer?: HttpRcpEngineCustomizer;
   private _promptToLoadFromTraceProcessorShell = true;
   private _trackFilteringEnabled = false;
-  private _filteredTracks?: AddTrackLikeArgs[] = undefined;
+  private _filteredTracks: AddTrackLikeArgs[] = [];
 
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
@@ -674,11 +674,11 @@ class Globals {
   }
 
   get filteredTracks(): AddTrackLikeArgs[] {
-    return this._filteredTracks || [];
+    return this._filteredTracks;
   }
 
-  set filteredTracks(filteredTracks: AddTrackLikeArgs[] | undefined) {
-    this._filteredTracks = filteredTracks ? [...filteredTracks] : undefined;
+  set filteredTracks(filteredTracks: AddTrackLikeArgs[]) {
+    this._filteredTracks = [...filteredTracks];
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {

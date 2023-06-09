@@ -66,9 +66,7 @@ abstract class ComposedFilter<FILTER extends Filter, ARGS> {
 
   abstract get kind(): string;
 
-  constructor(private readonly delegate: (filter: FILTER, args: ARGS) => FilterAction) {
-    this.delegate = delegate;
-  }
+  constructor(private readonly delegate: (filter: FILTER, args: ARGS) => FilterAction) {}
 
   push(...filters: FILTER[]): void {
     this.filters.push(...filters);
