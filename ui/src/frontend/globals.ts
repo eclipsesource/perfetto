@@ -267,6 +267,7 @@ class Globals {
   private _viewOpener?: ViewOpener = undefined;
   private _allowFileDrop = true;
   private _httpRpcEngineCustomizer?: HttpRcpEngineCustomizer;
+  private _promptToLoadFromTraceProcessorShell = true;
   private _trackFilteringEnabled = false;
   private _filteredTracks?: AddTrackLikeArgs[] = undefined;
 
@@ -654,6 +655,14 @@ class Globals {
 
   set httpRpcEngineCustomizer(httpRpcEngineCustomizer: HttpRcpEngineCustomizer | undefined) {
     this._httpRpcEngineCustomizer = httpRpcEngineCustomizer;
+  }
+
+  get promptToLoadFromTraceProcessorShell(): boolean {
+    return this._promptToLoadFromTraceProcessorShell;
+  }
+
+  set promptToLoadFromTraceProcessorShell(promptToLoadFromTraceProcessorShell: boolean) {
+    this._promptToLoadFromTraceProcessorShell = promptToLoadFromTraceProcessorShell;
   }
 
   get trackFilteringEnabled(): boolean {
