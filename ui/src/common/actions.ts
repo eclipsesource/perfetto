@@ -163,7 +163,6 @@ function removeTrack(state: StateDraft, trackId: string) {
 // A helper to clean the state for a given removable track group.
 function removeTrackGroup(state: StateDraft, groupId: string) {
   delete state.trackGroups[groupId];
-
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== groupId);
 }
 
