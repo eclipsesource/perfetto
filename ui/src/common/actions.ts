@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Draft} from 'immer';
+import {current, Draft} from 'immer';
 
 import {assertExists, assertTrue, assertUnreachable} from '../base/logging';
 import {RecordConfig} from '../controller/record_config_types';
@@ -57,12 +57,14 @@ import {
   Status,
   ThreadTrackSortKey,
   TraceTime,
+  TrackGroupState,
   TrackSortKey,
   TrackState,
   UtidToTrackSortKey,
   VisibleState,
 } from './state';
 import {TPDuration, TPTime} from './time';
+import {STR} from './query_result';
 
 export const DEBUG_SLICE_TRACK_KIND = 'DebugSliceTrack';
 
@@ -76,8 +78,25 @@ export interface AddTrackArgs {
   labels?: string[];
   trackSortKey: TrackSortKey;
   trackGroup?: string;
-  isUserDefined?: boolean;
   config: {};
+}
+
+export interface AddTrackGroupArgs {
+  id: string;
+  engineId: string;
+  name: string;
+  summaryTrackId: string;
+  collapsed: boolean;
+}
+
+export type AddTrackLikeArgs = AddTrackArgs | AddTrackGroupArgs;
+
+export function isAddTrackArgs(args: AddTrackLikeArgs): args is AddTrackArgs {
+  return 'kind' in args && 'trackSortKey' in args && 'config' in args;
+}
+
+export function isAddTrackGroupArgs(args: AddTrackLikeArgs): args is AddTrackGroupArgs {
+  return 'summaryTrackId' in args; // 'collapsed' is a boolean and so quasi-defaulted
 }
 
 export interface PostedTrace {
@@ -124,8 +143,6 @@ function generateNextId(draft: StateDraft): string {
 }
 
 // A helper to clean the state for a given removeable track.
-// This is not exported as action to make it clear that not all
-// tracks are removeable.
 function removeTrack(state: StateDraft, trackId: string) {
   const track = state.tracks[trackId];
   delete state.tracks[trackId];
@@ -141,6 +158,65 @@ function removeTrack(state: StateDraft, trackId: string) {
     removeTrackId(state.trackGroups[track.trackGroup].tracks);
   }
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== trackId);
+}
+
+// A helper to clean the state for a given removable track group.
+function removeTrackGroup(state: StateDraft, groupId: string) {
+  delete state.trackGroups[groupId];
+  state.pinnedTracks = state.pinnedTracks.filter((id) => id !== groupId);
+}
+// Query whether an |other| track matches enough details of a |track| as
+// to represent the same track
+function isSameTrack(track: AddTrackArgs, other: Partial<AddTrackArgs>): boolean {
+  return track.kind === other.kind &&
+      track.trackGroup == other.trackGroup &&
+      // TODO: This may not be reliable. May need to deep-compare the config object
+      track.name == other.name;
+}
+
+function unfilterTracklike(
+    state: StateDraft,
+    predicate: (tracklike: AddTrackLikeArgs) => boolean) {
+  const index = state.filteredTracks.findIndex(predicate);
+  if (index >= 0) {
+    state.filteredTracks.splice(index, 1);
+  }
+}
+
+function unfilterTrack(state: StateDraft, track: TrackState) {
+  unfilterTracklike(state, (filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
+}
+
+function unfilterTrackGroup(state: StateDraft, trackGroup: TrackGroupState) {
+  unfilterTracklike(state, (filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+}
+// A helper to delete the private tables and views created by a track.
+// TODO: These should recorded by each track that creates them and cleaned up
+//       by an explicit disposable-track protocol.
+async function dropTables(engineId: string, trackId: string) {
+  const engine = assertExists(globals.engines.get(engineId));
+  const suffix = trackId.split('-').join('_');
+  const result = await engine.query(`
+      select name, type from sqlite_schema
+      where name like '%_${suffix}'
+      union select name, type from sqlite_temp_schema
+      where name like '%_${suffix}'`);
+
+  const it = result.iter({name: STR, type: STR});
+  const dropStmts: string[] = [];
+  for (; it.valid(); it.next()) {
+    dropStmts.push(`drop ${it.type} ${it.name};`);
+  }
+
+  for (const stmt of dropStmts) {
+    try {
+      await engine.query(stmt);
+    } catch (_error) {
+      // This is expected, depending on the order in which
+      // we attempt to drop things (some may already be
+      // implicitly dropped)
+    }
+  }
 }
 
 let statusTraceEvent: TraceEventScope|undefined;
@@ -201,11 +277,28 @@ export const StateActions = {
     state.traceUuid = args.traceUuid;
   },
 
-  fillUiTrackIdByTraceTrackId(
-      state: StateDraft, trackState: TrackState, uiTrackId: string) {
+  updateUiTrackIdByTraceTrackId(
+      trackState: TrackState, uiTrackId: string,
+      updater: (trackId: number, uiTrackId: string) => void) {
     const namespace = (trackState.config as {namespace?: string}).namespace;
     if (namespace !== undefined) return;
 
+    const config = trackState.config as {trackId: number};
+    if (config.trackId !== undefined) {
+      updater(config.trackId, uiTrackId);
+      return;
+    }
+
+    const multiple = trackState.config as {trackIds: number[]};
+    if (multiple.trackIds !== undefined) {
+      for (const trackId of multiple.trackIds) {
+        updater(trackId, uiTrackId);
+      }
+    }
+  },
+
+  fillUiTrackIdByTraceTrackId(
+      state: StateDraft, trackState: TrackState, uiTrackId: string) {
     const setUiTrackId = (trackId: number, uiTrackId: string) => {
       if (state.uiTrackIdByTraceTrackId[trackId] !== undefined &&
           state.uiTrackIdByTraceTrackId[trackId] !== uiTrackId) {
@@ -216,18 +309,18 @@ export const StateActions = {
       state.uiTrackIdByTraceTrackId[trackId] = uiTrackId;
     };
 
-    const config = trackState.config as {trackId: number};
-    if (config.trackId !== undefined) {
-      setUiTrackId(config.trackId, uiTrackId);
-      return;
-    }
+    this.updateUiTrackIdByTraceTrackId(trackState, uiTrackId, setUiTrackId);
+  },
 
-    const multiple = trackState.config as {trackIds: number[]};
-    if (multiple.trackIds !== undefined) {
-      for (const trackId of multiple.trackIds) {
-        setUiTrackId(trackId, uiTrackId);
+  cleanUiTrackIdByTraceTrackId(
+      state: StateDraft, trackState: TrackState, uiTrackId: string) {
+    const cleanUiTrackId = (trackId: number, uiTrackId: string) => {
+      if (state.uiTrackIdByTraceTrackId[trackId] === uiTrackId) {
+            delete state.uiTrackIdByTraceTrackId[trackId];
       }
-    }
+    };
+
+    this.updateUiTrackIdByTraceTrackId(trackState, uiTrackId, cleanUiTrackId);
   },
 
   addTracks(state: StateDraft, args: {tracks: AddTrackArgs[]}) {
@@ -252,7 +345,6 @@ export const StateActions = {
   addTrack(state: StateDraft, args: {
     id?: string; engineId: string; kind: string; name: string;
     trackGroup?: string; config: {}; trackSortKey: TrackSortKey;
-    isUserDefined?: boolean;
   }): void {
     const id = args.id !== undefined ? args.id : generateNextId(state);
     state.tracks[id] = {
@@ -264,9 +356,8 @@ export const StateActions = {
       trackGroup: args.trackGroup,
       config: args.config,
     };
-    if (args.isUserDefined !== undefined) {
-      state.tracks[id].isUserDefined = args.isUserDefined;
-    }
+    unfilterTrack(state, state.tracks[id]);
+
     this.fillUiTrackIdByTraceTrackId(state, state.tracks[id], id);
     if (args.trackGroup === SCROLLING_TRACK_GROUP) {
       state.scrollingTracks.push(id);
@@ -290,6 +381,17 @@ export const StateActions = {
       collapsed: args.collapsed,
       tracks: [args.summaryTrackId],
     };
+    unfilterTrackGroup(state, state.trackGroups[args.id]);
+  },
+
+  addTrackLike(state: StateDraft, args: AddTrackLikeArgs): void {
+    if (isAddTrackGroupArgs(args)) {
+      this.addTrackGroup(state, args);
+    } else if (isAddTrackArgs(args)) {
+      this.addTrack(state, args);
+    } else {
+      assertUnreachable(args);
+    }
   },
 
   addDebugTrack(
@@ -316,10 +418,51 @@ export const StateActions = {
     removeTrack(state, args.trackId);
   },
 
-  removeUserDefinedTrack(state: StateDraft, args: {trackId: string}): void {
+  removeTrack(state: StateDraft, args: {trackId: string}): void {
     const track = state.tracks[args.trackId];
-    assertTrue(track.isUserDefined ?? false);
+    if (!track) {
+      return;
+    }
     removeTrack(state, args.trackId);
+
+    this.cleanUiTrackIdByTraceTrackId(state, track as TrackState, args.trackId);
+
+      // Don't assume that we can reuse the track's ID, unless
+      // it's a group summary track that has a fixed explicit ID.
+      // Note that (some, at least) summary tracks don't reference
+      // their group
+      const id = track.trackGroup !== SCROLLING_TRACK_GROUP &&
+              Object.values(state.trackGroups).some((group) => group.tracks.length && group.tracks[0] === track.id) ?
+          {id: track.id} :
+          {};
+      state.filteredTracks.push({
+        ...id,
+        kind: track.kind,
+        engineId: track.engineId,
+        name: track.name,
+        trackSortKey: track.trackSortKey,
+        trackGroup: track.trackGroup,
+        labels: track.labels,
+        config: current(track.config),
+      });
+
+    dropTables(track.engineId, track.id);
+  },
+
+  removeTrackGroup(state: StateDraft, args: {id: string, summaryTrackId: string}): void {
+    const trackGroup = state.trackGroups[args.id];
+    if (!trackGroup) {
+      return;
+    }
+
+    removeTrackGroup(state, args.id);
+      state.filteredTracks.push({
+        id: trackGroup.id,
+        engineId: trackGroup.engineId,
+        name: trackGroup.name,
+        collapsed: trackGroup.collapsed,
+        summaryTrackId: args.summaryTrackId,
+      });
   },
 
   removeVisualisedArgTracks(state: StateDraft, args: {trackIds: string[]}) {
@@ -1077,10 +1220,9 @@ export const StateActions = {
   },
 
   clearAllPinnedTracks(state: StateDraft, _: {}) {
-    const pinnedTracks = state.pinnedTracks.slice();
-    for (let index = pinnedTracks.length-1; index >= 0; index--) {
-      const trackId = pinnedTracks[index];
-      this.toggleTrackPinned(state, {trackId});
+    if (state.pinnedTracks.length > 0) {
+      // Clear pinnedTracks array
+      state.pinnedTracks.length = 0;
     }
   },
 
@@ -1210,6 +1352,12 @@ export const StateActions = {
   toggleCollapseByTextEntry(state: StateDraft, _: {}) {
     state.logFilteringCriteria.hideNonMatching =
         !state.logFilteringCriteria.hideNonMatching;
+  },
+
+  setFilteredTracks(
+      state: StateDraft,
+      args: {filteredTracks: AddTrackLikeArgs[]}) {
+    state.filteredTracks = [...args.filteredTracks];
   },
 };
 

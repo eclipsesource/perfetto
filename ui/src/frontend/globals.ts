@@ -13,24 +13,24 @@
 // limitations under the License.
 
 import {BigintMath} from '../base/bigint_math';
-import { HttpRcpEngineCustomizer } from '../common/http_rpc_engine';
-import { assertExists } from '../base/logging';
-import { Actions, DeferredAction } from '../common/actions';
-import { AggregateData } from '../common/aggregation_data';
-import { Args, ArgsTree } from '../common/arg_types';
+import {HttpRcpEngineCustomizer} from '../common/http_rpc_engine';
+import {ErrorHandler, assertExists} from '../base/logging';
+import {Actions, DeferredAction} from '../common/actions';
+import {AggregateData} from '../common/aggregation_data';
+import {Args, ArgsTree} from '../common/arg_types';
 import {
   ConversionJobName,
   ConversionJobStatus,
 } from '../common/conversion_jobs';
-import { createEmptyState } from '../common/empty_state';
-import { Engine } from '../common/engine';
+import {createEmptyState} from '../common/empty_state';
+import {Engine} from '../common/engine';
 import {
   HighPrecisionTime,
   HighPrecisionTimeSpan,
 } from '../common/high_precision_time';
-import { MetricResult } from '../common/metric_data';
-import { CurrentSearchResults, SearchSummary } from '../common/search_data';
-import { CallsiteInfo, EngineConfig, ProfileType, State } from '../common/state';
+import {MetricResult} from '../common/metric_data';
+import {CurrentSearchResults, SearchSummary} from '../common/search_data';
+import {CallsiteInfo, EngineConfig, ProfileType, State} from '../common/state';
 import {Span, tpTimeFromSeconds} from '../common/time';
 import {
   TPDuration,
@@ -38,13 +38,14 @@ import {
   TPTimeSpan,
 } from '../common/time';
 
-import { Analytics, initAnalytics } from './analytics';
-import { BottomTabList } from './bottom_tab';
-import { FrontendLocalState } from './frontend_local_state';
-import { RafScheduler } from './raf_scheduler';
-import { Router } from './router';
-import { ServiceWorkerController } from './service_worker_controller';
+import {Analytics, initAnalytics} from './analytics';
+import {BottomTabList} from './bottom_tab';
+import {FrontendLocalState} from './frontend_local_state';
+import {RafScheduler} from './raf_scheduler';
+import {Router} from './router';
+import {ServiceWorkerController} from './service_worker_controller';
 import {PxSpan, TimeScale} from './time_scale';
+import {maybeShowErrorDialog} from './error_dialog';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
@@ -265,10 +266,13 @@ class Globals {
   private _cachePrefix: string = '';
 
   private _viewOpener?: ViewOpener = undefined;
+  private _errorHandler: ErrorHandler = maybeShowErrorDialog;
   private _allowFileDrop = true;
   private _httpRpcEnginePort = 9001;
   private _httpRpcEngineCustomizer?: HttpRcpEngineCustomizer;
   private _promptToLoadFromTraceProcessorShell = true;
+  private _trackFilteringEnabled = false;
+  private _engineReadyObservers: ((engine: EngineConfig) => void)[] = [];
 
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
@@ -334,7 +338,12 @@ class Globals {
   }
 
   set state(state: State) {
+    state = assertExists(state);
+    const readyStateSet = state.engine?.ready && !this._state?.engine?.ready;
     this._state = assertExists(state);
+    if (readyStateSet) {
+      this.fireEngineReady(state.engine!);
+    }
   }
 
   get dispatch(): Dispatch {
@@ -534,7 +543,7 @@ class Globals {
   }
 
   get relaxContentSecurity(): boolean {
-    return !!this._relaxContentSecurity
+    return !!this._relaxContentSecurity;
   }
 
   get cachePrefix(): string {
@@ -640,6 +649,14 @@ class Globals {
     this._viewOpener = viewOpener;
   }
 
+  get errorHandler(): ErrorHandler {
+    return this._errorHandler;
+  }
+
+  set errorHandler(errorHandler: ErrorHandler) {
+    this._errorHandler = errorHandler;
+  }
+
   get allowFileDrop(): boolean {
     return this._allowFileDrop;
   }
@@ -670,6 +687,34 @@ class Globals {
 
   set promptToLoadFromTraceProcessorShell(promptToLoadFromTraceProcessorShell: boolean) {
     this._promptToLoadFromTraceProcessorShell = promptToLoadFromTraceProcessorShell;
+  }
+
+  get trackFilteringEnabled(): boolean {
+    return this._trackFilteringEnabled;
+  }
+
+  set trackFilteringEnabled(trackFilteringEnabled: boolean) {
+    this._trackFilteringEnabled = trackFilteringEnabled;
+  }
+
+  private fireEngineReady(engine: EngineConfig) {
+    for (const observer of this._engineReadyObservers) {
+      observer(engine);
+    }
+  }
+
+  /** Register an engine ready observer.
+   *
+   * returns a cleanup function, to be called to unregister.
+   */
+  addEngineReadyObserver(observer: (engine: EngineConfig) => void): ()=>void {
+    this._engineReadyObservers.push(observer);
+    return ()=> {
+      const index = this._engineReadyObservers.indexOf(observer);
+      if (index >= 0) {
+        this._engineReadyObservers.splice(index, 1);
+      }
+    };
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {

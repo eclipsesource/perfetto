@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { TrackFilter, TrackGroupFilter, trackFilterRegistry } from '../controller/track_filter';
 import {Engine} from '../common/engine';
 import {
   TrackControllerFactory,
@@ -28,6 +29,7 @@ import {
 } from './plugin_api';
 import {Registry} from './registry';
 import {Selection} from './state';
+import { CustomButton, CustomButtonArgs, customButtonRegistry } from '../frontend/button_registry';
 
 // Every plugin gets its own PluginContext. This is how we keep track
 // what each plugin is doing and how we can blame issues on particular
@@ -56,9 +58,17 @@ export class PluginContextImpl implements PluginContext {
     this.trackProviders.push(provider);
   }
 
+  registerTrackFilter(filter: TrackFilter | TrackGroupFilter): void {
+    trackFilterRegistry.register(filter);  
+  }
+
   registerOnDetailsPanelSelectionChange(
       onDetailsPanelSelectionChange: (newSelection?: Selection) => void) {
     this.onDetailsPanelSelectionChange = onDetailsPanelSelectionChange;
+  }
+
+  registerCustomButton(button: CustomButtonArgs): void {
+    customButtonRegistry.register(new CustomButton(button));
   }
   // ==================================================================
 
@@ -73,7 +83,7 @@ export class PluginContextImpl implements PluginContext {
   // PluginContext should unregister everything.
   revoke() {
     // TODO(hjd): Remove from trackControllerRegistry, trackRegistry,
-    // etc.
+    // track filters, etc.
   }
   // ==================================================================
 }

@@ -23,6 +23,7 @@ import {TopLevelScrollSelection} from '../tracks/scroll_jank/scroll_track';
 
 import {Direction} from './event_set';
 import {TPDuration, TPTime} from './time';
+import {AddTrackLikeArgs} from './actions';
 
 /**
  * A plain js object, holding objects of type |Class| keyed by string id.
@@ -242,7 +243,6 @@ export interface TrackState {
   labels?: string[];
   trackSortKey: TrackSortKey;
   trackGroup?: string;
-  isUserDefined?: boolean;
   config: {
     trackId?: number;
     trackIds?: number[];
@@ -563,6 +563,7 @@ export interface State {
   ftraceFilter: FtraceFilterState;
   traceConversionInProgress: boolean;
   visualisedArgs: string[];
+  filteredTracks: AddTrackLikeArgs[];
 
   /**
    * This state is updated on the frontend at 60Hz and eventually syncronised to
