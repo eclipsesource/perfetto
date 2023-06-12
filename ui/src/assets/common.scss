@@ -55,11 +55,7 @@
   line-break: anywhere;
 }
 
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: none;
-}
+
 
 html {
   font-family: Roboto, verdana, sans-serif;
@@ -78,29 +74,11 @@ body > main {
   overflow: hidden;
 }
 
-pre,
-code {
-  font-family: var(--monospace-font);
-}
-
 // This is to minimize Mac vs Linux Chrome Headless rendering differences
 // when running UI intergrationtests via puppeteer.
 body.testing {
   -webkit-font-smoothing: antialiased !important;
   font-kerning: none !important;
-}
-
-h1,
-h2,
-h3 {
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  padding: 0;
-  margin: 0;
-}
-table {
-  user-select: text;
 }
 
 body > main {
@@ -131,20 +109,6 @@ body.filedrag::after {
   background: rgba(255, 255, 255, 0.5);
 }
 
-button {
-  background: none;
-  color: inherit;
-  border: none;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-  outline: inherit;
-}
-
-button.close {
-  font-family: var(--monospace-font);
-}
-
 .full-page-loading-screen {
   position: absolute;
   width: 100%;
@@ -164,6 +128,39 @@ button.close {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  pre,
+  code {
+    font-family: var(--monospace-font);
+  }
+  table {
+    user-select: text;
+  }
+  button.close {
+    font-family: var(--monospace-font);
+  }
+  button {
+    background: none;
+    color: inherit;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    outline: inherit;
+  }
+  h1, 
+  h2,
+  h3 {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    padding: 0;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
 }
 
 .split-panel {
