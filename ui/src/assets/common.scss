@@ -85,14 +85,6 @@ body.testing {
 perfetto {
   color: var(--main-foreground-color);
   background-color: var(--main-background-color);
-  display: grid;
-  grid-template-areas:
-    "sidebar topbar"
-    "sidebar alerts"
-    "sidebar page";
-  grid-template-rows: auto auto 1fr;
-  grid-template-columns: auto 1fr;
-  overflow: hidden;
   pre,
   code {
     font-family: var(--monospace-font);
