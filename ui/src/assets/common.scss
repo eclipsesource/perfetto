@@ -66,7 +66,7 @@ html {
 html,
 body,
 body > main,
-.perfetto-ui  {
+.perfetto{
   height: 100%;
   width: 100%;
   padding: 0;
@@ -82,42 +82,43 @@ body.testing {
   font-kerning: none !important;
 }
 
-perfetto {
-  color: var(--main-foreground-color);
-  background-color: var(--main-background-color);
-  pre,
-  code {
-    font-family: var(--monospace-font);
-  }
-  table {
-    user-select: text;
-  }
-  button.close {
-    font-family: var(--monospace-font);
-  }
-  button {
-    background: none;
-    color: inherit;
-    border: none;
-    padding: 0;
-    font: inherit;
-    cursor: pointer;
-    outline: inherit;
-  }
-  h1, 
-  h2,
-  h3 {
-    font-family: inherit;
-    font-size: inherit;
-    font-weight: inherit;
-    padding: 0;
-    margin: 0;
-  }
-  * {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: none;
-  }
+pre,
+code {
+  font-family: var(--monospace-font);
+}
+
+table {
+  user-select: text;
+}
+
+button.close {
+  font-family: var(--monospace-font);
+}
+
+button {
+  background: none;
+  color: inherit;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  outline: inherit;
+}
+
+h1, 
+h2,
+h3 {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
 }
 
 body.filedrag::after {
