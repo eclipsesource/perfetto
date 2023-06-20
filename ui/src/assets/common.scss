@@ -55,7 +55,11 @@
   line-break: anywhere;
 }
 
-
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
 
 html {
   font-family: Roboto, verdana, sans-serif;
@@ -66,13 +70,18 @@ html {
 html,
 body,
 body > main,
-.perfetto{
+.perfetto {
   height: 100%;
   width: 100%;
   padding: 0;
   margin: 0;
   overscroll-behavior: none;
   overflow: hidden;
+}
+
+pre,
+code {
+  font-family: var(--monospace-font);
 }
 
 // This is to minimize Mac vs Linux Chrome Headless rendering differences
@@ -82,30 +91,7 @@ body.testing {
   font-kerning: none !important;
 }
 
-pre,
-code {
-  font-family: var(--monospace-font);
-}
-
-table {
-  user-select: text;
-}
-
-button.close {
-  font-family: var(--monospace-font);
-}
-
-button {
-  background: none;
-  color: inherit;
-  border: none;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-  outline: inherit;
-}
-
-h1, 
+h1,
 h2,
 h3 {
   font-family: inherit;
@@ -114,11 +100,19 @@ h3 {
   padding: 0;
   margin: 0;
 }
+table {
+  user-select: text;
+}
 
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: none;
+body > main,
+.perfetto {
+  display: grid;
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar alerts"
+    "sidebar page";
+  grid-template-rows: auto auto 1fr;
+  grid-template-columns: auto 1fr;
 }
 
 body.filedrag::after {
@@ -137,6 +131,20 @@ body.filedrag::after {
   background: rgba(255, 255, 255, 0.5);
 }
 
+button {
+  background: none;
+  color: inherit;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  outline: inherit;
+}
+
+button.close {
+  font-family: var(--monospace-font);
+}
+
 .full-page-loading-screen {
   position: absolute;
   width: 100%;
@@ -149,6 +157,8 @@ body.filedrag::after {
 }
 
 .page {
+  color: var(--main-foreground-color);
+  background-color: var(--main-background-color);
   grid-area: page;
   position: relative;
   display: flex;
@@ -664,19 +674,6 @@ button.query-ctrl {
     border-top: 1px solid var(--main-foreground-color);
     margin-top: -1px;
   }
-  .track-button {
-    color: rgb(60, 86, 136);
-    &.action {
-      @include transition();
-      cursor: pointer;
-      width: 22px;
-      font-size: 18px;
-      opacity: 0;
-    }
-  }
-  &:hover .track-button.action {
-    opacity: 1;
-  }
   &[collapsed="true"] {
     .shell {
       border-right: 1px solid var(--main-foreground-color);
@@ -692,6 +689,9 @@ button.query-ctrl {
     font-weight: bold;
     .shell.flash {
       color: #121212;
+    }
+    .track-button {
+      color: white;
     }
     span.chip {
       color: #121212;
