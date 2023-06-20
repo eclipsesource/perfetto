@@ -29,7 +29,6 @@
     "@types/uuid": "^8.3.4",
     "@types/w3c-web-usb": "^1.0.4",
     "color-convert": "^2.0.1",
-    "css-tree": "^2.3.1",
     "custom_utils": "file:src/base/utils",
     "devtools-protocol": "0.0.847576",
     "esbuild": "^0.15.12",
@@ -46,6 +45,7 @@
     "vega-lite": "^5.9.0"
   },
   "devDependencies": {
+    "css-tree": "^2.3.1",
     "@rollup/plugin-commonjs": "^24.0.1",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@types/jest": "^26.0.23",

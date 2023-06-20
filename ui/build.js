@@ -494,9 +494,6 @@ function addClassToCSS(inputPath, outputPath,parentClass ) {
             node.children.prependData(classData)
           }
         }
-        else{
-          console.log(node.children.first.type)
-        }
       }
     }
   })
