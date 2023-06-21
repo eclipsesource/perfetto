@@ -113,6 +113,7 @@ body > main,
     "sidebar page";
   grid-template-rows: auto auto 1fr;
   grid-template-columns: auto 1fr;
+  color: var(--main-foreground-color);
 }
 
 body.filedrag::after {
