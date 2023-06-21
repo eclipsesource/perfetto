@@ -99,11 +99,13 @@ interface SortingInfo<T> {
 // Encapsulated table data, that contains the input to be displayed, as well as
 // some helper information to allow sorting.
 export class TableData<T> {
+  globalsContext: string;
   data: T[];
   private _sortingInfo?: SortingInfo<T>;
   private permutation: number[];
 
-  constructor(data: T[]) {
+  constructor(globalsContext: string, data: T[]) {
+    this.globalsContext = globalsContext;
     this.data = data;
     this.permutation = range(data.length);
   }
@@ -124,13 +126,13 @@ export class TableData<T> {
     if (this._sortingInfo !== undefined) {
       this.reorder(this._sortingInfo);
     }
-    globals().rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   resetOrder() {
     this.permutation = range(this.data.length);
     this._sortingInfo = undefined;
-    globals().rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   get sortingInfo(): SortingInfo<T>|undefined {
@@ -142,11 +144,12 @@ export class TableData<T> {
     this.permutation.sort(withDirection(
         comparingBy((index: number) => this.data[index], info.ordering),
         info.direction));
-    globals().rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 }
 
 export interface TableAttrs<T> {
+  globalsContext: string;
   data: TableData<T>;
   columns: ColumnDescriptor<T>[];
 }
@@ -160,6 +163,8 @@ function directionOnIndex(
 }
 
 export class Table implements m.ClassComponent<TableAttrs<any>> {
+  private globalsContext = '';
+
   renderColumnHeader(
       vnode: m.Vnode<TableAttrs<any>>, column: ColumnDescriptor<any>): m.Child {
     let currDirection: SortDirection|undefined = undefined;
@@ -197,6 +202,7 @@ export class Table implements m.ClassComponent<TableAttrs<any>> {
 
     return m(
         'td', column.name, items === undefined ? null : m(PopupMenuButton, {
+          globalsContext: this.globalsContext,
           icon: popupMenuIcon(currDirection),
           items,
         }));
@@ -206,6 +212,10 @@ export class Table implements m.ClassComponent<TableAttrs<any>> {
     if (!allUnique(attrs.columns.map((c) => c.id))) {
       throw new Error('column IDs should be unique');
     }
+  }
+
+  oninit(vnode: m.Vnode<TableAttrs<any>, this>) {
+    this.globalsContext = vnode.attrs.globalsContext;
   }
 
   oncreate(vnode: m.VnodeDOM<TableAttrs<any>, this>) {

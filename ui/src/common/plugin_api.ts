@@ -74,11 +74,11 @@ export interface PluginContext {
   // selection changes for tracks in this plugin.
   //
   // Params:
-  // @onDetailsPanelSelectionChange a function that takes a Selection as its
-  // parameter and performs whatever must happen on the details panel when the
-  // selection is invoked.
+  // @onDetailsPanelSelectionChange a function that takes the trace globals
+  // context and a Selection as its parameters and performs whatever must
+  // happen on the details panel when the selection is invoked.
   registerOnDetailsPanelSelectionChange(
-      onDetailsPanelSelectionChange: (newSelection?: Selection) => void): void;
+      onDetailsPanelSelectionChange: (globalsContext: string,newSelection?: Selection) => void): void;
 }
 
 export interface PluginInfo {

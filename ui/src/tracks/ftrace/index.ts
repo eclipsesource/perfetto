@@ -25,7 +25,6 @@ import {
   TrackController,
 } from '../../controller/track_controller';
 import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
 import {NewTrackArgs, Track} from '../../frontend/track';
 
 
@@ -49,7 +48,7 @@ class FtraceRawTrackController extends TrackController<Config, Data> {
 
   async onBoundsChange(start: TPTime, end: TPTime, resolution: TPDuration):
       Promise<Data> {
-    const excludeList = Array.from(globals().state.ftraceFilter.excludedNames);
+    const excludeList = Array.from(this.globals().state.ftraceFilter.excludedNames);
     const excludeListSql = excludeList.map((s) => `'${s}'`).join(',');
     const cpuFilter =
         this.config.cpu === undefined ? '' : `and cpu = ${this.config.cpu}`;
@@ -105,7 +104,7 @@ export class FtraceRawTrack extends Track<Config, Data> {
     const {
       visibleTimeScale,
       windowSpan,
-    } = globals().frontendLocalState;
+    } = this.globals().frontendLocalState;
 
     const data = this.data();
 

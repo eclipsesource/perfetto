@@ -16,7 +16,6 @@ import {ColumnDef} from '../../common/aggregation_data';
 import {Engine} from '../../common/engine';
 import {Area, Sorting} from '../../common/state';
 import {tpDurationToSeconds} from '../../common/time';
-import {globals} from '../../frontend/globals';
 import {Config, COUNTER_TRACK_KIND} from '../../tracks/counter';
 
 import {AggregationController} from './aggregation_controller';
@@ -27,7 +26,7 @@ export class CounterAggregationController extends AggregationController {
 
     const ids = [];
     for (const trackId of area.tracks) {
-      const track = globals().state.tracks[trackId];
+      const track = this.globals().state.tracks[trackId];
       // Track will be undefined for track groups.
       if (track !== undefined && track.kind === COUNTER_TRACK_KIND) {
         const config = track.config as Config;

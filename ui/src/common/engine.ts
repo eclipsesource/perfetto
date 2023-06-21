@@ -40,8 +40,8 @@ import {Span} from '../common/time';
 import {BigintMath} from '../base/bigint_math';
 
 export interface LoadingTracker {
-  beginLoading(): void;
-  endLoading(): void;
+  beginLoading(globalsContext: string): void;
+  endLoading(globalsContext: string): void;
 }
 
 export class NullLoadingTracker implements LoadingTracker {
@@ -75,6 +75,7 @@ export interface TraceProcessorConfig {
 // 2. Call onRpcResponseBytes() when response data is received.
 export abstract class Engine {
   abstract readonly id: string;
+  private globalsContext: string;
   private _cpus?: number[];
   private _numGpus?: number;
   private loadingTracker: LoadingTracker;
@@ -90,7 +91,8 @@ export abstract class Engine {
   private pendingReadMetatrace?: Deferred<DisableAndReadMetatraceResult>;
   private _isMetatracingEnabled = false;
 
-  constructor(tracker?: LoadingTracker) {
+  constructor(globalsContext: string, tracker?: LoadingTracker) {
+    this.globalsContext = globalsContext;
     this.loadingTracker = tracker ? tracker : new NullLoadingTracker();
   }
 
@@ -223,7 +225,7 @@ export abstract class Engine {
     }  // switch(rpc.response);
 
     if (isFinalResponse) {
-      this.loadingTracker.endLoading();
+      this.loadingTracker.endLoading(this.globalsContext);
     }
   }
 
@@ -375,7 +377,7 @@ export abstract class Engine {
     const outerProto = TraceProcessorRpcStream.create();
     outerProto.msg.push(rpc);
     const buf = TraceProcessorRpcStream.encode(outerProto).finish();
-    this.loadingTracker.beginLoading();
+    this.loadingTracker.beginLoading(this.globalsContext);
     this.rpcSendRequestBytes(buf);
   }
 

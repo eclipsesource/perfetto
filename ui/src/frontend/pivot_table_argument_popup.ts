@@ -15,9 +15,9 @@
  */
 
 import m from 'mithril';
-import {globals} from './globals';
+import {HasGlobalsContextAttrs, globals} from './globals';
 
-interface ArgumentPopupArgs {
+interface ArgumentPopupArgs extends HasGlobalsContextAttrs {
   onArgumentChange: (arg: string) => void;
   knownArguments: string[];
 }
@@ -43,7 +43,7 @@ export class ArgumentPopup implements m.ClassComponent<ArgumentPopupArgs> {
   setArgument(attrs: ArgumentPopupArgs, arg: string) {
     this.argument = arg;
     attrs.onArgumentChange(arg);
-    globals().rafScheduler.scheduleFullRedraw();
+    globals(attrs.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   renderMatches(attrs: ArgumentPopupArgs): m.Child[] {

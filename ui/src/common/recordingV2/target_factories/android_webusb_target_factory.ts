@@ -79,8 +79,9 @@ export class AndroidWebusbTargetFactory implements TargetFactory {
       throw new RecordingError(deviceValid.issues.join('\n'));
     }
 
+    // TODO(cwd): Figure out how to get the globalsContext into this
     const androidTarget =
-        new AndroidWebusbTarget(device, this.keyManager, this.onTargetChange);
+        new AndroidWebusbTarget(device, this.keyManager, '', this.onTargetChange);
     this.targets.set(assertExists(device.serialNumber), androidTarget);
     return androidTarget;
   }
@@ -94,8 +95,9 @@ export class AndroidWebusbTargetFactory implements TargetFactory {
       if (this.checkDeviceValidity(device).isValid) {
         this.targets.set(
             assertExists(device.serialNumber),
+            // TODO(cwd): Figure out how to get the globalsContext into this
             new AndroidWebusbTarget(
-                device, this.keyManager, this.onTargetChange));
+                device, this.keyManager, '', this.onTargetChange));
       }
     }
 
@@ -103,8 +105,9 @@ export class AndroidWebusbTargetFactory implements TargetFactory {
       if (this.checkDeviceValidity(ev.device).isValid) {
         this.targets.set(
             assertExists(ev.device.serialNumber),
+            // TODO(cwd): Figure out how to get the globalsContext into this
             new AndroidWebusbTarget(
-                ev.device, this.keyManager, this.onTargetChange));
+                ev.device, this.keyManager, '', this.onTargetChange));
         this.onTargetChange();
       }
     });

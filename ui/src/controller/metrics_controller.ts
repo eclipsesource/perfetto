@@ -15,7 +15,6 @@
 import {Actions} from '../common/actions';
 import {Engine} from '../common/engine';
 import {QueryError} from '../common/query_result';
-import {globals} from '../frontend/globals';
 import {publishMetricResult} from '../frontend/publish';
 
 import {Controller} from './controller';
@@ -24,8 +23,8 @@ export class MetricsController extends Controller<'main'> {
   private engine: Engine;
   private currentlyRunningMetric?: string;
 
-  constructor(args: {engine: Engine}) {
-    super('main');
+  constructor(args: {globalsContext: string; engine: Engine}) {
+    super('main', args.globalsContext);
     this.engine = args.engine;
     this.run();
   }
@@ -35,7 +34,7 @@ export class MetricsController extends Controller<'main'> {
     this.currentlyRunningMetric = name;
     try {
       const metricResult = await this.engine.computeMetric([name]);
-      publishMetricResult({
+      publishMetricResult(this.globals.context, {
         name,
         resultString: metricResult.metricsAsPrototext || undefined,
       });
@@ -43,17 +42,17 @@ export class MetricsController extends Controller<'main'> {
       if (e instanceof QueryError) {
         // Reroute error to be displated differently when metric is run through
         // metric page.
-        publishMetricResult({name, error: e.message});
+        publishMetricResult(this.globals.context, {name, error: e.message});
       } else {
         throw e;
       }
     }
-    globals().dispatch(Actions.resetMetricRequest({name}));
+    this.globals().dispatch(Actions.resetMetricRequest({name}));
     this.currentlyRunningMetric = undefined;
   }
 
   run() {
-    const {requestedMetric} = globals().state.metrics;
+    const {requestedMetric} = this.globals().state.metrics;
     if (!requestedMetric) return;
     this.computeMetric(requestedMetric);
   }

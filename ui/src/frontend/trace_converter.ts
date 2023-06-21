@@ -70,7 +70,7 @@ function handleOnMessage(msg: MessageEvent): void {
     const str = (new TextDecoder('utf-8')).decode(args.buffer);
     openBufferWithLegacyTraceViewer('trace.json', str, 0);
   } else if (args.kind === 'error') {
-    maybeShowErrorDialog(args.error);
+    maybeShowErrorDialog('', args.error);
   } else {
     throw new Error(`Unhandled message ${JSON.stringify(args)}`);
   }

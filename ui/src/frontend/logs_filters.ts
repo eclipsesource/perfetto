@@ -15,7 +15,7 @@
 import m from 'mithril';
 
 import {Actions} from '../common/actions';
-import {globals} from './globals';
+import {bindGlobals, globals, HasGlobalsContextAttrs} from './globals';
 
 export const LOG_PRIORITIES =
     ['-', '-', 'Verbose', 'Debug', 'Info', 'Warn', 'Error', 'Fatal'];
@@ -32,11 +32,11 @@ interface LogTagChipAttrs {
   removeTag: (name: string) => void;
 }
 
-interface LogTagsWidgetAttrs {
+interface LogTagsWidgetAttrs extends HasGlobalsContextAttrs {
   tags: string[];
 }
 
-interface FilterByTextWidgetAttrs {
+interface FilterByTextWidgetAttrs extends HasGlobalsContextAttrs {
   hideNonMatching: boolean;
 }
 
@@ -78,8 +78,14 @@ class LogTagChip implements m.ClassComponent<LogTagChipAttrs> {
 }
 
 class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
+  private globals = bindGlobals()
+
+  oninit({attrs}: m.Vnode<LogTagsWidgetAttrs>) {
+      this.globals = bindGlobals(attrs.globalsContext);
+  }
+
   removeTag(tag: string) {
-    globals().dispatch(Actions.removeLogTag({tag}));
+    this.globals().dispatch(Actions.removeLogTag({tag}));
   }
 
   view(vnode: m.Vnode<LogTagsWidgetAttrs>) {
@@ -100,7 +106,7 @@ class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
             // When the user clicks 'Backspace' we delete the previous tag.
             if (e.key === 'Backspace' && tags.length > 0 &&
                 htmlElement.value === '') {
-              globals().dispatch(
+              this.globals().dispatch(
                   Actions.removeLogTag({tag: tags[tags.length - 1]}));
               return;
             }
@@ -111,7 +117,7 @@ class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
             if (htmlElement.value === '') {
               return;
             }
-            globals().dispatch(
+            this.globals().dispatch(
                 Actions.addLogTag({tag: htmlElement.value.trim()}));
             htmlElement.value = '';
           },
@@ -119,8 +125,9 @@ class LogTagsWidget implements m.ClassComponent<LogTagsWidgetAttrs> {
   }
 }
 
-class LogTextWidget implements m.ClassComponent {
-  view() {
+class LogTextWidget implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         '.tag-container', m(`input.chip-input[placeholder='Search log text']`, {
           onkeydown: (e: KeyboardEvent) => {
@@ -133,7 +140,7 @@ class LogTextWidget implements m.ClassComponent {
             // We want to use the value of the input field after it has been
             // updated with the latest key (onkeyup).
             const htmlElement = e.target as HTMLInputElement;
-            globals().dispatch(
+            globals(globalsContext).dispatch(
                 Actions.updateLogFilterText({textEntry: htmlElement.value}));
           },
         }));
@@ -142,6 +149,7 @@ class LogTextWidget implements m.ClassComponent {
 
 class FilterByTextWidget implements m.ClassComponent<FilterByTextWidgetAttrs> {
   view({attrs}: m.Vnode<FilterByTextWidgetAttrs>) {
+    const globalsContext = attrs.globalsContext;
     const icon = attrs.hideNonMatching ? 'unfold_less' : 'unfold_more';
     const tooltip = attrs.hideNonMatching ? 'Expand all and view highlighted' :
                                             'Collapse all';
@@ -151,29 +159,31 @@ class FilterByTextWidget implements m.ClassComponent<FilterByTextWidgetAttrs> {
         m('i.material-icons',
           {
             onclick: () => {
-              globals().dispatch(Actions.toggleCollapseByTextEntry({}));
+              globals(globalsContext).dispatch(Actions.toggleCollapseByTextEntry({}));
             },
           },
           icon));
   }
 }
 
-export class LogsFilters implements m.ClassComponent {
-  view(_: m.CVnode<{}>) {
+export class LogsFilters implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.CVnode<HasGlobalsContextAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         '.log-filters',
         m('.log-label', 'Log Level'),
         m(LogPriorityWidget, {
           options: LOG_PRIORITIES,
-          selectedIndex: globals().state.logFilteringCriteria.minimumLevel,
+          selectedIndex: globals(globalsContext).state.logFilteringCriteria.minimumLevel,
           onSelect: (minimumLevel) => {
-            globals().dispatch(Actions.setMinimumLogLevel({minimumLevel}));
+            globals(globalsContext).dispatch(Actions.setMinimumLogLevel({minimumLevel}));
           },
         }),
-        m(LogTagsWidget, {tags: globals().state.logFilteringCriteria.tags}),
+        m(LogTagsWidget, {globalsContext, tags: globals(globalsContext).state.logFilteringCriteria.tags}),
         m(LogTextWidget),
         m(FilterByTextWidget, {
-          hideNonMatching: globals().state.logFilteringCriteria.hideNonMatching,
+          globalsContext,
+          hideNonMatching: globals(globalsContext).state.logFilteringCriteria.hideNonMatching,
         }));
   }
 }

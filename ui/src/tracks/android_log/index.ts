@@ -21,7 +21,6 @@ import {
   TrackController,
 } from '../../controller/track_controller';
 import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
 import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const ANDROID_LOGS_TRACK_KIND = 'AndroidLogTrack';
@@ -105,7 +104,7 @@ class AndroidLogTrack extends Track<Config, Data> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
-    const {visibleTimeScale, windowSpan} = globals().frontendLocalState;
+    const {visibleTimeScale, windowSpan} = this.globals().frontendLocalState;
 
     const data = this.data();
 

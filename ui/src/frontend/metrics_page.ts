@@ -15,22 +15,23 @@
 import m from 'mithril';
 
 import {Actions} from '../common/actions';
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 import {createPage} from './pages';
 import {Button} from './widgets/button';
 
-function getCurrSelectedMetric() {
-  const {availableMetrics, selectedIndex} = globals().state.metrics;
+function getCurrSelectedMetric(globalsContext: string) {
+  const {availableMetrics, selectedIndex} = globals(globalsContext).state.metrics;
   if (!availableMetrics) return undefined;
   if (selectedIndex === undefined) return undefined;
   return availableMetrics[selectedIndex];
 }
 
-class MetricResult implements m.ClassComponent {
-  view() {
-    const metricResult = globals().metricResult;
+class MetricResult implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
+    const globalsContext = attrs.globalsContext;
+    const metricResult = globals(globalsContext).metricResult;
     if (metricResult === undefined) return undefined;
-    const currSelection = getCurrSelectedMetric();
+    const currSelection = getCurrSelectedMetric(globalsContext);
     if (!(metricResult && metricResult.name === currSelection)) {
       return undefined;
     }
@@ -44,9 +45,10 @@ class MetricResult implements m.ClassComponent {
   }
 }
 
-class MetricPicker implements m.ClassComponent {
-  view() {
-    const {availableMetrics, selectedIndex} = globals().state.metrics;
+class MetricPicker implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
+    const globalsContext = attrs.globalsContext;
+    const {availableMetrics, selectedIndex} = globals(globalsContext).state.metrics;
     if (availableMetrics === undefined) return 'Loading metrics...';
     if (availableMetrics.length === 0) return 'No metrics available';
     if (selectedIndex === undefined) {
@@ -57,16 +59,16 @@ class MetricPicker implements m.ClassComponent {
       'Select a metric:',
       m('select',
         {
-          selectedIndex: globals().state.metrics.selectedIndex,
+          selectedIndex: globals(globalsContext).state.metrics.selectedIndex,
           onchange: (e: InputEvent) => {
-            globals().dispatch(Actions.setMetricSelectedIndex(
+            globals(globalsContext).dispatch(Actions.setMetricSelectedIndex(
                 {index: (e.target as HTMLSelectElement).selectedIndex}));
           },
         },
         availableMetrics.map(
             (metric) => m('option', {value: metric, key: metric}, metric))),
       m(Button, {
-        onclick: () => globals().dispatch(Actions.requestSelectedMetric({})),
+        onclick: () => globals(globalsContext).dispatch(Actions.requestSelectedMetric({})),
         label: 'Run',
       }),
     ]);
@@ -74,11 +76,11 @@ class MetricPicker implements m.ClassComponent {
 }
 
 export const MetricsPage = createPage({
-  view() {
+  view({attrs}) {
     return m(
         '.metrics-page',
-        m(MetricPicker),
-        m(MetricResult),
+        m(MetricPicker, attrs),
+        m(MetricResult, attrs),
     );
   },
 });

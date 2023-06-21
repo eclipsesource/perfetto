@@ -17,7 +17,7 @@ import m from 'mithril';
 import {Actions} from '../common/actions';
 import {VERSION} from '../gen/perfetto_version';
 
-import {globals} from './globals';
+import {bindGlobals, globals, HasGlobalsContextAttrs} from './globals';
 import {runQueryInNewTab} from './query_result_tab';
 import {executeSearch} from './search_handler';
 import {taskTracker} from './task_tracker';
@@ -36,64 +36,70 @@ export const DISMISSED_PANNING_HINT_KEY = 'dismissedPanningHint';
 let mode: Mode = SEARCH;
 let displayStepThrough = false;
 
-function onKeyDown(e: Event) {
-  const event = (e as KeyboardEvent);
-  const key = event.key;
-  if (key !== 'Enter') {
+function onKeyDown(globalsContext: string) {
+  return (e: Event) => {
+    const event = (e as KeyboardEvent);
+    const key = event.key;
+    if (key !== 'Enter') {
+      e.stopPropagation();
+    }
+    const txt = (e.target as HTMLInputElement);
+
+    if (mode === SEARCH && txt.value === '' && key === ':') {
+      e.preventDefault();
+      mode = COMMAND;
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
+      return;
+    }
+
+    if (mode === COMMAND && txt.value === '' && key === 'Backspace') {
+      mode = SEARCH;
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
+      return;
+    }
+
+    if (mode === SEARCH && key === 'Enter') {
+      txt.blur();
+    }
+
+    if (mode === COMMAND && key === 'Enter') {
+      const openInPinnedTab = event.metaKey || event.ctrlKey;
+      runQueryInNewTab(
+          globalsContext,
+          txt.value,
+          openInPinnedTab ? 'Pinned query' : 'Omnibox query',
+          openInPinnedTab ? undefined : 'omnibox_query',
+      );
+    }
+  };
+}
+
+function onKeyUp(globalsContext: string) {
+  return (e: Event) => {
     e.stopPropagation();
-  }
-  const txt = (e.target as HTMLInputElement);
+    const event = (e as KeyboardEvent);
+    const key = event.key;
+    const txt = e.target as HTMLInputElement;
 
-  if (mode === SEARCH && txt.value === '' && key === ':') {
-    e.preventDefault();
-    mode = COMMAND;
-    globals().rafScheduler.scheduleFullRedraw();
-    return;
-  }
-
-  if (mode === COMMAND && txt.value === '' && key === 'Backspace') {
-    mode = SEARCH;
-    globals().rafScheduler.scheduleFullRedraw();
-    return;
-  }
-
-  if (mode === SEARCH && key === 'Enter') {
-    txt.blur();
-  }
-
-  if (mode === COMMAND && key === 'Enter') {
-    const openInPinnedTab = event.metaKey || event.ctrlKey;
-    runQueryInNewTab(
-        txt.value,
-        openInPinnedTab ? 'Pinned query' : 'Omnibox query',
-        openInPinnedTab ? undefined : 'omnibox_query',
-    );
-  }
+    if (key === 'Escape') {
+      mode = SEARCH;
+      txt.value = '';
+      txt.blur();
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
+      return;
+    }
+  };
 }
 
-function onKeyUp(e: Event) {
-  e.stopPropagation();
-  const event = (e as KeyboardEvent);
-  const key = event.key;
-  const txt = e.target as HTMLInputElement;
-
-  if (key === 'Escape') {
-    mode = SEARCH;
-    txt.value = '';
-    txt.blur();
-    globals().rafScheduler.scheduleFullRedraw();
-    return;
-  }
-}
-
-class Omnibox implements m.ClassComponent {
-  oncreate(vnode: m.VnodeDOM) {
+class Omnibox implements m.ClassComponent<HasGlobalsContextAttrs> {
+  oncreate(vnode: m.VnodeDOM<HasGlobalsContextAttrs>) {
     const txt = vnode.dom.querySelector('input') as HTMLInputElement;
-    txt.addEventListener('keydown', onKeyDown);
-    txt.addEventListener('keyup', onKeyUp);
+    txt.addEventListener('keydown', onKeyDown(vnode.attrs.globalsContext));
+    txt.addEventListener('keyup', onKeyUp(vnode.attrs.globalsContext));
   }
 
-  view() {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     const msgTTL = globals().state.status.timestamp + 1 - Date.now() / 1e3;
     const engineIsBusy =
         globals().state.engine !== undefined && !globals().state.engine!.ready;
@@ -138,14 +144,14 @@ class Omnibox implements m.ClassComponent {
                 m('button',
                   {
                     onclick: () => {
-                      executeSearch(true /* reverse direction */);
+                      executeSearch(globals.context, true /* reverse direction */);
                     },
                   },
                   m('i.material-icons.left', 'keyboard_arrow_left')),
                 m('button',
                   {
                     onclick: () => {
-                      executeSearch();
+                      executeSearch(globals.context);
                     },
                   },
                   m('i.material-icons.right', 'keyboard_arrow_right')),
@@ -154,7 +160,8 @@ class Omnibox implements m.ClassComponent {
   }
 }
 
-class Progress implements m.ClassComponent {
+class Progress implements m.ClassComponent<HasGlobalsContextAttrs> {
+  private globals = bindGlobals();
   private loading: () => void;
   private progressBar?: HTMLElement;
 
@@ -162,13 +169,17 @@ class Progress implements m.ClassComponent {
     this.loading = () => this.loadingAnimation();
   }
 
-  oncreate(vnodeDom: m.CVnodeDOM) {
+  oninit(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    this.globals = bindGlobals(vnode.attrs.globalsContext);
+  }
+
+  oncreate(vnodeDom: m.CVnodeDOM<HasGlobalsContextAttrs>) {
     this.progressBar = vnodeDom.dom as HTMLElement;
-    globals().rafScheduler.addRedrawCallback(this.loading);
+    this.globals().rafScheduler.addRedrawCallback(this.loading);
   }
 
   onremove() {
-    globals().rafScheduler.removeRedrawCallback(this.loading);
+    this.globals().rafScheduler.removeRedrawCallback(this.loading);
   }
 
   view() {
@@ -177,8 +188,8 @@ class Progress implements m.ClassComponent {
 
   loadingAnimation() {
     if (this.progressBar === undefined) return;
-    const engine = globals().getCurrentEngine();
-    if ((engine && !engine.ready) || globals().numQueuedQueries > 0 ||
+    const engine = this.globals().getCurrentEngine();
+    if ((engine && !engine.ready) || this.globals().numQueuedQueries > 0 ||
         taskTracker.hasPendingTasks()) {
       this.progressBar.classList.add('progress-anim');
     } else {
@@ -188,8 +199,9 @@ class Progress implements m.ClassComponent {
 }
 
 
-class NewVersionNotification implements m.ClassComponent {
-  view() {
+class NewVersionNotification implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     return m(
         '.new-version-toast',
         `Updated to ${VERSION} and ready for offline use!`,
@@ -206,8 +218,9 @@ class NewVersionNotification implements m.ClassComponent {
 }
 
 
-class HelpPanningNotification implements m.ClassComponent {
-  view() {
+class HelpPanningNotification implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     const dismissed = localStorage.getItem(DISMISSED_PANNING_HINT_KEY);
     // Do not show the help notification in embedded mode because local storage
     // does not persist for iFrames. The host is responsible for communicating
@@ -234,8 +247,9 @@ class HelpPanningNotification implements m.ClassComponent {
   }
 }
 
-class TraceErrorIcon implements m.ClassComponent {
-  view() {
+class TraceErrorIcon implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     if (globals().embeddedMode) return;
 
     const errors = globals().traceErrors;
@@ -257,8 +271,9 @@ class TraceErrorIcon implements m.ClassComponent {
   }
 }
 
-export class Topbar implements m.ClassComponent {
-  view() {
+export class Topbar implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     return m(
         '.topbar',
         {class: globals().state.sidebarVisible ? '' : 'hide-sidebar'},

@@ -17,7 +17,7 @@ import m from 'mithril';
 import {channelChanged, getNextChannel, setChannel} from '../common/channels';
 import {featureFlags, Flag, OverrideState} from '../common/feature_flags';
 
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 import {createPage} from './pages';
 
 const RELEASE_PROCESS_URL =
@@ -28,7 +28,7 @@ interface FlagOption {
   name: string;
 }
 
-interface SelectWidgetAttrs {
+interface SelectWidgetAttrs extends HasGlobalsContextAttrs {
   label: string;
   description: m.Children;
   options: FlagOption[];
@@ -39,6 +39,7 @@ interface SelectWidgetAttrs {
 class SelectWidget implements m.ClassComponent<SelectWidgetAttrs> {
   view(vnode: m.Vnode<SelectWidgetAttrs>) {
     const attrs = vnode.attrs;
+    const globalsContext = attrs.globalsContext;
     return m(
         '.flag-widget',
         m('label', attrs.label),
@@ -48,7 +49,7 @@ class SelectWidget implements m.ClassComponent<SelectWidgetAttrs> {
               onchange: (e: InputEvent) => {
                 const value = (e.target as HTMLSelectElement).value;
                 attrs.onSelect(value);
-                globals().rafScheduler.scheduleFullRedraw();
+                globals(globalsContext).rafScheduler.scheduleFullRedraw();
               },
             },
             attrs.options.map((o) => {
@@ -61,15 +62,17 @@ class SelectWidget implements m.ClassComponent<SelectWidgetAttrs> {
   }
 }
 
-interface FlagWidgetAttrs {
+interface FlagWidgetAttrs extends HasGlobalsContextAttrs {
   flag: Flag;
 }
 
 class FlagWidget implements m.ClassComponent<FlagWidgetAttrs> {
   view(vnode: m.Vnode<FlagWidgetAttrs>) {
     const flag = vnode.attrs.flag;
+    const globalsContext = vnode.attrs.globalsContext;
     const defaultState = flag.defaultValue ? 'Enabled' : 'Disabled';
     return m(SelectWidget, {
+      globalsContext,
       label: flag.name,
       description: flag.description,
       options: [
@@ -97,7 +100,8 @@ class FlagWidget implements m.ClassComponent<FlagWidgetAttrs> {
 }
 
 export const FlagsPage = createPage({
-  view() {
+  view(vnode) {
+    const globalsContext = vnode.attrs.globalsContext;
     const needsReload = channelChanged();
     return m(
         '.flags-page',
@@ -109,6 +113,7 @@ export const FlagsPage = createPage({
                   m('h2', 'Please reload for your changes to take effect'),
                 ],
             m(SelectWidget, {
+              globalsContext,
               label: 'Release channel',
               description: [
                 'Which release channel of the UI to use. See ',
@@ -131,12 +136,12 @@ export const FlagsPage = createPage({
               {
                 onclick: () => {
                   featureFlags.resetAll();
-                  globals().rafScheduler.scheduleFullRedraw();
+                  globals(globalsContext).rafScheduler.scheduleFullRedraw();
                 },
               },
               'Reset all below'),
 
-            featureFlags.allFlags().map((flag) => m(FlagWidget, {flag})),
+            featureFlags.allFlags().map((flag) => m(FlagWidget, {globalsContext, flag})),
             ));
   },
 });

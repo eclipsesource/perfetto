@@ -24,7 +24,7 @@ const _run = jest.fn();
 type MockStates = 'idle'|'state1'|'state2'|'state3';
 class MockController extends Controller<MockStates> {
   constructor(public type: string) {
-    super('idle');
+    super('idle', '');
     _onCreate(this.type);
   }
 

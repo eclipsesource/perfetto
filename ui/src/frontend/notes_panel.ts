@@ -35,9 +35,8 @@ import {
   TickType,
   timeScaleForVisibleWindow,
 } from './gridline_helper';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 import {isTraceLoaded} from './sidebar';
-
 const FLAG_WIDTH = 16;
 const AREA_TRIANGLE_WIDTH = 10;
 const FLAG = `\uE153`;
@@ -47,34 +46,34 @@ function toSummary(s: string) {
   return s.slice(0, Math.min(newlineIndex, s.length, 16));
 }
 
-function getStartTimestamp(note: Note|AreaNote) {
+function getStartTimestamp(globalsContext: string, note: Note|AreaNote) {
   if (note.noteType === 'AREA') {
-    return globals().state.areas[note.areaId].start;
+    return globals(globalsContext).state.areas[note.areaId].start;
   } else {
     return note.timestamp;
   }
 }
 
-export class NotesPanel extends Panel {
+export class NotesPanel extends Panel<PanelAttrs> {
   hoveredX: null|number = null;
 
-  oncreate({dom}: m.CVnodeDOM) {
+  oncreate({dom}: m.CVnodeDOM<PanelAttrs>) {
     dom.addEventListener('mousemove', (e: Event) => {
       this.hoveredX = (e as PerfettoMouseEvent).layerX - TRACK_SHELL_WIDTH;
-      globals().rafScheduler.scheduleRedraw();
+      this.globals().rafScheduler.scheduleRedraw();
     }, {passive: true});
     dom.addEventListener('mouseenter', (e: Event) => {
       this.hoveredX = (e as PerfettoMouseEvent).layerX - TRACK_SHELL_WIDTH;
-      globals().rafScheduler.scheduleRedraw();
+      this.globals().rafScheduler.scheduleRedraw();
     });
     dom.addEventListener('mouseout', () => {
       this.hoveredX = null;
-      globals().dispatch(Actions.setHoveredNoteTimestamp({ts: -1n}));
+      this.globals().dispatch(Actions.setHoveredNoteTimestamp({ts: -1n}));
     }, {passive: true});
   }
 
   view() {
-    const allCollapsed = Object.values(globals().state.trackGroups)
+    const allCollapsed = Object.values(this.globals().state.trackGroups)
                              .every((group) => group.collapsed);
 
     return m(
@@ -85,13 +84,13 @@ export class NotesPanel extends Panel {
             e.stopPropagation();
           },
         },
-        isTraceLoaded() ?
+        isTraceLoaded(this.globals.context) ?
             [
               m('button',
                 {
                   onclick: (e: Event) => {
                     e.preventDefault();
-                    globals().dispatch(Actions.toggleAllTrackGroups(
+                    this.globals().dispatch(Actions.toggleAllTrackGroups(
                         {collapsed: !allCollapsed}));
                   },
                 },
@@ -102,7 +101,7 @@ export class NotesPanel extends Panel {
                 {
                   onclick: (e: Event) => {
                     e.preventDefault();
-                    globals().dispatch(Actions.clearAllPinnedTracks({}));
+                    this.globals().dispatch(Actions.clearAllPinnedTracks({}));
                   },
                 },
                 m('i.material-icons',
@@ -123,13 +122,13 @@ export class NotesPanel extends Panel {
     ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
     ctx.clip();
 
-    const span = globals().frontendLocalState.visibleWindow.timestampSpan;
-    const {visibleTimeScale} = globals().frontendLocalState;
+    const span = this.globals().frontendLocalState.visibleWindow.timestampSpan;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
-      const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+      const map = timeScaleForVisibleWindow(this.globals.context, TRACK_SHELL_WIDTH, size.width);
       for (const {type, time} of new TickGenerator(
-               span, maxMajorTicks, globals().state.traceTime.start)) {
+               span, maxMajorTicks, this.globals().state.traceTime.start)) {
         const px = Math.floor(map.tpTimeToPx(time));
         if (type === TickType.MAJOR) {
           ctx.fillRect(px, 0, 1, size.height);
@@ -140,21 +139,21 @@ export class NotesPanel extends Panel {
     ctx.textBaseline = 'bottom';
     ctx.font = '10px Helvetica';
 
-    for (const note of Object.values(globals().state.notes)) {
-      const timestamp = getStartTimestamp(note);
+    for (const note of Object.values(this.globals().state.notes)) {
+      const timestamp = getStartTimestamp(this.globals.context, note);
       // TODO(hjd): We should still render area selection marks in viewport is
       // *within* the area (e.g. both lhs and rhs are out of bounds).
       if ((note.noteType !== 'AREA' && !span.contains(timestamp)) ||
           (note.noteType === 'AREA' &&
-           !span.contains(globals().state.areas[note.areaId].end) &&
-           !span.contains(globals().state.areas[note.areaId].start))) {
+           !span.contains(this.globals().state.areas[note.areaId].end) &&
+           !span.contains(this.globals().state.areas[note.areaId].start))) {
         continue;
       }
       const currentIsHovered =
           this.hoveredX && this.mouseOverNote(this.hoveredX, note);
       if (currentIsHovered) aNoteIsHovered = true;
 
-      const selection = globals().state.currentSelection;
+      const selection = this.globals().state.currentSelection;
       const isSelected = selection !== null &&
           ((selection.kind === 'NOTE' && selection.id === note.id) ||
            (selection.kind === 'AREA' && selection.noteId === note.id));
@@ -163,7 +162,7 @@ export class NotesPanel extends Panel {
 
       // Draw flag or marker.
       if (note.noteType === 'AREA') {
-        const area = globals().state.areas[note.areaId];
+        const area = this.globals().state.areas[note.areaId];
         this.drawAreaMarker(
             ctx,
             left,
@@ -190,14 +189,14 @@ export class NotesPanel extends Panel {
     // A real note is hovered so we don't need to see the preview line.
     // TODO(hjd): Change cursor to pointer here.
     if (aNoteIsHovered) {
-      globals().dispatch(Actions.setHoveredNoteTimestamp({ts: -1n}));
+      this.globals().dispatch(Actions.setHoveredNoteTimestamp({ts: -1n}));
     }
 
     // View preview note flag when hovering on notes panel.
     if (!aNoteIsHovered && this.hoveredX !== null) {
       const timestamp = visibleTimeScale.pxToHpTime(this.hoveredX).toTPTime();
       if (span.contains(timestamp)) {
-        globals().dispatch(Actions.setHoveredNoteTimestamp({ts: timestamp}));
+        this.globals().dispatch(Actions.setHoveredNoteTimestamp({ts: timestamp}));
         const x = visibleTimeScale.tpTimeToPx(timestamp);
         const left = Math.floor(x + TRACK_SHELL_WIDTH);
         this.drawFlag(ctx, left, size.height, '#aaa', /* fill */ true);
@@ -214,7 +213,7 @@ export class NotesPanel extends Panel {
     ctx.strokeStyle = color;
     const topOffset = 10;
     // Don't draw in the track shell section.
-    if (x >= globals().frontendLocalState.windowSpan.start + TRACK_SHELL_WIDTH) {
+    if (x >= this.globals().frontendLocalState.windowSpan.start + TRACK_SHELL_WIDTH) {
       // Draw left triangle.
       ctx.beginPath();
       ctx.moveTo(x, topOffset);
@@ -235,7 +234,7 @@ export class NotesPanel extends Panel {
 
     // Start line after track shell section, join triangles.
     const startDraw = Math.max(
-        x, globals().frontendLocalState.windowSpan.start + TRACK_SHELL_WIDTH);
+        x, this.globals().frontendLocalState.windowSpan.start + TRACK_SHELL_WIDTH);
     ctx.beginPath();
     ctx.moveTo(startDraw, topOffset);
     ctx.lineTo(xEnd, topOffset);
@@ -267,28 +266,28 @@ export class NotesPanel extends Panel {
 
   private onClick(x: number, _: number) {
     if (x < 0) return;
-    const {visibleTimeScale} = globals().frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     const timestamp = visibleTimeScale.pxToHpTime(x).toTPTime();
-    for (const note of Object.values(globals().state.notes)) {
+    for (const note of Object.values(this.globals().state.notes)) {
       if (this.hoveredX && this.mouseOverNote(this.hoveredX, note)) {
         if (note.noteType === 'AREA') {
-          globals().makeSelection(
+          this.globals().makeSelection(
               Actions.reSelectArea({areaId: note.areaId, noteId: note.id}));
         } else {
-          globals().makeSelection(Actions.selectNote({id: note.id}));
+          this.globals().makeSelection(Actions.selectNote({id: note.id}));
         }
         return;
       }
     }
     const color = randomColor();
-    globals().makeSelection(Actions.addNote({timestamp, color}));
+    this.globals().makeSelection(Actions.addNote({timestamp, color}));
   }
 
   private mouseOverNote(x: number, note: AreaNote|Note): boolean {
-    const timeScale = globals().frontendLocalState.visibleTimeScale;
-    const noteX = timeScale.tpTimeToPx(getStartTimestamp(note));
+    const timeScale = this.globals().frontendLocalState.visibleTimeScale;
+    const noteX = timeScale.tpTimeToPx(getStartTimestamp(this.globals.context, note));
     if (note.noteType === 'AREA') {
-      const noteArea = globals().state.areas[note.areaId];
+      const noteArea = this.globals().state.areas[note.areaId];
       return (noteX <= x && x < noteX + AREA_TRIANGLE_WIDTH) ||
           (timeScale.tpTimeToPx(noteArea.end) > x &&
            x > timeScale.tpTimeToPx(noteArea.end) - AREA_TRIANGLE_WIDTH);
@@ -321,11 +320,11 @@ export class NotesEditorTab extends BottomTab<NotesEditorTabConfig> {
   }
 
   viewTab() {
-    const note = globals().state.notes[this.config.id];
+    const note = this.globals().state.notes[this.config.id];
     if (note === undefined) {
       return m('.', `No Note with id ${this.config.id}`);
     }
-    const startTime = getStartTimestamp(note) - globals().state.traceTime.start;
+    const startTime = getStartTimestamp(this.globals.context, note) - this.globals().state.traceTime.start;
     return m(
         '.notes-editor-panel',
         m('.notes-editor-panel-heading-bar',
@@ -338,7 +337,7 @@ export class NotesEditorTab extends BottomTab<NotesEditorTabConfig> {
             value: note.text,
             onchange: (e: InputEvent) => {
               const newText = (e.target as HTMLInputElement).value;
-              globals().dispatch(Actions.changeNoteText({
+              this.globals().dispatch(Actions.changeNoteText({
                 id: this.config.id,
                 newText,
               }));
@@ -348,7 +347,7 @@ export class NotesEditorTab extends BottomTab<NotesEditorTabConfig> {
               value: note.color,
               onchange: (e: Event) => {
                 const newColor = (e.target as HTMLInputElement).value;
-                globals().dispatch(Actions.changeNoteColor({
+                this.globals().dispatch(Actions.changeNoteColor({
                   id: this.config.id,
                   newColor,
                 }));
@@ -357,9 +356,9 @@ export class NotesEditorTab extends BottomTab<NotesEditorTabConfig> {
           m('button',
             {
               onclick: () => {
-                globals().dispatch(Actions.removeNote({id: this.config.id}));
-                globals().dispatch(Actions.setCurrentTab({tab: undefined}));
-                globals().rafScheduler.scheduleFullRedraw();
+                this.globals().dispatch(Actions.removeNote({id: this.config.id}));
+                this.globals().dispatch(Actions.setCurrentTab({tab: undefined}));
+                this.globals().rafScheduler.scheduleFullRedraw();
               },
             },
             'Remove')),

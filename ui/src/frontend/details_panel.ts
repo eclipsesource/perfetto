@@ -36,7 +36,7 @@ import {
   FlowEventsPanel,
 } from './flow_events_panel';
 import {FtracePanel} from './ftrace_panel';
-import {globals} from './globals';
+import {bindGlobals, globals, HasGlobalsContextAttrs} from './globals';
 import {LogPanel} from './logs_panel';
 import {NotesEditorTab} from './notes_panel';
 import {AnyAttrsVnode, PanelContainer} from './panel_container';
@@ -56,8 +56,8 @@ function getDetailsHeight() {
   return DEFAULT_DETAILS_CONTENT_HEIGHT + DRAG_HANDLE_HEIGHT_PX;
 }
 
-function getFullScreenHeight(dom?: Element) {
-  for(const selector of globals().frontendLocalState.detailsFullScreenSelectors) {
+function getFullScreenHeight(globalsContext: string, dom?: Element) {
+  for(const selector of globals(globalsContext).frontendLocalState.detailsFullScreenSelectors) {
     const element = dom?.closest(selector) || document.querySelector(selector);
     if(element != null) {
       return element.clientHeight;
@@ -66,8 +66,8 @@ function getFullScreenHeight(dom?: Element) {
   return getDetailsHeight();
 }
 
-function hasLogs(): boolean {
-  const data = globals().trackDataStore.get(LogExistsKey) as LogExists;
+function hasLogs(globalsContext: string): boolean {
+  const data = globals(globalsContext).trackDataStore.get(LogExistsKey) as LogExists;
   return data && data.exists;
 }
 
@@ -76,7 +76,7 @@ interface Tab {
   name: string;
 }
 
-interface DragHandleAttrs {
+interface DragHandleAttrs extends HasGlobalsContextAttrs {
   height: number;
   resize: (height: number) => void;
   tabs: Tab[];
@@ -93,13 +93,18 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
   // We can't get real fullscreen height until the pan_and_zoom_handler exists.
   private fullscreenHeight = getDetailsHeight();
   private dom?: Element = undefined;
+  private globals = bindGlobals();
+
+  oninit({attrs}: m.Vnode<DragHandleAttrs>) {
+    this.globals = bindGlobals(attrs.globalsContext);
+  }
 
   oncreate({dom, attrs}: m.CVnodeDOM<DragHandleAttrs>) {
     this.resize = attrs.resize;
     this.height = attrs.height;
     this.isClosed = this.height <= DRAG_HANDLE_HEIGHT_PX;
     this.dom = dom;
-    this.fullscreenHeight = getFullScreenHeight(this.dom);
+    this.fullscreenHeight = getFullScreenHeight(this.globals.context, this.dom);
     new DragGestureHandler(
         this.dom as HTMLElement,
         this.onDrag.bind(this),
@@ -119,11 +124,11 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
     this.isClosed = newHeight <= DRAG_HANDLE_HEIGHT_PX;
     this.isFullscreen = newHeight >= this.fullscreenHeight;
     this.resize(newHeight);
-    globals().rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   onDragStart(_x: number, _y: number) {
-    this.fullscreenHeight = getFullScreenHeight(this.dom);
+    this.fullscreenHeight = getFullScreenHeight(this.globals.context, this.dom);
     this.dragStartHeight = this.height;
   }
 
@@ -140,7 +145,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
           '.tab',
           {
             onclick: () => {
-              globals().dispatch(Actions.setCurrentTab({tab: tab.key}));
+              this.globals().dispatch(Actions.setCurrentTab({tab: tab.key}));
             },
           },
           tab.name);
@@ -154,8 +159,8 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
               onclick: () => {
                 this.isClosed = false;
                 this.isFullscreen = true;
-                this.resize(getFullScreenHeight(this.dom));
-                globals().rafScheduler.scheduleFullRedraw();
+                this.resize(getFullScreenHeight(this.globals.context, this.dom));
+                this.globals().rafScheduler.scheduleFullRedraw();
               },
               title: 'Open fullscreen',
               disabled: this.isFullscreen,
@@ -176,7 +181,7 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
                   this.previousHeight = this.height;
                   this.resize(DRAG_HANDLE_HEIGHT_PX);
                 }
-                globals().rafScheduler.scheduleFullRedraw();
+                this.globals().rafScheduler.scheduleFullRedraw();
               },
               title,
             },
@@ -184,9 +189,9 @@ class DragHandle implements m.ClassComponent<DragHandleAttrs> {
   }
 }
 
-function handleSelectionChange(newSelection?: Selection, _?: Selection): void {
+function handleSelectionChange(newSelection?: Selection, _?: Selection, globalsContext?: string): void {
   const currentSelectionTag = CURRENT_SELECTION_TAG;
-  const bottomTabList = globals().bottomTabList;
+  const bottomTabList = bindGlobals(globalsContext)().bottomTabList;
   if (!bottomTabList) return;
   if (newSelection === undefined) {
     bottomTabList.closeTabByTag(currentSelectionTag);
@@ -234,7 +239,7 @@ function handleSelectionChange(newSelection?: Selection, _?: Selection): void {
       break;
     case TOP_LEVEL_SCROLL_KIND:
       pluginManager.onDetailsPanelSelectionChange(
-          SCROLL_JANK_PLUGIN_ID, newSelection);
+          SCROLL_JANK_PLUGIN_ID, globalsContext ?? '', newSelection);
       break;
     default:
       bottomTabList.closeTabByTag(currentSelectionTag);
@@ -242,10 +247,10 @@ function handleSelectionChange(newSelection?: Selection, _?: Selection): void {
 }
 addSelectionChangeObserver(handleSelectionChange);
 
-export class DetailsPanel implements m.ClassComponent {
+export class DetailsPanel implements m.ClassComponent<HasGlobalsContextAttrs> {
   private detailsHeight = getDetailsHeight();
 
-  view() {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
     interface DetailsPanel {
       key: string;
       name: string;
@@ -253,6 +258,8 @@ export class DetailsPanel implements m.ClassComponent {
     }
 
     const detailsPanels: DetailsPanel[] = [];
+    const globalsContext = vnode.attrs.globalsContext;
+    const globals = bindGlobals(globalsContext);
 
     if (globals().bottomTabList) {
       for (const tab of globals().bottomTabList!.getTabs()) {
@@ -275,7 +282,7 @@ export class DetailsPanel implements m.ClassComponent {
             detailsPanels.push({
               key: 'flamegraph_selection',
               name: 'Flamegraph Selection',
-              vnode: m(FlamegraphDetailsPanel, {key: 'flamegraph'}),
+              vnode: m(FlamegraphDetailsPanel, {globalsContext, key: 'flamegraph'}),
             });
           }
           break;
@@ -284,6 +291,7 @@ export class DetailsPanel implements m.ClassComponent {
             key: 'current_selection',
             name: 'Current Selection',
             vnode: m(SliceDetailsPanel, {
+              globalsContext,
               key: 'slice',
             }),
           });
@@ -293,6 +301,7 @@ export class DetailsPanel implements m.ClassComponent {
             key: 'current_selection',
             name: 'Current Selection',
             vnode: m(CounterDetailsPanel, {
+              globalsContext,
               key: 'counter',
             }),
           });
@@ -302,7 +311,7 @@ export class DetailsPanel implements m.ClassComponent {
           detailsPanels.push({
             key: 'current_selection',
             name: 'Current Selection',
-            vnode: m(FlamegraphDetailsPanel, {key: 'flamegraph'}),
+            vnode: m(FlamegraphDetailsPanel, {globalsContext, key: 'flamegraph'}),
           });
           break;
         case 'CPU_PROFILE_SAMPLE':
@@ -310,6 +319,7 @@ export class DetailsPanel implements m.ClassComponent {
             key: 'current_selection',
             name: 'Current Selection',
             vnode: m(CpuProfileDetailsPanel, {
+              globalsContext,
               key: 'cpu_profile_sample',
             }),
           });
@@ -318,18 +328,18 @@ export class DetailsPanel implements m.ClassComponent {
           detailsPanels.push({
             key: 'current_selection',
             name: 'Current Selection',
-            vnode: m(ChromeSliceDetailsPanel, {key: 'chrome_slice'}),
+            vnode: m(ChromeSliceDetailsPanel, {globalsContext, key: 'chrome_slice'}),
           });
           break;
         default:
           break;
       }
     }
-    if (hasLogs()) {
+    if (hasLogs(globalsContext)) {
       detailsPanels.push({
         key: 'android_logs',
         name: 'Android Logs',
-        vnode: m(LogPanel, {key: 'logs_panel'}),
+        vnode: m(LogPanel, {globalsContext, key: 'logs_panel'}),
       });
     }
 
@@ -340,7 +350,7 @@ export class DetailsPanel implements m.ClassComponent {
         detailsPanels.push({
           key: 'ftrace_events',
           name: 'Ftrace Events',
-          vnode: m(FtracePanel, {key: 'ftrace_panel'}),
+          vnode: m(FtracePanel, {globalsContext, key: 'ftrace_panel'}),
         });
       }
     }
@@ -351,6 +361,7 @@ export class DetailsPanel implements m.ClassComponent {
         key: 'pivot_table',
         name: 'Pivot Table',
         vnode: m(PivotTable, {
+          globalsContext,
           key: 'pivot_table',
           selectionArea:
               globals().state.nonSerializableState.pivotTable.selectionArea!,
@@ -362,7 +373,7 @@ export class DetailsPanel implements m.ClassComponent {
       detailsPanels.push({
         key: 'bound_flows',
         name: 'Flow Events',
-        vnode: m(FlowEventsPanel, {key: 'flow_events'}),
+        vnode: m(FlowEventsPanel, {globalsContext, key: 'flow_events'}),
       });
     }
 
@@ -371,7 +382,7 @@ export class DetailsPanel implements m.ClassComponent {
         detailsPanels.push({
           key: value.tabName,
           name: value.tabName,
-          vnode: m(AggregationPanel, {kind: key, key, data: value}),
+          vnode: m(AggregationPanel, {globalsContext, kind: key, key, data: value}),
         });
       }
     }
@@ -381,7 +392,7 @@ export class DetailsPanel implements m.ClassComponent {
       detailsPanels.push({
         key: 'selected_flows',
         name: 'Flow Events',
-        vnode: m(FlowEventsAreaSelectedPanel, {key: 'flow_events_area'}),
+        vnode: m(FlowEventsAreaSelectedPanel, {globalsContext, key: 'flow_events_area'}),
       });
     }
 
@@ -403,6 +414,7 @@ export class DetailsPanel implements m.ClassComponent {
           },
         },
         m(DragHandle, {
+          globalsContext,
           resize: (height: number) => {
             this.detailsHeight = Math.max(height, DRAG_HANDLE_HEIGHT_PX);
           },
@@ -413,6 +425,6 @@ export class DetailsPanel implements m.ClassComponent {
           currentTabKey: currentTabDetails?.key,
         }),
         m('.details-panel-container.x-scrollable',
-          m(PanelContainer, {doesScroll: true, panels, kind: 'DETAILS'})));
+          m(PanelContainer, {globalsContext, doesScroll: true, panels, kind: 'DETAILS'})));
   }
 }

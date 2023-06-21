@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { GlobalsFunction, bindGlobals } from '../../frontend/globals';
 import {assertExists, assertTrue} from '../../base/logging';
-import {globals} from '../../frontend/globals';
 import {autosaveConfigStore} from '../../frontend/record_config';
 import {
   DEFAULT_ADB_WEBSOCKET_URL,
@@ -228,6 +228,8 @@ class TracingSessionWrapper {
 // Keeps track of the state the Ui is in. Has methods which are executed on
 // user actions such as starting/stopping/cancelling a tracing session.
 export class RecordingPageController {
+  // The contextual trace globals
+  private globals: GlobalsFunction;
   // State of the recording page. This is set by user actions and/or automatic
   // transitions. This is queried by the UI in order to
   private state: RecordingState = RecordingState.NO_TARGET;
@@ -242,6 +244,10 @@ export class RecordingPageController {
   // A counter for state modifications. We use this to ensure that state
   // transitions don't override one another in async functions.
   private stateGeneration = 0;
+
+  constructor(globalsContext: string) {
+    this.globals = bindGlobals(globalsContext);
+  }
 
   getBufferUsagePercentage(): number {
     return this.bufferUsagePercentage;
@@ -265,8 +271,8 @@ export class RecordingPageController {
       throw new RecordingError('Recording page state transition out of order.');
     }
     this.setState(state);
-    globals().dispatch(Actions.setRecordingStatus({status: undefined}));
-    globals().rafScheduler.scheduleFullRedraw();
+    this.globals().dispatch(Actions.setRecordingStatus({status: undefined}));
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   maybeClearRecordingState(tracingSessionWrapper: TracingSessionWrapper): void {
@@ -280,7 +286,7 @@ export class RecordingPageController {
     if (this.tracingSessionWrapper !== tracingSessionWrapper) {
       return;
     }
-    globals().dispatch(Actions.openTraceFromBuffer({
+    this.globals().dispatch(Actions.openTraceFromBuffer({
       title: 'Recorded trace',
       buffer: trace.buffer,
       fileName: `trace_${currentDateHourAndMinute()}${TRACE_SUFFIX}`,
@@ -295,11 +301,11 @@ export class RecordingPageController {
     // For the 'Recording in progress for 7000ms we don't show a
     // modal.'
     if (message.startsWith(RECORDING_IN_PROGRESS)) {
-      globals().dispatch(Actions.setRecordingStatus({status: message}));
+      this.globals().dispatch(Actions.setRecordingStatus({status: message}));
     } else {
       // For messages such as 'Please allow USB debugging on your
       // device, which require a user action, we show a modal.
-      showRecordingModal(message);
+      showRecordingModal(this.globals.context, message);
     }
   }
 
@@ -309,7 +315,7 @@ export class RecordingPageController {
       return;
     }
     if (errorMessage) {
-      showRecordingModal(errorMessage);
+      showRecordingModal(this.globals.context, errorMessage);
     }
     this.clearRecordingState();
     this.onTargetChange();
@@ -320,7 +326,7 @@ export class RecordingPageController {
     if (this.tracingSessionWrapper !== tracingSessionWrapper) {
       return;
     }
-    showRecordingModal(errorMessage);
+    showRecordingModal(this.globals.context, errorMessage);
     this.clearRecordingState();
   }
 
@@ -353,11 +359,11 @@ export class RecordingPageController {
 
     if (!this.target) {
       this.setState(RecordingState.NO_TARGET);
-      globals().rafScheduler.scheduleFullRedraw();
+      this.globals().rafScheduler.scheduleFullRedraw();
       return;
     }
     this.setState(RecordingState.TARGET_SELECTED);
-    globals().rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
 
     this.tracingSessionWrapper = this.createTracingSessionWrapper(this.target);
     this.tracingSessionWrapper.fetchTargetInfo();
@@ -371,7 +377,7 @@ export class RecordingPageController {
       this.selectTarget(target);
     } catch (e) {
       if (e instanceof RecordingError) {
-        showRecordingModal(e.message);
+        showRecordingModal(this.globals.context, e.message);
       } else {
         throw e;
       }
@@ -389,13 +395,13 @@ export class RecordingPageController {
   onStartRecordingPressed(): void {
     assertTrue(RecordingState.TARGET_INFO_DISPLAYED === this.state);
     location.href = '#!/record/instructions';
-    autosaveConfigStore.save(globals().state.recordConfig);
+    autosaveConfigStore.save(this.globals().state.recordConfig);
 
     const target = this.getTarget();
     const targetInfo = target.getInfo();
-    globals().logging.logEvent(
+    this.globals().logging.logEvent(
         'Record Trace', `Record trace (${targetInfo.targetType})`);
-    const traceConfig = genTraceConfig(globals().state.recordConfig, targetInfo);
+    const traceConfig = genTraceConfig(this.globals().state.recordConfig, targetInfo);
 
     this.tracingSessionWrapper = this.createTracingSessionWrapper(target);
     this.tracingSessionWrapper.start(traceConfig);
@@ -439,7 +445,7 @@ export class RecordingPageController {
     // We redraw if:
     // 1. We received a correct buffer usage value.
     // 2. We receive a RecordingError.
-    globals().rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   initFactories() {
@@ -480,7 +486,7 @@ export class RecordingPageController {
     // If the change happens for an existing target, the controller keeps the
     // currently selected target in focus.
     if (this.target && allTargets.includes(this.target)) {
-      globals().rafScheduler.scheduleFullRedraw();
+      this.globals().rafScheduler.scheduleFullRedraw();
       return;
     }
     // If the change happens to a new target or the controller does not have a
@@ -497,10 +503,10 @@ export class RecordingPageController {
     this.bufferUsagePercentage = 0;
     this.tracingSessionWrapper = undefined;
     this.setState(RecordingState.TARGET_INFO_DISPLAYED);
-    globals().dispatch(Actions.setRecordingStatus({status: undefined}));
+    this.globals().dispatch(Actions.setRecordingStatus({status: undefined}));
     // Redrawing because this method has changed the RecordingState, which will
     // affect the display of the record_page.
-    globals().rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   private setState(state: RecordingState) {

@@ -15,7 +15,7 @@
 import {createPopper, Instance, OptionsGeneric} from '@popperjs/core';
 import type {StrictModifiers} from '@popperjs/core';
 import m from 'mithril';
-import {globals} from '../globals';
+import {bindGlobals, HasGlobalsContextAttrs} from '../globals';
 import {MountOptions, Portal, PortalAttrs} from './portal';
 import {classNames} from '../classnames';
 import {findRef, isOrContains, toHTMLElement} from './utils';
@@ -45,7 +45,7 @@ export enum PopupPosition {
 
 type OnChangeCallback = (shouldOpen: boolean) => void;
 
-export interface PopupAttrs {
+export interface PopupAttrs extends HasGlobalsContextAttrs {
   // Which side of the trigger to place to popup.
   // Defaults to "Auto"
   position?: PopupPosition;
@@ -85,6 +85,7 @@ export interface PopupAttrs {
 // a little arrow pointing at the trigger element.
 // Useful for displaying things like popup menus.
 export class Popup implements m.ClassComponent<PopupAttrs> {
+  private globals = bindGlobals();
   private isOpen: boolean = false;
   private triggerElement?: Element;
   private popupElement?: HTMLElement;
@@ -187,6 +188,10 @@ export class Popup implements m.ClassComponent<PopupAttrs> {
     );
   }
 
+  oninit({attrs}: m.Vnode<PopupAttrs>) {
+    this.globals = bindGlobals(attrs.globalsContext);
+  }
+
   oncreate({dom}: m.VnodeDOM<PopupAttrs, this>) {
     this.triggerElement = assertExists(findRef(dom, Popup.TRIGGER_REF));
   }
@@ -278,13 +283,13 @@ export class Popup implements m.ClassComponent<PopupAttrs> {
     if (this.isOpen) {
       this.isOpen = false;
       this.onChange(this.isOpen);
-      globals().rafScheduler.scheduleFullRedraw();
+      this.globals().rafScheduler.scheduleFullRedraw();
     }
   }
 
   private togglePopup() {
     this.isOpen = !this.isOpen;
     this.onChange(this.isOpen);
-    globals().rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 }

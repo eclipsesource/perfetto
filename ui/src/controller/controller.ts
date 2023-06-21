@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { GlobalsFunction, bindGlobals } from "../frontend/globals";
+
 export type ControllerAny = Controller</* StateType=*/ any>;
 
 export interface ControllerFactory<ConstructorArgs> {
@@ -43,8 +45,11 @@ export abstract class Controller<StateType> {
   private _state: StateType;
   private _children = new Map<string, ControllerAny>();
 
-  constructor(initialState: StateType) {
+  protected readonly globals: GlobalsFunction;
+
+  constructor(initialState: StateType, globalsContext: string) {
     this._state = initialState;
+    this.globals = bindGlobals(globalsContext);
   }
 
   abstract run(): Children|void;
@@ -53,7 +58,7 @@ export abstract class Controller<StateType> {
   // Invokes the current controller subtree, recursing into children.
   // While doing so handles lifecycle of child controllers.
   // This method should be called only by the runControllers() method in
-  // globals().ts. Exposed publicly for testing.
+  // globals.ts. Exposed publicly for testing.
   invoke(): boolean {
     if (this._inRunner) throw new Error('Reentrancy in Controller');
     this._stateChanged = false;

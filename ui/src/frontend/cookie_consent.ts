@@ -14,23 +14,24 @@
 
 import m from 'mithril';
 
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 
 const COOKIE_ACK_KEY = 'cookieAck';
 
-export class CookieConsent implements m.ClassComponent {
+export class CookieConsent implements m.ClassComponent<HasGlobalsContextAttrs> {
   private showCookieConsent = true;
 
-  oninit() {
+  oninit({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
     this.showCookieConsent = true;
-    if (!globals().logging.isEnabled() ||
+    if (!globals(attrs.globalsContext).logging.isEnabled() ||
         localStorage.getItem(COOKIE_ACK_KEY) === 'true') {
       this.showCookieConsent = false;
     }
   }
 
-  view() {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs, this>) {
     if (!this.showCookieConsent) return;
+    const globalsContext = attrs.globalsContext;
     return m(
         '.cookie-consent',
         m('.cookie-text',
@@ -49,7 +50,7 @@ export class CookieConsent implements m.ClassComponent {
               onclick: () => {
                 this.showCookieConsent = false;
                 localStorage.setItem(COOKIE_ACK_KEY, 'true');
-                globals().rafScheduler.scheduleFullRedraw();
+                globals(globalsContext).rafScheduler.scheduleFullRedraw();
               },
             },
             'OK')),

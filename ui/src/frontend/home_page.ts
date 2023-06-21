@@ -16,18 +16,19 @@ import m from 'mithril';
 
 import {channelChanged, getNextChannel, setChannel} from '../common/channels';
 
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 import {createPage} from './pages';
 
 
 export const HomePage = createPage({
-  view() {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globalsContext = vnode.attrs.globalsContext;
     return m(
         '.page.home-page',
         m(
             '.home-page-center',
             m('.home-page-title', 'Perfetto'),
-            m(`img.logo[src=${globals().root}assets/logo-3d.png]`),
+            m(`img.logo[src=${globals(globalsContext).root}assets/logo-3d.png]`),
             m(
                 'div.channel-select',
                 m('div',

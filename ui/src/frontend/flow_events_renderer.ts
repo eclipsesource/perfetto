@@ -70,14 +70,14 @@ export class FlowEventsRendererArgs {
   trackIdToTrackPanel: Map<number, TrackPanelInfo>;
   groupIdToTrackGroupPanel: Map<string, TrackGroupPanelInfo>;
 
-  constructor(public canvasWidth: number, public canvasHeight: number) {
+  constructor(public globalsContext: string, public canvasWidth: number, public canvasHeight: number) {
     this.trackIdToTrackPanel = new Map<number, TrackPanelInfo>();
     this.groupIdToTrackGroupPanel = new Map<string, TrackGroupPanelInfo>();
   }
 
   registerPanel(panel: PanelVNode, yStart: number, height: number) {
     if (panel.state instanceof TrackPanel && hasId(panel.attrs)) {
-      const config = globals().state.tracks[panel.attrs.id].config;
+      const config = globals(this.globalsContext).state.tracks[panel.attrs.id].config;
       if (hasTrackId(config)) {
         this.trackIdToTrackPanel.set(
             config.trackId, {panel: panel.state, yStart});
@@ -97,9 +97,11 @@ export class FlowEventsRendererArgs {
 }
 
 export class FlowEventsRenderer {
+  constructor(private readonly globalsContext: string) {}
+
   private getTrackGroupIdByTrackId(trackId: number): string|undefined {
-    const uiTrackId = globals().state.uiTrackIdByTraceTrackId[trackId];
-    return uiTrackId ? globals().state.tracks[uiTrackId].trackGroup : undefined;
+    const uiTrackId = globals(this.globalsContext).state.uiTrackIdByTraceTrackId[trackId];
+    return uiTrackId ? globals(this.globalsContext).state.tracks[uiTrackId].trackGroup : undefined;
   }
 
   private getTrackGroupYCoordinate(
@@ -141,7 +143,7 @@ export class FlowEventsRenderer {
   }
 
   private getXCoordinate(ts: TPTime): number {
-    return globals().frontendLocalState.visibleTimeScale.tpTimeToPx(ts);
+    return globals(this.globalsContext).frontendLocalState.visibleTimeScale.tpTimeToPx(ts);
   }
 
   private getSliceRect(args: FlowEventsRendererArgs, point: FlowPoint):
@@ -160,15 +162,15 @@ export class FlowEventsRenderer {
     ctx.rect(0, 0, args.canvasWidth - TRACK_SHELL_WIDTH, args.canvasHeight);
     ctx.clip();
 
-    globals().connectedFlows.forEach((flow) => {
+    globals(this.globalsContext).connectedFlows.forEach((flow) => {
       this.drawFlow(ctx, args, flow, CONNECTED_FLOW_HUE);
     });
 
-    globals().selectedFlows.forEach((flow) => {
+    globals(this.globalsContext).selectedFlows.forEach((flow) => {
       const categories = getFlowCategories(flow);
       for (const cat of categories) {
-        if (globals().visibleFlowCategories.get(cat) ||
-            globals().visibleFlowCategories.get(ALL_CATEGORIES)) {
+        if (globals(this.globalsContext).visibleFlowCategories.get(cat) ||
+            globals(this.globalsContext).visibleFlowCategories.get(ALL_CATEGORIES)) {
           this.drawFlow(ctx, args, flow, SELECTED_FLOW_HUE);
           break;
         }
@@ -212,10 +214,10 @@ export class FlowEventsRenderer {
       y: endYConnection.y,
       dir: endDir,
     };
-    const highlighted = flow.end.sliceId === globals().state.highlightedSliceId ||
-        flow.begin.sliceId === globals().state.highlightedSliceId;
-    const focused = flow.id === globals().state.focusedFlowIdLeft ||
-        flow.id === globals().state.focusedFlowIdRight;
+    const highlighted = flow.end.sliceId === globals(this.globalsContext).state.highlightedSliceId ||
+        flow.begin.sliceId === globals(this.globalsContext).state.highlightedSliceId;
+    const focused = flow.id === globals(this.globalsContext).state.focusedFlowIdLeft ||
+        flow.id === globals(this.globalsContext).state.focusedFlowIdRight;
 
     let intensity = DEFAULT_FLOW_INTENSITY;
     let width = DEFAULT_FLOW_WIDTH;

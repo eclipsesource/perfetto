@@ -54,14 +54,14 @@ import {ViewerPage} from './viewer_page';
 import {WidgetsPage} from './widgets_page';
 
 export {ViewerPage} from './viewer_page';
-export {globals, registerNewGlobal} from './globals';
+export {globals, registerNewGlobals} from './globals';
 
 const EXTENSION_ID = 'lfmkphfpdbjijhpomgecfikhfohaoine';
 
 class FrontendApi {
   private state: State;
 
-  constructor(private context = '') {
+  constructor(private globalsContext = '') {
     this.state = createEmptyState();
   }
 
@@ -82,19 +82,19 @@ class FrontendApi {
     }
 
     // Update overall state.
-    globals(this.context).state = this.state;
+    globals(this.globalsContext).state = this.state;
 
     // If the visible time in the global state has been updated more recently
     // than the visible time handled by the frontend @ 60fps, update it. This
     // typically happens when restoring the state from a permalink.
-    globals(this.context).frontendLocalState.mergeState(this.state.frontendLocalState);
+    globals(this.globalsContext).frontendLocalState.mergeState(this.state.frontendLocalState);
 
     // Only redraw if something other than the frontendLocalState changed.
     let key: keyof State;
     for (key in this.state) {
       if (key !== 'frontendLocalState' && key !== 'visibleTracks' &&
           oldState[key] !== this.state[key]) {
-        globals(this.context).rafScheduler.scheduleFullRedraw();
+        globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
         break;
       }
     }
@@ -112,7 +112,7 @@ class FrontendApi {
       // Need to avoid reentering the controller so move this to a
       // separate task.
       setTimeout(() => {
-        runControllers(this.context);
+        runControllers(this.globalsContext);
       }, 0);
     }
   }
@@ -140,19 +140,19 @@ class FrontendApi {
 }
 
 function setExtensionAvailability(available: boolean) {
-  globals().dispatch(Actions.setExtensionAvailable({
+  globals('').dispatch(Actions.setExtensionAvailable({
     available,
   }));
 }
 
-function initGlobalsFromQueryString() {
+function initGlobalsFromQueryString(globalsContext = '') {
   const queryString = window.location.search;
-  globals().embeddedMode = queryString.includes('mode=embedded');
-  globals().hideSidebar = queryString.includes('hideSidebar=true');
+  globals(globalsContext).embeddedMode = queryString.includes('mode=embedded');
+  globals(globalsContext).hideSidebar = queryString.includes('hideSidebar=true');
 }
 
-function setupContentSecurityPolicy() {
-  const defaultSrc = globals().relaxContentSecurity ? [
+function setupContentSecurityPolicy(globalsContext = '') {
+  const defaultSrc = globals(globalsContext).relaxContentSecurity ? [
     `'self'`,
     `'unsafe-inline'`,
   ] : [
@@ -160,7 +160,7 @@ function setupContentSecurityPolicy() {
     // Google Tag Manager bootstrap.
     `'sha256-LirUKeorCU4uRNtNzr8tlB11uy8rzrdmqHCX38JSwHY='`,
   ]
-  const connectSrc = globals().relaxContentSecurity ? [
+  const connectSrc = globals(globalsContext).relaxContentSecurity ? [
     '*'
   ] : [
     `'self'`,
@@ -206,19 +206,20 @@ function setupContentSecurityPolicy() {
   document.head.appendChild(meta);
 }
 
+const cssLoadPromise = defer<void>();
+
 function main() {
   setupContentSecurityPolicy();
 
   // Load the css. The load is asynchronous and the CSS is not ready by the time
   // appenChild returns.
-  const cssLoadPromise = defer<void>();
   const css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = globals().root + 'perfetto.css';
+  css.href = globals('').root + 'perfetto.css';
   css.onload = () => cssLoadPromise.resolve();
   css.onerror = (err) => cssLoadPromise.reject(err);
   const favicon = document.head.querySelector('#favicon') as HTMLLinkElement;
-  if (favicon) favicon.href = globals().root + 'assets/favicon.png';
+  if (favicon) favicon.href = globals('').root + 'assets/favicon.png';
 
   // Load the script to detect if this is a Googler (see comments on globals().ts)
   // and initialize GA after that (or after a timeout if something goes wrong).
@@ -226,20 +227,20 @@ function main() {
   script.src =
       'https://storage.cloud.google.com/perfetto-ui-internal/is_internal_user.js';
   script.async = true;
-  script.onerror = () => globals().logging.initialize();
-  script.onload = () => globals().logging.initialize();
-  setTimeout(() => globals().logging.initialize(), 5000);
+  script.onerror = () => globals('').logging.initialize();
+  script.onload = () => globals('').logging.initialize();
+  setTimeout(() => globals('').logging.initialize(), 5000);
 
   document.head.append(script, css);
 
   // Add Error handlers for JS error and for uncaught exceptions in promises.
-  setErrorHandler((err: string) => maybeShowErrorDialog(err));
+  setErrorHandler((err: string) => maybeShowErrorDialog('', err));
   window.addEventListener('error', (e) => reportError(e));
   window.addEventListener('unhandledrejection', (e) => reportError(e));
 
   const extensionLocalChannel = new MessageChannel();
 
-  initWasm(globals().root);
+  initWasm(globals('').root);
   initializeImmerJs();
   initController(extensionLocalChannel.port1);
 
@@ -247,7 +248,7 @@ function main() {
     frontendApi.dispatchMultiple([action]);
   };
 
-  const router = new Router({
+  const router = new Router('', {
     '/': HomePage,
     '/viewer': ViewerPage,
     '/record': RECORDING_V2_FLAG.get() ? RecordPageV2 : RecordPage,
@@ -258,19 +259,19 @@ function main() {
     '/widgets': WidgetsPage,
   });
   router.onRouteChanged = (route) => {
-    globals().rafScheduler.scheduleFullRedraw();
-    maybeOpenTraceFromRoute(route);
+    globals('').rafScheduler.scheduleFullRedraw();
+    maybeOpenTraceFromRoute('', route);
   };
 
-  // This must be called before calling `globals.initialize` so that the
+  // This must be called before calling `globals().initialize` so that the
   // `embeddedMode` global is set.
   initGlobalsFromQueryString();
 
-  globals().initialize(dispatch, router);
-  globals().serviceWorkerController.install();
+  globals('').initialize('', dispatch, router);
+  globals('').serviceWorkerController.install();
 
   const frontendApi = new FrontendApi();
-  globals().publishRedraw = () => globals().rafScheduler.scheduleFullRedraw();
+  globals('').publishRedraw = () => globals('').rafScheduler.scheduleFullRedraw();
 
   // We proxy messages between the extension and the controller because the
   // controller's worker can't access chrome.runtime.
@@ -289,7 +290,7 @@ function main() {
     extensionPort.onMessage.addListener(
         (message: object, _port: chrome.runtime.Port) => {
           if (isGetCategoriesResponse(message)) {
-            globals().dispatch(Actions.setChromeCategories(message));
+            globals('').dispatch(Actions.setChromeCategories(message));
             return;
           }
           extensionLocalChannel.port2.postMessage(message);
@@ -309,9 +310,9 @@ function main() {
     if (e.ctrlKey) e.preventDefault();
   }, {passive: false});
 
-  cssLoadPromise.then(() => onCssLoaded());
+  cssLoadPromise.then(() => onCssLoaded(''));
 
-  if (globals().testing) {
+  if (globals('').testing) {
     document.body.classList.add('testing');
   }
 
@@ -321,15 +322,15 @@ function main() {
   }
 }
 
-export function setupFurtherFrontend(context: string) {
+export function setupFurtherFrontend(globalsContext: string) {
   const extensionLocalChannel = new MessageChannel();
-  initController(extensionLocalChannel.port1, context);
+  initController(extensionLocalChannel.port1, globalsContext);
 
   const dispatch = (action: DeferredAction) => {
     furtherFrontendApi.dispatchMultiple([action]);
   };
 
-  const router = new Router({
+  const router = new Router(globalsContext, {
     '/': HomePage,
     '/viewer': ViewerPage,
     '/record': RECORDING_V2_FLAG.get() ? RecordPageV2 : RecordPage,
@@ -340,39 +341,44 @@ export function setupFurtherFrontend(context: string) {
     '/widgets': WidgetsPage,
   });
   router.onRouteChanged = (route) => {
-    globals(context).rafScheduler.scheduleFullRedraw();
-    maybeOpenTraceFromRoute(route);
+    globals(globalsContext).rafScheduler.scheduleFullRedraw();
+    maybeOpenTraceFromRoute(globalsContext, route);
   };
 
-  globals(context).initialize(dispatch, router);
-  globals(context).serviceWorkerController.install();
+  globals(globalsContext).initialize(globalsContext, dispatch, router);
+  globals(globalsContext).serviceWorkerController.install();
 
-  const furtherFrontendApi = new FrontendApi(context);
-  globals(context).publishRedraw = () => globals(context).rafScheduler.scheduleFullRedraw();
+  const furtherFrontendApi = new FrontendApi(globalsContext);
+  globals(globalsContext).publishRedraw = () => globals(globalsContext).rafScheduler.scheduleFullRedraw();
+
+  cssLoadPromise.then(() => onCssLoaded(globalsContext));
 }
 
 
-function onCssLoaded() {
-  initCssConstants();
+function onCssLoaded(globalsContext: string) {
+  if (globalsContext === '') {
+    initCssConstants();
+  }
+
   // Clear all the contents of the initial page (e.g. the <pre> error message)
   // And replace it with the root <main> element which will be used by mithril.
-  if(!globals().disableMainRendering) {
+  if(!globals(globalsContext).disableMainRendering) {
     document.body.innerHTML = '<main></main>';
     const main = assertExists(document.body.querySelector('main'));
-    globals().rafScheduler.domRedraw = () => {
-      m.render(main, globals().router.resolve());
+    globals(globalsContext).rafScheduler.domRedraw = () => {
+      m.render(main, globals(globalsContext).router.resolve());
     };
   }
 
-  initLiveReloadIfLocalhost();
+  initLiveReloadIfLocalhost(globalsContext);
 
   if (!RECORDING_V2_FLAG.get()) {
-    updateAvailableAdbDevices();
+    updateAvailableAdbDevices(globalsContext);
     try {
       navigator.usb.addEventListener(
-          'connect', () => updateAvailableAdbDevices());
+          'connect', () => updateAvailableAdbDevices(globalsContext));
       navigator.usb.addEventListener(
-          'disconnect', () => updateAvailableAdbDevices());
+          'disconnect', () => updateAvailableAdbDevices(globalsContext));
     } catch (e) {
       console.error('WebUSB API not supported');
     }
@@ -384,24 +390,24 @@ function onCssLoaded() {
   // Don't auto-open any trace URLs until we get a response here because we may
   // accidentially clober the state of an open trace processor instance
   // otherwise.
-  CheckHttpRpcConnection().then(() => {
-    if (!globals().embeddedMode && globals().allowFileDrop) {
+  CheckHttpRpcConnection(globalsContext).then(() => {
+    if (!globals(globalsContext).embeddedMode && globals(globalsContext).allowFileDrop) {
       installFileDropHandler();
     }
 
     // Don't allow postMessage or opening trace from route when the user says
     // that they want to reuse the already loaded trace in trace processor.
-    const engine = globals().getCurrentEngine();
+    const engine = globals(globalsContext).getCurrentEngine();
     if (engine && engine.source.type === 'HTTP_RPC') {
       return;
     }
 
     // Add support for opening traces from postMessage().
-    window.addEventListener('message', postMessageHandler, {passive: true});
+    window.addEventListener('message', postMessageHandler(globalsContext), {passive: true});
 
     // Handles the initial ?local_cache_key=123 or ?s=permalink or ?url=...
     // cases.
-    maybeOpenTraceFromRoute(Router.parseUrl(window.location.href));
+    maybeOpenTraceFromRoute(globalsContext, Router.parseUrl(window.location.href));
   });
 }
 

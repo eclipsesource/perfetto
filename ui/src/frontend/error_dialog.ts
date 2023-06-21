@@ -32,13 +32,13 @@ let timeLastReport = 0;
 const queuedErrors = new Array<string>();
 const ERR_QUEUE_MAX_LEN = 10;
 
-export function maybeShowErrorDialog(errLog: string) {
-  globals().logging.logError(errLog);
+export function maybeShowErrorDialog(globalsContext: string, errLog: string) {
+  globals(globalsContext).logging.logError(errLog);
   const now = performance.now();
 
   // Here we rely on the exception message from onCannotGrowMemory function
   if (errLog.includes('Cannot enlarge memory')) {
-    showOutOfMemoryDialog();
+    showOutOfMemoryDialog(globalsContext);
     // Refresh timeLastReport to prevent a different error showing a dialog
     timeLastReport = now;
     return;
@@ -46,7 +46,7 @@ export function maybeShowErrorDialog(errLog: string) {
 
   if (!RECORDING_V2_FLAG.get()) {
     if (errLog.includes('Unable to claim interface')) {
-      showWebUSBError();
+      showWebUSBError(globalsContext);
       timeLastReport = now;
       return;
     }
@@ -54,19 +54,19 @@ export function maybeShowErrorDialog(errLog: string) {
     if (errLog.includes('A transfer error has occurred') ||
         errLog.includes('The device was disconnected') ||
         errLog.includes('The transfer was cancelled')) {
-      showConnectionLostError();
+      showConnectionLostError(globalsContext);
       timeLastReport = now;
       return;
     }
   }
 
   if (errLog.includes('(ERR:fmt)')) {
-    showUnknownFileError();
+    showUnknownFileError(globalsContext);
     return;
   }
 
   if (errLog.includes('(ERR:rpc_seq)')) {
-    showRpcSequencingError();
+    showRpcSequencingError(globalsContext);
     return;
   }
 
@@ -87,10 +87,10 @@ export function maybeShowErrorDialog(errLog: string) {
   const errTitle = errLog.split('\n', 1)[0].substr(0, 80);
   const userDescription = '';
   let checked = false;
-  const engine = globals().getCurrentEngine();
+  const engine = globals(globalsContext).getCurrentEngine();
 
   const shareTraceSection: m.Vnode[] = [];
-  if (isShareable() && !urlExists()) {
+  if (isShareable() && !urlExists(globalsContext)) {
     shareTraceSection.push(
         m(`input[type=checkbox]`, {
           checked,
@@ -98,15 +98,15 @@ export function maybeShowErrorDialog(errLog: string) {
             checked = (ev.target as HTMLInputElement).checked;
             if (checked && engine && engine.source.type === 'FILE') {
               saveTrace(engine.source.file).then((url) => {
-                const errMessage = createErrorMessage(errLog, checked, url);
+                const errMessage = createErrorMessage(globalsContext, errLog, checked, url);
                 renderModal(
-                    errTitle, errMessage, userDescription, shareTraceSection);
+                    globalsContext, errTitle, errMessage, userDescription, shareTraceSection);
                 return;
               });
             }
-            const errMessage = createErrorMessage(errLog, checked);
+            const errMessage = createErrorMessage(globalsContext, errLog, checked);
             renderModal(
-                errTitle, errMessage, userDescription, shareTraceSection);
+                globalsContext, errTitle, errMessage, userDescription, shareTraceSection);
           },
         }),
         m('span', `Check this box to share the current trace for debugging
@@ -117,18 +117,21 @@ export function maybeShowErrorDialog(errLog: string) {
      to the bug if preferred.`));
   }
   renderModal(
+      globalsContext,
       errTitle,
-      createErrorMessage(errLog, checked),
+      createErrorMessage(globalsContext, errLog, checked),
       userDescription,
       shareTraceSection);
 }
 
 function renderModal(
+    globalsContext: string,
     errTitle: string,
     errMessage: string,
     userDescription: string,
     shareTraceSection: m.Vnode[]) {
   showModal({
+    globalsContext,
     title: 'Oops, something went wrong. Please file a bug.',
     content:
         m('div',
@@ -164,19 +167,19 @@ function renderModal(
 }
 
 // If there is a trace URL to share, we don't have to show the upload checkbox.
-function urlExists() {
-  const engine = globals().getCurrentEngine();
+function urlExists(globalsContext: string) {
+  const engine = globals(globalsContext).getCurrentEngine();
   return engine !== undefined &&
       (engine.source.type === 'ARRAY_BUFFER' || engine.source.type === 'URL') &&
       engine.source.url !== undefined;
 }
 
-function createErrorMessage(errLog: string, checked: boolean, url?: string) {
+function createErrorMessage(globalsContext: string, errLog: string, checked: boolean, url?: string) {
   let errMessage = '';
-  const engine = globals().getCurrentEngine();
+  const engine = globals(globalsContext).getCurrentEngine();
   if (checked && url !== undefined) {
     errMessage += `Trace: ${url}`;
-  } else if (urlExists()) {
+  } else if (urlExists(globalsContext)) {
     errMessage +=
         `Trace: ${(assertExists(engine).source as TraceUrlSource).url}`;
   } else {
@@ -201,7 +204,7 @@ function createLink(
   return link.substr(0, 8000);
 }
 
-function showOutOfMemoryDialog() {
+function showOutOfMemoryDialog(globalsContext: string) {
   const url =
       'https://perfetto.dev/docs/quickstart/trace-analysis#get-trace-processor';
 
@@ -210,6 +213,7 @@ function showOutOfMemoryDialog() {
       'trace_processor --httpd /path/to/trace.pftrace\n' +
       '# Reload the UI, it will prompt to use the HTTP+RPC interface';
   showModal({
+    globalsContext,
     title: 'Oops! Your WASM trace processor ran out of memory',
     content: m(
         'div',
@@ -231,8 +235,9 @@ function showOutOfMemoryDialog() {
   });
 }
 
-function showUnknownFileError() {
+function showUnknownFileError(globalsContext: string) {
   showModal({
+    globalsContext,
     title: 'Cannot open this file',
     content: m(
         'div',
@@ -253,8 +258,9 @@ function showUnknownFileError() {
   });
 }
 
-function showWebUSBError() {
+function showWebUSBError(globalsContext: string) {
   showModal({
+    globalsContext,
     title: 'A WebUSB error occurred',
     content: m(
         'div',
@@ -270,8 +276,9 @@ function showWebUSBError() {
   });
 }
 
-export function showWebUSBErrorV2() {
+export function showWebUSBErrorV2(globalsContext: string) {
   showModal({
+    globalsContext,
     title: 'A WebUSB error occurred',
     content: m(
         'div',
@@ -302,8 +309,9 @@ export function showWebUSBErrorV2() {
   });
 }
 
-export function showConnectionLostError(): void {
+export function showConnectionLostError(globalsContext: string): void {
   showModal({
+    globalsContext,
     title: 'Connection with the ADB device lost',
     content: m(
         'div',
@@ -313,8 +321,9 @@ export function showConnectionLostError(): void {
   });
 }
 
-export function showAllowUSBDebugging(): void {
+export function showAllowUSBDebugging(globalsContext: string): void {
   showModal({
+    globalsContext,
     title: 'Could not connect to the device',
     content: m(
         'div', m('span', 'Please allow USB debugging on the device.'), m('br')),
@@ -322,8 +331,9 @@ export function showAllowUSBDebugging(): void {
   });
 }
 
-export function showNoDeviceSelected(): void {
+export function showNoDeviceSelected(globalsContext: string): void {
   showModal({
+    globalsContext,
     title: 'No device was selected for recording',
     content:
         m('div',
@@ -334,8 +344,9 @@ export function showNoDeviceSelected(): void {
   });
 }
 
-export function showExtensionNotInstalled(): void {
+export function showExtensionNotInstalled(globalsContext: string): void {
   showModal({
+    globalsContext,
     title: 'Perfetto Chrome extension not installed',
     content:
         m('div',
@@ -348,16 +359,18 @@ export function showExtensionNotInstalled(): void {
   });
 }
 
-export function showWebsocketConnectionIssue(message: string): void {
+export function showWebsocketConnectionIssue(globalsContext: string, message: string): void {
   showModal({
+    globalsContext,
     title: 'Unable to connect to the device via websocket',
     content: m('div', m('span', message), m('br')),
     buttons: [],
   });
 }
 
-export function showIssueParsingTheTracedResponse(message: string): void {
+export function showIssueParsingTheTracedResponse(globalsContext: string, message: string): void {
   showModal({
+    globalsContext,
     title: 'A problem was encountered while connecting to' +
         ' the Perfetto tracing service',
     content: m('div', m('span', message), m('br')),
@@ -365,8 +378,9 @@ export function showIssueParsingTheTracedResponse(message: string): void {
   });
 }
 
-export function showFailedToPushBinary(message: string): void {
+export function showFailedToPushBinary(globalsContext: string, message: string): void {
   showModal({
+    globalsContext,
     title: 'Failed to push a binary to the device',
     content:
         m('div',
@@ -383,8 +397,9 @@ export function showFailedToPushBinary(message: string): void {
   });
 }
 
-function showRpcSequencingError() {
+function showRpcSequencingError(globalsContext: string) {
   showModal({
+    globalsContext,
     title: 'A TraceProcessor RPC error occurred',
     content: m(
         'div',

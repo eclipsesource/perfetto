@@ -43,7 +43,7 @@ const RUN_WEBSOCKET_CMD = '# Get tracebox\n' +
     '# Start the websocket server\n' +
     './tracebox websocket_bridge\n';
 
-export function addNewTarget(recordingPageController: RecordingPageController):
+export function addNewTarget(globalsContext: string, recordingPageController: RecordingPageController):
     ModalDefinition {
   const components = [];
   components.push(m('text', 'Select platform:'));
@@ -57,6 +57,7 @@ export function addNewTarget(recordingPageController: RecordingPageController):
   components.push(assembleChromeSection(recordingPageController));
 
   return {
+    globalsContext,
     title: 'Add new recording target',
     content: m('.record-modal', components),
   };

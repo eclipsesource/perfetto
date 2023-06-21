@@ -16,9 +16,9 @@ import m from 'mithril';
 
 import {Anchor} from './anchor';
 import {classNames} from './classnames';
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 import {LIBRARY_ADD_CHECK} from './icons';
-import {createPage} from './pages';
+import {PageAttrs, createPage} from './pages';
 import {PopupMenuButton} from './popup_menu';
 import {TableShowcase} from './tables/table_showcase';
 import {Button} from './widgets/button';
@@ -28,7 +28,7 @@ import {Form, FormButtonBar, FormLabel} from './widgets/form';
 import {Icon} from './widgets/icon';
 import {Menu, MenuDivider, MenuItem, PopupMenu2} from './widgets/menu';
 import {MultiSelect, MultiSelectDiff} from './widgets/multiselect';
-import {Popup, PopupPosition} from './widgets/popup';
+import {Popup, PopupAttrs, PopupPosition} from './widgets/popup';
 import {Portal} from './widgets/portal';
 import {Select} from './widgets/select';
 import {Spinner} from './widgets/spinner';
@@ -68,7 +68,7 @@ function PortalButton() {
           label: 'Toggle Portal',
           onclick: () => {
             portalOpen = !portalOpen;
-            globals().rafScheduler.scheduleFullRedraw();
+            globals(attrs.globalsContext).rafScheduler.scheduleFullRedraw();
           },
         }),
         portalOpen &&
@@ -105,10 +105,11 @@ function ControlledPopup() {
   let popupOpen = false;
 
   return {
-    view: function() {
+    view: function({attrs}: m.Vnode<PopupAttrs>) {
       return m(
           Popup,
           {
+            globalsContext: attrs.globalsContext,
             trigger:
                 m(Button, {label: `${popupOpen ? 'Close' : 'Open'} Popup`}),
             isOpen: popupOpen,
@@ -118,7 +119,7 @@ function ControlledPopup() {
             label: 'Close Popup',
             onclick: () => {
               popupOpen = !popupOpen;
-              globals().rafScheduler.scheduleFullRedraw();
+              globals(attrs.globalsContext).rafScheduler.scheduleFullRedraw();
             },
           }),
       );
@@ -130,7 +131,7 @@ type Options = {
   [key: string]: EnumOption|boolean
 };
 
-interface WidgetShowcaseAttrs {
+interface WidgetShowcaseAttrs extends HasGlobalsContextAttrs {
   initialOpts?: Options;
   renderWidget: (options: any) => any;
   wide?: boolean;
@@ -173,13 +174,13 @@ class WidgetShowcase implements m.ClassComponent<WidgetShowcaseAttrs> {
     }
   }
 
-  view({attrs: {renderWidget, wide}}: m.CVnode<WidgetShowcaseAttrs>) {
+  view({attrs: {renderWidget, wide, globalsContext}}: m.CVnode<WidgetShowcaseAttrs>) {
     const listItems = [];
 
     if (this.opts) {
       for (const key in this.opts) {
         if (Object.prototype.hasOwnProperty.call(this.opts, key)) {
-          listItems.push(m('li', this.renderControlForOption(key)));
+          listItems.push(m('li', this.renderControlForOption(globalsContext, key)));
         }
       }
     }
@@ -202,30 +203,30 @@ class WidgetShowcase implements m.ClassComponent<WidgetShowcaseAttrs> {
     ];
   }
 
-  private renderControlForOption(key: string) {
+  private renderControlForOption(globalsContext: string, key: string) {
     if (!this.opts) return null;
     const value = this.opts[key];
     if (value instanceof EnumOption) {
-      return this.renderEnumOption(key, value);
+      return this.renderEnumOption(globalsContext, key, value);
     } else if (typeof value === 'boolean') {
-      return this.renderBooleanOption(key);
+      return this.renderBooleanOption(globalsContext, key);
     } else {
       return null;
     }
   }
 
-  private renderBooleanOption(key: string) {
+  private renderBooleanOption(globalsContext: string, key: string) {
     return m(Checkbox, {
       checked: this.optValues[key],
       label: key,
       onchange: () => {
         this.optValues[key] = !this.optValues[key];
-        globals().rafScheduler.scheduleFullRedraw();
+        globals(globalsContext).rafScheduler.scheduleFullRedraw();
       },
     });
   }
 
-  private renderEnumOption(key: string, opt: EnumOption) {
+  private renderEnumOption(globalsContext: string, key: string, opt: EnumOption) {
     const optionElements = opt.options.map((option: string) => {
       return m('option', {value: option}, option);
     });
@@ -236,7 +237,7 @@ class WidgetShowcase implements m.ClassComponent<WidgetShowcaseAttrs> {
           onchange: (e: Event) => {
             const el = e.target as HTMLSelectElement;
             this.optValues[key] = el.value;
-            globals().rafScheduler.scheduleFullRedraw();
+            globals(globalsContext).rafScheduler.scheduleFullRedraw();
           },
         },
         optionElements);
@@ -244,25 +245,28 @@ class WidgetShowcase implements m.ClassComponent<WidgetShowcaseAttrs> {
 }
 
 function recursiveLazyTreeNode(
-    left: string, summary: string, hoardData: boolean): m.Children {
+    globalsContext: string, left: string, summary: string, hoardData: boolean): m.Children {
   return m(LazyTreeNode, {
+    globalsContext,
     left,
     summary,
     hoardData,
     fetchData: async () => {
       await new Promise((r) => setTimeout(r, 200));
-      return () => recursiveLazyTreeNode(left, summary, hoardData);
+      return () => recursiveLazyTreeNode(globalsContext, left, summary, hoardData);
     },
   });
 }
 
 export const WidgetsPage = createPage({
-  view() {
+  view({attrs}: m.Vnode<PageAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         '.widgets-page',
         m('h1', 'Widgets'),
         m('h2', 'Button'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({label, icon, rightIcon, ...rest}) => m(Button, {
             icon: icon ? 'send' : undefined,
             rightIcon: rightIcon ? 'arrow_forward' : undefined,
@@ -281,6 +285,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Checkbox'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(Checkbox, {label: 'Checkbox', ...opts}),
           initialOpts: {
             disabled: false,
@@ -288,6 +293,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Switch'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({label, ...rest}: any) =>
               m(Switch, {label: label ? 'Switch' : undefined, ...rest}),
           initialOpts: {
@@ -297,6 +303,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Text Input'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({placeholder, ...rest}) => m(TextInput, {
             placeholder: placeholder ? 'Placeholder...' : '',
             ...rest,
@@ -308,6 +315,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Select'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) =>
               m(Select,
                 opts,
@@ -322,6 +330,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Empty State'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({header, content}) =>
               m(EmptyState,
                 {
@@ -335,6 +344,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Anchor'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({icon}) => m(
               Anchor,
               {
@@ -350,11 +360,12 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Table'),
         m(WidgetShowcase,
-          {renderWidget: () => m(TableShowcase), initialOpts: {}, wide: true}),
+          {globalsContext, renderWidget: () => m(TableShowcase), initialOpts: {}, wide: true}),
         m('h2', 'Portal'),
         m('p', `A portal is a div rendered out of normal flow of the
         hierarchy.`),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(PortalButton, opts),
           initialOpts: {
             absolute: true,
@@ -367,6 +378,7 @@ export const WidgetsPage = createPage({
         dynamically updated to appear to float alongside a specific element on
         the page, even as the element is moved and scrolled around.`),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(
               Popup,
               {
@@ -394,16 +406,19 @@ export const WidgetsPage = createPage({
         Note, this is the same component as the popup above, but used in
         controlled mode.`),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(ControlledPopup, opts),
           initialOpts: {},
         }),
         m('h2', 'Icon'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(Icon, {icon: 'star', ...opts}),
           initialOpts: {filled: false},
         }),
         m('h2', 'MultiSelect'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({icon, ...rest}) => m(MultiSelect, {
             options: Object.entries(options).map(([key, value]) => {
               return {
@@ -419,7 +434,7 @@ export const WidgetsPage = createPage({
               diffs.forEach(({id, checked}) => {
                 options[id] = checked;
               });
-              globals().rafScheduler.scheduleFullRedraw();
+              globals(globalsContext).rafScheduler.scheduleFullRedraw();
             },
             ...rest,
           }),
@@ -431,8 +446,10 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'PopupMenu'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: () => {
             return m(PopupMenuButton, {
+              globalsContext,
               icon: 'description',
               items: [
                 {itemType: 'regular', text: 'New', callback: () => {}},
@@ -455,6 +472,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Menu'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: () => m(
               Menu,
               m(MenuItem, {label: 'New', icon: 'add'}),
@@ -487,6 +505,7 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'PopupMenu2'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(
               PopupMenu2,
               {
@@ -530,6 +549,7 @@ export const WidgetsPage = createPage({
         m('p', `Simple spinner, rotates forever. Width and height match the font
          size.`),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: ({fontSize, easing}) =>
               m('', {style: {fontSize}}, m(Spinner, {easing})),
           initialOpts: {
@@ -542,16 +562,19 @@ export const WidgetsPage = createPage({
         }),
         m('h2', 'Tree'),
         m(WidgetShowcase, {
+          globalsContext,
           renderWidget: (opts) => m(
               Tree,
               opts,
-              m(TreeNode, {left: 'Name', right: 'my_event'}),
-              m(TreeNode, {left: 'CPU', right: '2'}),
+              m(TreeNode, {globalsContext, left: 'Name', right: 'my_event'}),
+              m(TreeNode, {globalsContext, left: 'CPU', right: '2'}),
               m(TreeNode, {
+                globalsContext,
                 left: 'SQL',
                 right: m(
                     PopupMenu2,
                     {
+                      globalsContext,
                       trigger: m(Anchor, {
                         text: 'SELECT * FROM ftrace_event WHERE id = 123',
                         icon: 'unfold_more',
@@ -568,30 +591,33 @@ export const WidgetsPage = createPage({
                     ),
               }),
               m(TreeNode, {
+                globalsContext,
                 left: 'Thread',
                 right: m(Anchor, {text: 'my_thread[456]', icon: 'open_in_new'}),
               }),
               m(TreeNode, {
+                globalsContext,
                 left: 'Process',
                 right: m(Anchor, {text: '/bin/foo[789]', icon: 'open_in_new'}),
               }),
-              recursiveLazyTreeNode('Lazy', '(hoarding)', true),
-              recursiveLazyTreeNode('Lazy', '(non-hoarding)', false),
+              recursiveLazyTreeNode(globalsContext, 'Lazy', '(hoarding)', true),
+              recursiveLazyTreeNode(globalsContext, 'Lazy', '(non-hoarding)', false),
               m(
                   TreeNode,
                   {
+                    globalsContext,
                     left: 'Args',
                     summary: 'foo: string, baz: string, quux: string[4]',
                   },
-                  m(TreeNode, {left: 'foo', right: 'bar'}),
-                  m(TreeNode, {left: 'baz', right: 'qux'}),
+                  m(TreeNode, {globalsContext, left: 'foo', right: 'bar'}),
+                  m(TreeNode, {globalsContext, left: 'baz', right: 'qux'}),
                   m(
                       TreeNode,
-                      {left: 'quux'},
-                      m(TreeNode, {left: '[0]', right: 'corge'}),
-                      m(TreeNode, {left: '[1]', right: 'grault'}),
-                      m(TreeNode, {left: '[2]', right: 'garply'}),
-                      m(TreeNode, {left: '[3]', right: 'waldo'}),
+                      {globalsContext, left: 'quux'},
+                      m(TreeNode, {globalsContext, left: '[0]', right: 'corge'}),
+                      m(TreeNode, {globalsContext, left: '[1]', right: 'grault'}),
+                      m(TreeNode, {globalsContext, left: '[2]', right: 'garply'}),
+                      m(TreeNode, {globalsContext, left: '[3]', right: 'waldo'}),
                       ),
                   ),
               ),
@@ -606,6 +632,7 @@ export const WidgetsPage = createPage({
         m('h2', 'Form'),
         m(
           WidgetShowcase, {
+            globalsContext,
             renderWidget: () => m(
               Form,
               m(FormLabel, {for: 'foo'}, 'Foo'),
@@ -624,13 +651,16 @@ export const WidgetsPage = createPage({
         m('h2', 'Nested Popups'),
         m(
           WidgetShowcase, {
+            globalsContext,
             renderWidget: () => m(
               Popup,
               {
+                globalsContext,
                 trigger: m(Button, {label: 'Open the popup'}),
               },
               m(PopupMenu2,
                 {
+                  globalsContext,
                   trigger: m(Button, {label: 'Select an option'}),
                 },
                 m(MenuItem, {label: 'Option 1'}),

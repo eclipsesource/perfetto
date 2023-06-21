@@ -15,7 +15,6 @@
 import m from 'mithril';
 
 import {BottomTab, bottomTabRegistry, NewBottomTabArgs} from './bottom_tab';
-import {globals} from './globals';
 import {ThreadStateSqlId} from './sql_types';
 import {getThreadState, ThreadState, threadStateToDict} from './thread_state';
 import {renderDict} from './value';
@@ -41,7 +40,7 @@ export class ThreadStateTab extends BottomTab<ThreadStateTabConfig> {
     getThreadState(this.engine, this.config.id).then((state?: ThreadState) => {
       this.loaded = true;
       this.state = state;
-      globals().rafScheduler.scheduleFullRedraw();
+      this.globals().rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -57,7 +56,7 @@ export class ThreadStateTab extends BottomTab<ThreadStateTabConfig> {
     if (!this.state) {
       return m('h2', `Thread state ${this.config.id} does not exist`);
     }
-    return renderDict(threadStateToDict(this.state));
+    return renderDict(this.globals.context, threadStateToDict(this.globals.context, this.state));
   }
 
   viewTab() {

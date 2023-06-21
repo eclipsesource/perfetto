@@ -16,15 +16,10 @@ import m from 'mithril';
 
 import {
   Dropdown,
-  DropdownAttrs,
   Probe,
-  ProbeAttrs,
   Slider,
-  SliderAttrs,
   Textarea,
-  TextareaAttrs,
   Toggle,
-  ToggleAttrs,
 } from '../record_widgets';
 import {RecordingSectionAttrs} from './recording_sections';
 
@@ -52,10 +47,12 @@ FTRACE_CATEGORIES.set('fastrpc/*', 'fastrpc');
 export class AdvancedSettings implements
     m.ClassComponent<RecordingSectionAttrs> {
   view({attrs}: m.CVnode<RecordingSectionAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         `.record-section${attrs.cssClass}`,
         m(Probe,
           {
+            globalsContext,
             title: 'Advanced ftrace config',
             img: 'rec_ftrace.png',
             descr:
@@ -64,8 +61,9 @@ export class AdvancedSettings implements
                   enabled by other probes.`,
             setEnabled: (cfg, val) => cfg.ftrace = val,
             isEnabled: (cfg) => cfg.ftrace,
-          } as ProbeAttrs,
+          },
           m(Toggle, {
+            globalsContext,
             title: 'Resolve kernel symbols',
             cssClass: '.thin',
             descr: `Enables lookup via /proc/kallsyms for workqueue,
@@ -73,8 +71,9 @@ export class AdvancedSettings implements
               (userdebug/eng builds only).`,
             setEnabled: (cfg, val) => cfg.symbolizeKsyms = val,
             isEnabled: (cfg) => cfg.symbolizeKsyms,
-          } as ToggleAttrs),
+          }),
           m(Slider, {
+            globalsContext,
             title: 'Buf size',
             cssClass: '.thin',
             values: [0, 512, 1024, 2 * 1024, 4 * 1024, 16 * 1024, 32 * 1024],
@@ -82,8 +81,9 @@ export class AdvancedSettings implements
             zeroIsDefault: true,
             set: (cfg, val) => cfg.ftraceBufferSizeKb = val,
             get: (cfg) => cfg.ftraceBufferSizeKb,
-          } as SliderAttrs),
+          }),
           m(Slider, {
+            globalsContext,
             title: 'Drain rate',
             cssClass: '.thin',
             values: [0, 100, 250, 500, 1000, 2500, 5000],
@@ -91,20 +91,22 @@ export class AdvancedSettings implements
             zeroIsDefault: true,
             set: (cfg, val) => cfg.ftraceDrainPeriodMs = val,
             get: (cfg) => cfg.ftraceDrainPeriodMs,
-          } as SliderAttrs),
+          }),
           m(Dropdown, {
+            globalsContext,
             title: 'Event groups',
             cssClass: '.multicolumn.ftrace-events',
             options: FTRACE_CATEGORIES,
             set: (cfg, val) => cfg.ftraceEvents = val,
             get: (cfg) => cfg.ftraceEvents,
-          } as DropdownAttrs),
+          }),
           m(Textarea, {
+            globalsContext,
             placeholder: 'Add extra events, one per line, e.g.:\n' +
                 'sched/sched_switch\n' +
                 'kmem/*',
             set: (cfg, val) => cfg.ftraceExtraEvents = val,
             get: (cfg) => cfg.ftraceExtraEvents,
-          } as TextareaAttrs)));
+          } )));
   }
 }

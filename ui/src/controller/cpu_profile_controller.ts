@@ -15,12 +15,12 @@
 import {Engine} from '../common/engine';
 import {NUM, STR} from '../common/query_result';
 import {CallsiteInfo, CpuProfileSampleSelection} from '../common/state';
-import {CpuProfileDetails, globals} from '../frontend/globals';
+import {CpuProfileDetails, HasGlobalsContextAttrs} from '../frontend/globals';
 import {publishCpuProfileDetails} from '../frontend/publish';
 
 import {Controller} from './controller';
 
-export interface CpuProfileControllerArgs {
+export interface CpuProfileControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 
@@ -30,11 +30,11 @@ export class CpuProfileController extends Controller<'main'> {
   private queuedRunRequest = false;
 
   constructor(private args: CpuProfileControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
   }
 
   run() {
-    const selection = globals().state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (!selection || selection.kind !== 'CPU_PROFILE_SAMPLE') {
       return;
     }
@@ -50,7 +50,7 @@ export class CpuProfileController extends Controller<'main'> {
     }
 
     this.requestingData = true;
-    publishCpuProfileDetails({});
+    publishCpuProfileDetails(this.globals.context, {});
     this.lastSelectedSample = this.copyCpuProfileSample(selection);
 
     this.getSampleData(selectedSample.id)
@@ -65,7 +65,7 @@ export class CpuProfileController extends Controller<'main'> {
               stack: sampleData,
             };
 
-            publishCpuProfileDetails(cpuProfileDetails);
+            publishCpuProfileDetails(this.globals.context, cpuProfileDetails);
           }
         })
         .finally(() => {

@@ -17,9 +17,9 @@ import m from 'mithril';
 import {Actions} from '../common/actions';
 import {tpTimeToCode} from '../common/time';
 
-import {Flow, globals} from './globals';
+import {Flow} from './globals';
 import {BLANK_CHECKBOX, CHECKBOX} from './icons';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 
 export const ALL_CATEGORIES = '_all_';
 
@@ -36,17 +36,17 @@ export function getFlowCategories(flow: Flow): string[] {
   return categories;
 }
 
-export class FlowEventsPanel extends Panel {
+export class FlowEventsPanel extends Panel<PanelAttrs> {
   view() {
-    const selection = globals().state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (!selection || selection.kind !== 'CHROME_SLICE') {
       return;
     }
 
     const flowClickHandler = (sliceId: number, trackId: number) => {
-      const uiTrackId = globals().state.uiTrackIdByTraceTrackId[trackId];
+      const uiTrackId = this.globals().state.uiTrackIdByTraceTrackId[trackId];
       if (uiTrackId) {
-        globals().makeSelection(
+        this.globals().makeSelection(
             Actions.selectChromeSlice(
                 {id: sliceId, trackId: uiTrackId, table: 'slice'}),
             'bound_flows');
@@ -55,7 +55,7 @@ export class FlowEventsPanel extends Panel {
 
     // Can happen only for flow events version 1
     const haveCategories =
-        globals().connectedFlows.filter((flow) => flow.category).length > 0;
+    this.globals().connectedFlows.filter((flow) => flow.category).length > 0;
 
     const columns = [
       m('th', 'Direction'),
@@ -76,7 +76,7 @@ export class FlowEventsPanel extends Panel {
     const rows = [m('tr', columns)];
 
     // Fill the table with all the directly connected flow events
-    globals().connectedFlows.forEach((flow) => {
+    this.globals().connectedFlows.forEach((flow) => {
       if (selection.id !== flow.begin.sliceId &&
           selection.id !== flow.end.sliceId) {
         return;
@@ -87,10 +87,10 @@ export class FlowEventsPanel extends Panel {
 
       const args = {
         onclick: () => flowClickHandler(otherEnd.sliceId, otherEnd.trackId),
-        onmousemove: () => globals().dispatch(
+        onmousemove: () => this.globals().dispatch(
             Actions.setHighlightedSliceId({sliceId: otherEnd.sliceId})),
         onmouseleave: () =>
-            globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1})),
+        this.globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1})),
       };
 
       const data = [
@@ -121,9 +121,9 @@ export class FlowEventsPanel extends Panel {
   renderCanvas(_ctx: CanvasRenderingContext2D, _size: PanelSize) {}
 }
 
-export class FlowEventsAreaSelectedPanel extends Panel {
+export class FlowEventsAreaSelectedPanel extends Panel<PanelAttrs> {
   view() {
-    const selection = globals().state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (!selection || selection.kind !== 'AREA') {
       return;
     }
@@ -143,7 +143,7 @@ export class FlowEventsAreaSelectedPanel extends Panel {
 
     const categoryToFlowsNum = new Map<string, number>();
 
-    globals().selectedFlows.forEach((flow) => {
+    this.globals().selectedFlows.forEach((flow) => {
       const categories = getFlowCategories(flow);
       categories.forEach((cat) => {
         if (!categoryToFlowsNum.has(cat)) {
@@ -153,31 +153,31 @@ export class FlowEventsAreaSelectedPanel extends Panel {
       });
     });
 
-    const allWasChecked = globals().visibleFlowCategories.get(ALL_CATEGORIES);
+    const allWasChecked = this.globals().visibleFlowCategories.get(ALL_CATEGORIES);
     rows.push(m('tr.sum', [
       m('td.sum-data', 'All'),
-      m('td.sum-data', globals().selectedFlows.length),
+      m('td.sum-data', this.globals().selectedFlows.length),
       m('td.sum-data',
         m('i.material-icons',
           {
             onclick: () => {
               if (allWasChecked) {
-                globals().visibleFlowCategories.clear();
+                this.globals().visibleFlowCategories.clear();
               } else {
                 categoryToFlowsNum.forEach((_, cat) => {
-                  globals().visibleFlowCategories.set(cat, true);
+                  this.globals().visibleFlowCategories.set(cat, true);
                 });
               }
-              globals().visibleFlowCategories.set(ALL_CATEGORIES, !allWasChecked);
-              globals().rafScheduler.scheduleFullRedraw();
+              this.globals().visibleFlowCategories.set(ALL_CATEGORIES, !allWasChecked);
+              this.globals().rafScheduler.scheduleFullRedraw();
             },
           },
           allWasChecked ? CHECKBOX : BLANK_CHECKBOX)),
     ]));
 
     categoryToFlowsNum.forEach((num, cat) => {
-      const wasChecked = globals().visibleFlowCategories.get(cat) ||
-          globals().visibleFlowCategories.get(ALL_CATEGORIES);
+      const wasChecked = this.globals().visibleFlowCategories.get(cat) ||
+      this.globals().visibleFlowCategories.get(ALL_CATEGORIES);
       const data = [
         m('td.flow-info', cat),
         m('td.flow-info', num),
@@ -186,10 +186,10 @@ export class FlowEventsAreaSelectedPanel extends Panel {
             {
               onclick: () => {
                 if (wasChecked) {
-                  globals().visibleFlowCategories.set(ALL_CATEGORIES, false);
+                  this.globals().visibleFlowCategories.set(ALL_CATEGORIES, false);
                 }
-                globals().visibleFlowCategories.set(cat, !wasChecked);
-                globals().rafScheduler.scheduleFullRedraw();
+                this.globals().visibleFlowCategories.set(cat, !wasChecked);
+                this.globals().rafScheduler.scheduleFullRedraw();
               },
             },
             wasChecked ? CHECKBOX : BLANK_CHECKBOX)),

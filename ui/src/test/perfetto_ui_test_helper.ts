@@ -45,7 +45,7 @@ export async function waitForPerfettoIdle(page: Page, minIdleMs?: number) {
     const isShowingAnim = !!(await page.$('.progress.progress-anim'));
     const hasPendingRedraws =
         await (
-            await page.evaluateHandle('globals.rafScheduler.hasPendingRedraws'))
+            await page.evaluateHandle('globals().rafScheduler.hasPendingRedraws'))
             .jsonValue();
 
     if (isShowingAnim || isShowingMsg || hasPendingRedraws) {

@@ -23,7 +23,6 @@ import {TPDuration, TPTime} from '../../common/time';
 import {TrackData} from '../../common/track_data';
 import {TrackController} from '../../controller/track_controller';
 import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
 import {cachedHsluvToHex} from '../../frontend/hsluv_cache';
 import {NewTrackArgs, SliceRect, Track} from '../../frontend/track';
 
@@ -178,7 +177,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO: fonts and colors should come from the CSS and not hardcoded here.
 
-    const {visibleTimeScale, visibleWindowTime} = globals().frontendLocalState;
+    const {visibleTimeScale, visibleWindowTime} = this.globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;  // Can't possibly draw anything.
@@ -224,14 +223,14 @@ export class ChromeSliceTrack extends Track<Config, Data> {
         continue;
       }
 
-      const currentSelection = globals().state.currentSelection;
+      const currentSelection = this.globals().state.currentSelection;
       const isSelected = currentSelection &&
           currentSelection.kind === 'CHROME_SLICE' &&
           currentSelection.id !== undefined && currentSelection.id === sliceId;
 
       const name = title.replace(/( )?\d+/g, '');
       const highlighted = titleId === this.hoveredTitleId ||
-          globals().state.highlightedSliceId === sliceId;
+          this.globals().state.highlightedSliceId === sliceId;
 
       const hasFocus = highlighted || isSelected;
 
@@ -343,7 +342,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     const {
       visibleTimeScale: timeScale,
       visibleWindowTime,
-    } = globals().frontendLocalState;
+    } = this.globals().frontendLocalState;
     if (y < TRACK_PADDING) return;
     const instantWidthTime = timeScale.pxDeltaToDuration(HALF_CHEVRON_WIDTH_PX);
     const t = timeScale.pxToHpTime(x);
@@ -372,19 +371,19 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
   onMouseMove({x, y}: {x: number, y: number}) {
     this.hoveredTitleId = -1;
-    globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
+    this.globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
     const sliceIndex = this.getSliceIndex({x, y});
     if (sliceIndex === undefined) return;
     const data = this.data();
     if (data === undefined) return;
     this.hoveredTitleId = data.titles[sliceIndex];
     const sliceId = data.sliceIds[sliceIndex];
-    globals().dispatch(Actions.setHighlightedSliceId({sliceId}));
+    this.globals().dispatch(Actions.setHighlightedSliceId({sliceId}));
   }
 
   onMouseOut() {
     this.hoveredTitleId = -1;
-    globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
+    this.globals().dispatch(Actions.setHighlightedSliceId({sliceId: -1}));
   }
 
   onMouseClick({x, y}: {x: number, y: number}): boolean {
@@ -394,7 +393,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     if (data === undefined) return false;
     const sliceId = data.sliceIds[sliceIndex];
     if (sliceId !== undefined && sliceId !== -1) {
-      globals().makeSelection(Actions.selectChromeSlice({
+      this.globals().makeSelection(Actions.selectChromeSlice({
         id: sliceId,
         trackId: this.trackState.id,
         table: this.config.namespace,
@@ -414,7 +413,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       visibleTimeScale: timeScale,
       visibleWindowTime,
       windowSpan,
-    } = globals().frontendLocalState;
+    } = this.globals().frontendLocalState;
 
     const pxEnd = windowSpan.end;
     const left = Math.max(timeScale.tpTimeToPx(tStart), 0);

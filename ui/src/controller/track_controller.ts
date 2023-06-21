@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { HasGlobalsContextAttrs } from '../frontend/globals';
 import {BigintMath} from '../base/bigint_math';
 import {assertExists} from '../base/logging';
 import {Engine} from '../common/engine';
@@ -24,7 +25,7 @@ import {
   TPTimeSpan,
 } from '../common/time';
 import {LIMIT, TrackData} from '../common/track_data';
-import {globals} from '../frontend/globals';
+
 import {publishTrackData} from '../frontend/publish';
 
 import {Controller} from './controller';
@@ -52,7 +53,7 @@ export abstract class TrackController<
   private static readonly MIN_TABLE_SIZE_TO_CACHE = 100000;
 
   constructor(args: TrackControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
     this.trackId = args.trackId;
     this.engine = args.engine;
   }
@@ -72,7 +73,7 @@ export abstract class TrackController<
       Promise<Data>;
 
   get trackState(): TrackState {
-    return assertExists(globals().state.tracks[this.trackId]);
+    return assertExists(this.globals().state.tracks[this.trackId]);
   }
 
   get config(): Config {
@@ -93,7 +94,7 @@ export abstract class TrackController<
 
   publish(data: Data): void {
     this.data = data;
-    publishTrackData({id: this.trackId, data});
+    publishTrackData(this.globals.context, {id: this.trackId, data});
   }
 
   // Returns a valid SQL table name with the given prefix that should be unique
@@ -117,13 +118,13 @@ export abstract class TrackController<
   }
 
   private shouldReload(): boolean {
-    const {lastTrackReloadRequest} = globals().state;
+    const {lastTrackReloadRequest} = this.globals().state;
     return !!lastTrackReloadRequest &&
         this.lastReloadHandled < lastTrackReloadRequest;
   }
 
   private markReloadHandled() {
-    this.lastReloadHandled = globals().state.lastTrackReloadRequest || 0;
+    this.lastReloadHandled = this.globals().state.lastTrackReloadRequest || 0;
   }
 
   shouldRequestData(traceTime: TraceTime): boolean {
@@ -146,7 +147,7 @@ export abstract class TrackController<
         tspan.start >= this.data.start && tspan.end <= this.data.end;
     return !inRange ||
         this.data.resolution !==
-        globals().state.frontendLocalState.visibleState.resolution;
+        this.globals().state.frontendLocalState.visibleState.resolution;
   }
 
   // Decides, based on the length of the trace and the number of rows
@@ -160,7 +161,7 @@ export abstract class TrackController<
       return undefined;
     }
 
-    const traceDuration = globals().stateTraceTimeTP().duration;
+    const traceDuration = this.globals().stateTraceTimeTP().duration;
 
     // For large traces, going through the raw table in the most zoomed-out
     // states can be very expensive as this can involve going through O(millions
@@ -178,7 +179,7 @@ export abstract class TrackController<
     // resolution levels down which ensures that our cached table works for more
     // than the literally most zoomed out state. Moving down a resolution level
     // is defined as moving down a power of 2; this matches the logic in
-    // |globals.getCurResolution|.
+    // |this.globals().getCurResolution|.
     //
     // TODO(lalitm): in the future, we should consider having a whole set of
     // quantized tables each of which cover some portion of resolution lvel
@@ -224,13 +225,13 @@ export abstract class TrackController<
   }
 
   run() {
-    const visibleState = globals().state.frontendLocalState.visibleState;
+    const visibleState = this.globals().state.frontendLocalState.visibleState;
     if (visibleState === undefined) {
       return;
     }
-    const visibleTimeSpan = globals().stateVisibleTime();
+    const visibleTimeSpan = this.globals().stateVisibleTime();
     const dur = visibleTimeSpan.duration;
-    if (globals().state.visibleTracks.includes(this.trackId) &&
+    if (this.globals().state.visibleTracks.includes(this.trackId) &&
         this.shouldRequestData(visibleState)) {
       if (this.requestingData) {
         this.queuedRequest = true;
@@ -271,7 +272,7 @@ export abstract class TrackController<
   }
 }
 
-export interface TrackControllerArgs {
+export interface TrackControllerArgs extends HasGlobalsContextAttrs {
   trackId: string;
   engine: Engine;
 }

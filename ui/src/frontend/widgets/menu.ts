@@ -17,6 +17,7 @@ import {classNames} from '../classnames';
 import {Icon} from './icon';
 import {Popup, PopupPosition} from './popup';
 import {hasChildren} from './utils';
+import { HasGlobalsContextAttrs } from '../globals';
 
 export interface MenuItemAttrs {
   // Text to display on the menu button.
@@ -61,6 +62,7 @@ export class MenuItem implements m.ClassComponent<MenuItemAttrs> {
     return m(
         PopupMenu2,
         {
+          globalsContext: attrs.globalsContext,
           popupPosition: PopupPosition.RightStart,
           trigger: m(MenuItem, {
             rightIcon: rightIcon ?? 'chevron_right',
@@ -116,7 +118,7 @@ export class Menu implements m.ClassComponent {
   }
 };
 
-interface PopupMenu2Attrs {
+interface PopupMenu2Attrs extends HasGlobalsContextAttrs {
   // The trigger is mithril component which is used to toggle the popup when
   // clicked, and provides the anchor on the page which the popup shall hover
   // next to, and to which the popup's arrow shall point. The popup shall move
@@ -147,12 +149,13 @@ interface PopupMenu2Attrs {
 // MenuDividers, but really they can be any Mithril component.
 export class PopupMenu2 implements m.ClassComponent<PopupMenu2Attrs> {
   view({attrs, children}: m.CVnode<PopupMenu2Attrs>) {
-    const {trigger, popupPosition = PopupPosition.Bottom, ...popupAttrs} =
+    const {globalsContext, trigger, popupPosition = PopupPosition.Bottom, ...popupAttrs} =
         attrs;
 
     return m(
         Popup,
         {
+          globalsContext,
           trigger,
           position: popupPosition,
           ...popupAttrs,

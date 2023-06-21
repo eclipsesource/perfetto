@@ -15,7 +15,7 @@
 
 import m from 'mithril';
 
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 import {
   KeyboardLayoutMap,
   nativeKeyboardLayoutMap,
@@ -25,9 +25,9 @@ import {showModal} from './modal';
 import {KeyMapping} from './pan_and_zoom_handler';
 import {Spinner} from './widgets/spinner';
 
-export function toggleHelp() {
-  globals().logging.logEvent('User Actions', 'Show help');
-  showHelp();
+export function toggleHelp(globalsContext: string) {
+  globals(globalsContext).logging.logEvent('User Actions', 'Show help');
+  showHelp(globalsContext);
 }
 
 function keycap(glyph: m.Children): m.Children {
@@ -43,14 +43,15 @@ class EnglishQwertyKeyboardLayoutMap implements KeyboardLayoutMap {
   }
 }
 
-class KeyMappingsHelp implements m.ClassComponent {
+class KeyMappingsHelp implements m.ClassComponent<HasGlobalsContextAttrs> {
   private keyMap?: KeyboardLayoutMap;
 
-  oninit() {
+  oninit({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
+    const globalsContext = attrs.globalsContext;
     nativeKeyboardLayoutMap()
         .then((keyMap: KeyboardLayoutMap) => {
           this.keyMap = keyMap;
-          globals().rafScheduler.scheduleFullRedraw();
+          globals(globalsContext).rafScheduler.scheduleFullRedraw();
         })
         .catch((e) => {
           if (e instanceof NotSupportedError ||
@@ -63,7 +64,7 @@ class KeyMappingsHelp implements m.ClassComponent {
             // The alternative would be to show key mappings for all keyboard
             // layouts which is not feasible.
             this.keyMap = new EnglishQwertyKeyboardLayoutMap();
-            globals().rafScheduler.scheduleFullRedraw();
+            globals(globalsContext).rafScheduler.scheduleFullRedraw();
           } else {
             // Something unexpected happened. Either the browser doesn't conform
             // to the keyboard API spec, or the keyboard API spec has changed!
@@ -72,11 +73,12 @@ class KeyMappingsHelp implements m.ClassComponent {
         });
   }
 
-  view(_: m.Vnode): m.Children {
+  view(node: m.Vnode<HasGlobalsContextAttrs>): m.Children {
+    const globalsContext = node.attrs.globalsContext;
     const ctrlOrCmd =
         window.navigator.platform.indexOf('Mac') !== -1 ? 'Cmd' : 'Ctrl';
 
-    const queryPageInstructions = globals().hideSidebar ? [] : [
+    const queryPageInstructions = globals(globalsContext).hideSidebar ? [] : [
       m('h2', 'Making SQL queries from the query page'),
       m('table',
         m('tr',
@@ -87,7 +89,7 @@ class KeyMappingsHelp implements m.ClassComponent {
           m('td', 'Execute selection'))),
     ];
 
-    const sidebarInstructions = globals().hideSidebar ?
+    const sidebarInstructions = globals(globalsContext).hideSidebar ?
         [] :
         [m('tr',
            m('td', keycap(ctrlOrCmd), ' + ', keycap('b')),
@@ -182,8 +184,9 @@ class KeyMappingsHelp implements m.ClassComponent {
   }
 }
 
-function showHelp() {
+function showHelp(globalsContext: string) {
   showModal({
+    globalsContext,
     title: 'Perfetto Help',
     content: () => m(KeyMappingsHelp),
     buttons: [],

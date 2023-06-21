@@ -21,7 +21,6 @@ import {
   bottomTabRegistry,
   NewBottomTabArgs,
 } from '../../frontend/bottom_tab';
-import {globals} from '../../frontend/globals';
 import {asTPTimestamp} from '../../frontend/sql_types';
 import {Duration} from '../../frontend/widgets/duration';
 import {Timestamp} from '../../frontend/widgets/timestamp';
@@ -62,7 +61,7 @@ export class DebugSliceDetailsTab extends
             this.config.id}`)
         .then((queryResult) => {
           this.data = queryResult.firstRow({});
-          globals().rafScheduler.scheduleFullRedraw();
+          this.globals().rafScheduler.scheduleFullRedraw();
         });
   }
 
@@ -70,10 +69,10 @@ export class DebugSliceDetailsTab extends
     if (this.data === undefined) {
       return m('h2', 'Loading');
     }
-    const left = dictToTree({
+    const left = dictToTree(this.globals.context, {
       'Name': this.data['name'] as string,
       'Start time':
-          m(Timestamp, {ts: asTPTimestamp(tpTimeFromSql(this.data['ts']))}),
+          m(Timestamp, {globalsContext: this.globals.context, ts: asTPTimestamp(tpTimeFromSql(this.data['ts']))}),
       'Duration': m(Duration, {dur: tpDurationFromSql(this.data['dur'])}),
       'Debug slice id': `${this.config.sqlTableName}[${this.config.id}]`,
     });
@@ -93,7 +92,7 @@ export class DebugSliceDetailsTab extends
             },
           },
           m('.half-width-panel', left),
-          m('.half-width-panel', dictToTree(args))));
+          m('.half-width-panel', dictToTree(this.globals.context, args))));
   }
 
   getTitle(): string {

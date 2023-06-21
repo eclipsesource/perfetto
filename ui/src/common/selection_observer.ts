@@ -15,14 +15,14 @@
 import {Selection} from './state';
 
 export type SelectionChangedObserver =
-    (newSelection?: Selection, oldSelection?: Selection) => void;
+    (newSelection?: Selection, oldSelection?: Selection, globalsContext?: string) => void;
 
 const selectionObservers: SelectionChangedObserver[] = [];
 
 export function onSelectionChanged(
-    newSelection?: Selection, oldSelection?: Selection) {
+    newSelection?: Selection, oldSelection?: Selection, globalsContext?: string) {
   for (const observer of selectionObservers) {
-    observer(newSelection, oldSelection);
+    observer(newSelection, oldSelection, globalsContext);
   }
 }
 

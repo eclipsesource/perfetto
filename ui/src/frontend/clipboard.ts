@@ -17,11 +17,11 @@ import {QueryResponse} from '../common/queries';
 
 import {globals} from './globals';
 
-export function onClickCopy(url: string) {
+export function onClickCopy(globalsContext: string, url: string) {
   return (e: Event) => {
     e.preventDefault();
     copyToClipboard(url);
-    globals().dispatch(Actions.updateStatus(
+    globals(globalsContext).dispatch(Actions.updateStatus(
         {msg: 'Link copied into the clipboard', timestamp: Date.now() / 1000}));
   };
 }

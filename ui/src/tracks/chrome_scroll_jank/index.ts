@@ -68,6 +68,7 @@ export type DecideTracksResult = {
 export type GetTrackGroupUuidFn = (utid: number, upid: number|null) => string;
 
 export async function decideTracks(
+    globalsContext: string,
     engine: Engine,
     getTrackGroupUuid: GetTrackGroupUuidFn): Promise<DecideTracksResult> {
   const result: DecideTracksResult = {
@@ -126,7 +127,7 @@ select RUN_METRIC(
      from chrome_tasks_delaying_input_processing s1
      join slice s2 on s1.slice_id=s2.id
      `;
-  runQueryInNewTab(query, 'Scroll Jank: long tasks');
+  runQueryInNewTab(globalsContext, query, 'Scroll Jank: long tasks');
 
   return result;
 }

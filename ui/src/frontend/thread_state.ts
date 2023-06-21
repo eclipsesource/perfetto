@@ -138,9 +138,9 @@ export async function getThreadState(
   return result[0];
 }
 
-export function goToSchedSlice(cpu: number, id: SchedSqlId, ts: TPTime) {
+export function goToSchedSlice(globalsContext: string, cpu: number, id: SchedSqlId, ts: TPTime) {
   let trackId: string|undefined;
-  for (const track of Object.values(globals().state.tracks)) {
+  for (const track of Object.values(globals(globalsContext).state.tracks)) {
     if (track.kind === 'CpuSliceTrack' &&
         (track.config as {cpu: number}).cpu === cpu) {
       trackId = track.id;
@@ -149,12 +149,12 @@ export function goToSchedSlice(cpu: number, id: SchedSqlId, ts: TPTime) {
   if (trackId === undefined) {
     return;
   }
-  globals().makeSelection(Actions.selectSlice({id, trackId}));
-  scrollToTrackAndTs(trackId, ts);
+  globals(globalsContext).makeSelection(Actions.selectSlice({id, trackId}));
+  scrollToTrackAndTs(globalsContext, trackId, ts);
 }
 
 function stateToValue(
-    state: string, cpu: number|undefined, id: SchedSqlId|undefined, ts: TPTime):
+    globalsContext: string, state: string, cpu: number|undefined, id: SchedSqlId|undefined, ts: TPTime):
     Value|null {
   if (!state) {
     return null;
@@ -165,21 +165,21 @@ function stateToValue(
   return value(`${state} on CPU ${cpu}`, {
     rightButton: {
       action: () => {
-        goToSchedSlice(cpu, id, ts);
+        goToSchedSlice(globalsContext, cpu, id, ts);
       },
       hoverText: 'Go to CPU slice',
     },
   });
 }
 
-export function threadStateToDict(state: ThreadState): Dict {
+export function threadStateToDict(globalsContext: string, state: ThreadState): Dict {
   const result: {[name: string]: Value|null} = {};
 
   result['Start time'] =
-      value(tpTimeToCode(state.ts - globals().state.traceTime.start));
+      value(tpTimeToCode(state.ts - globals(globalsContext).state.traceTime.start));
   result['Duration'] = value(tpTimeToCode(state.dur));
   result['State'] =
-      stateToValue(state.state, state.cpu, state.schedSqlId, state.ts);
+      stateToValue(globalsContext, state.state, state.cpu, state.schedSqlId, state.ts);
   result['Blocked function'] = maybeValue(state.blockedFunction);
   const process = state?.thread?.process;
   result['Process'] = maybeValue(process ? getProcessName(process) : undefined);

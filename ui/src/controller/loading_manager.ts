@@ -25,20 +25,20 @@ export class LoadingManager implements LoadingTracker {
     return this._instance || (this._instance = new this());
   }
 
-  beginLoading() {
-    this.update(1);
+  beginLoading(globalsContext: string) {
+    this.update(globalsContext, 1);
   }
 
-  endLoading() {
-    this.update(-1);
+  endLoading(globalsContext: string) {
+    this.update(globalsContext, -1);
   }
 
-  private update(change: number) {
+  private update(globalsContext: string, change: number) {
     this.numQueuedQueries += change;
     if (this.numQueuedQueries === 0 ||
         Math.abs(this.numLastUpdate - this.numQueuedQueries) > 2) {
       this.numLastUpdate = this.numQueuedQueries;
-      publishLoading(this.numQueuedQueries);
+      publishLoading(globalsContext, this.numQueuedQueries);
     }
   }
 }

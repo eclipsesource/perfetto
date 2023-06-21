@@ -23,18 +23,18 @@ beforeEach(() => {
 });
 
 test('Default route must be defined', () => {
-  expect(() => new Router({'/a': mockComponent})).toThrow();
+  expect(() => new Router('', {'/a': mockComponent})).toThrow();
 });
 
 test('Resolves empty route to default component', () => {
-  const router = new Router({'/': mockComponent});
+  const router = new Router('', {'/': mockComponent});
   window.location.hash = '';
   expect(router.resolve().tag).toBe(mockComponent);
 });
 
 test('Resolves subpage route to component of main page', () => {
   const nonDefaultComponent = {view() {}};
-  const router = new Router({
+  const router = new Router('', {
     '/': mockComponent,
     '/a': nonDefaultComponent,
   });
@@ -45,7 +45,7 @@ test('Resolves subpage route to component of main page', () => {
 
 test('Pass empty subpage if not found in URL', () => {
   const nonDefaultComponent = {view() {}};
-  const router = new Router({
+  const router = new Router('', {
     '/': mockComponent,
     '/a': nonDefaultComponent,
   });

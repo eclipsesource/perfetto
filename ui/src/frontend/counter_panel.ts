@@ -15,14 +15,13 @@
 import m from 'mithril';
 
 import {tpTimeToCode} from '../common/time';
-import {globals} from './globals';
-import {Panel} from './panel';
+import {Panel, PanelAttrs} from './panel';
 
-interface CounterDetailsPanelAttrs {}
+interface CounterDetailsPanelAttrs extends PanelAttrs {}
 
 export class CounterDetailsPanel extends Panel<CounterDetailsPanelAttrs> {
   view() {
-    const counterInfo = globals().counterDetails;
+    const counterInfo = this.globals().counterDetails;
     if (counterInfo && counterInfo.startTime &&
         counterInfo.name !== undefined && counterInfo.value !== undefined &&
         counterInfo.delta !== undefined && counterInfo.duration !== undefined) {
@@ -40,7 +39,7 @@ export class CounterDetailsPanel extends Panel<CounterDetailsPanelAttrs> {
                        `${
                            tpTimeToCode(
                                counterInfo.startTime -
-                               globals().state.traceTime.start)}`)),
+                               this.globals().state.traceTime.start)}`)),
                    m('tr',
                      m('th', `Value`),
                      m('td', `${counterInfo.value.toLocaleString()}`)),

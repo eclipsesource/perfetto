@@ -46,8 +46,8 @@ export class HttpRpcEngine extends Engine {
   private websocket?: WebSocket;
   private connected = false;
 
-  constructor(id: string, loadingTracker?: LoadingTracker, port = 9001) {
-    super(loadingTracker);
+  constructor(globalsContext: string, id: string, loadingTracker?: LoadingTracker, port = 9001) {
+    super(globalsContext, loadingTracker);
     this.id = id;
     this.port = port;
   }

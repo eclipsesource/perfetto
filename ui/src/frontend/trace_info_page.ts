@@ -18,11 +18,11 @@ import m from 'mithril';
 import {EngineProxy} from '../common/engine';
 import {QueryResponse, runQuery} from '../common/queries';
 
-import {globals} from './globals';
-import {createPage} from './pages';
+import {globals, HasGlobalsContextAttrs} from './globals';
+import {createPage, PageAttrs} from './pages';
 
 
-interface StatsSectionAttrs {
+interface StatsSectionAttrs extends HasGlobalsContextAttrs {
   title: string;
   subTitle: string;
   sqlConstraints: string;
@@ -30,11 +30,11 @@ interface StatsSectionAttrs {
   queryId: string;
 }
 
-function getEngine(name: string): EngineProxy|undefined {
-  const currentEngine = globals().getCurrentEngine();
+function getEngine(globalsContext: string, name: string): EngineProxy|undefined {
+  const currentEngine = globals(globalsContext).getCurrentEngine();
   if (currentEngine === undefined) return undefined;
   const engineId = currentEngine.id;
-  return globals().engines.get(engineId)?.getProxy(name);
+  return globals(globalsContext).engines.get(engineId)?.getProxy(name);
 }
 
 // Generic class that generate a <section> + <table> from the stats table.
@@ -44,7 +44,9 @@ class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
   private queryResponse?: QueryResponse;
 
   constructor({attrs}: m.CVnode<StatsSectionAttrs>) {
-    const engine = getEngine('StatsSection');
+    const globalsContext = attrs.globalsContext;
+    
+    const engine = getEngine(globalsContext, 'StatsSection');
     if (engine === undefined) {
       return;
     }
@@ -54,7 +56,7 @@ class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
               order by name, idx`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals().rafScheduler.scheduleFullRedraw();
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -94,22 +96,25 @@ class StatsSection implements m.ClassComponent<StatsSectionAttrs> {
   }
 }
 
-class MetricErrors implements m.ClassComponent {
-  view() {
-    if (!globals().metricError) return;
+class MetricErrors implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
+    const globalsContext = attrs.globalsContext;
+    if (!globals(globalsContext).metricError) return;
     return m(
         `section.errors`,
         m('h2', `Metric Errors`),
         m('h3', `One or more metrics were not computed successfully:`),
-        m('div.metric-error', globals().metricError));
+        m('div.metric-error', globals(globalsContext).metricError));
   }
 }
 
-class TraceMetadata implements m.ClassComponent {
+class TraceMetadata implements m.ClassComponent<HasGlobalsContextAttrs> {
   private queryResponse?: QueryResponse;
 
-  constructor() {
-    const engine = getEngine('StatsSection');
+  oncreate(vnode: m.VnodeDOM<HasGlobalsContextAttrs>) {
+    const globalsContext = vnode.attrs.globalsContext;
+  
+    const engine = getEngine(globalsContext, 'StatsSection');
     if (engine === undefined) {
       return;
     }
@@ -132,7 +137,7 @@ class TraceMetadata implements m.ClassComponent {
           order by priority desc, name`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals().rafScheduler.scheduleFullRedraw();
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -164,11 +169,12 @@ class TraceMetadata implements m.ClassComponent {
   }
 }
 
-class AndroidGameInterventionList implements m.ClassComponent {
+class AndroidGameInterventionList implements m.ClassComponent<HasGlobalsContextAttrs> {
   private queryResponse?: QueryResponse;
 
-  constructor() {
-    const engine = getEngine('StatsSection');
+  oncreate(vnode: m.VnodeDOM<HasGlobalsContextAttrs>) {
+    const globalsContext = vnode.attrs.globalsContext;
+    const engine = getEngine(globalsContext, 'StatsSection');
     if (engine === undefined) {
       return;
     }
@@ -191,7 +197,7 @@ class AndroidGameInterventionList implements m.ClassComponent {
                 from android_game_intervention_list`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals().rafScheduler.scheduleFullRedraw();
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -267,11 +273,12 @@ class AndroidGameInterventionList implements m.ClassComponent {
   }
 }
 
-class PackageList implements m.ClassComponent {
+class PackageList implements m.ClassComponent<HasGlobalsContextAttrs> {
   private queryResponse?: QueryResponse;
 
-  constructor() {
-    const engine = getEngine('StatsSection');
+  oncreate(vnode: m.VnodeDOM<HasGlobalsContextAttrs>) {
+    const globalsContext = vnode.attrs.globalsContext;
+    const engine = getEngine(globalsContext, 'StatsSection');
     if (engine === undefined) {
       return;
     }
@@ -279,7 +286,7 @@ class PackageList implements m.ClassComponent {
                 profileable_from_shell from package_list`;
     runQuery(query, engine).then((resp: QueryResponse) => {
       this.queryResponse = resp;
-      globals().rafScheduler.scheduleFullRedraw();
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
     });
   }
 
@@ -319,11 +326,13 @@ class PackageList implements m.ClassComponent {
 }
 
 export const TraceInfoPage = createPage({
-  view() {
+  view({attrs}: m.Vnode<PageAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         '.trace-info-page',
-        m(MetricErrors),
+        m(MetricErrors, {globalsContext}),
         m(StatsSection, {
+          globalsContext,
           queryId: 'info_errors',
           title: 'Import errors',
           cssClass: '.errors',
@@ -335,6 +344,7 @@ export const TraceInfoPage = createPage({
 
         }),
         m(StatsSection, {
+          globalsContext,
           queryId: 'info_data_losses',
           title: 'Data losses',
           cssClass: '.errors',
@@ -344,17 +354,17 @@ export const TraceInfoPage = createPage({
                track contents will be incomplete.`,
           sqlConstraints: `severity = 'data_loss' and value > 0`,
         }),
-        m(TraceMetadata),
-        m(PackageList),
-        m(AndroidGameInterventionList),
+        m(TraceMetadata, {globalsContext}),
+        m(PackageList, {globalsContext}),
+        m(AndroidGameInterventionList, {globalsContext}),
         m(StatsSection, {
+          globalsContext,
           queryId: 'info_all',
           title: 'Debugging stats',
           cssClass: '',
           subTitle: `Debugging statistics such as trace buffer usage and metrics
                      coming from the TraceProcessor importer stages.`,
           sqlConstraints: '',
-
         }),
     );
   },

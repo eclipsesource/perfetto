@@ -22,6 +22,7 @@ import {
   debugNow,
   measure,
   perfDebug,
+  PerfDisplay,
   perfDisplay,
   RunningStatistics,
   runningStatStr,
@@ -57,6 +58,7 @@ export type RedrawCallback = (nowMs: number) => void;
 // This class guarantees that, on each frame, redraw callbacks are called after
 // all action callbacks.
 export class RafScheduler {
+  private readonly globalsContext: string;
   private actionCallbacks = new Set<ActionCallback>();
   private canvasRedrawCallbacks = new Set<RedrawCallback>();
   private domRedrawCallbacks = new Set<RedrawCallback>();
@@ -73,13 +75,21 @@ export class RafScheduler {
     domRedraw: new RunningStatistics(),
   };
 
+  private perfDisplay?: PerfDisplay;
+
+  constructor(globalsContext: string) {
+    this.globalsContext = globalsContext;
+  }
+
   start(cb: ActionCallback) {
+    this.perfDisplay = perfDisplay(this.globalsContext);
     this.actionCallbacks.add(cb);
     this.maybeScheduleAnimationFrame();
   }
 
   stop(cb: ActionCallback) {
     this.actionCallbacks.delete(cb);
+    this.perfDisplay = undefined;
   }
 
   addRedrawCallback(cb: RedrawCallback) {
@@ -119,10 +129,10 @@ export class RafScheduler {
   }
 
   syncDomRedraw(nowMs: number) {
-    const redrawStart = debugNow();
+    const redrawStart = debugNow(this.globalsContext);
     for (const redraw of this.domRedrawCallbacks) redraw(nowMs);
-    if (perfDebug()) {
-      this.perfStats.domRedraw.addValue(debugNow() - redrawStart);
+    if (perfDebug(this.globalsContext)) {
+      this.perfStats.domRedraw.addValue(debugNow(this.globalsContext) - redrawStart);
     }
   }
 
@@ -131,15 +141,15 @@ export class RafScheduler {
   }
 
   private syncCanvasRedraw(nowMs: number) {
-    const redrawStart = debugNow();
+    const redrawStart = debugNow(this.globalsContext);
     if (this.isRedrawing) return;
-    globals().frontendLocalState.clearVisibleTracks();
+    globals(this.globalsContext).frontendLocalState.clearVisibleTracks();
     this.isRedrawing = true;
     for (const redraw of this.canvasRedrawCallbacks) redraw(nowMs);
     this.isRedrawing = false;
-    globals().frontendLocalState.sendVisibleTracks();
-    if (perfDebug()) {
-      this.perfStats.rafCanvas.addValue(debugNow() - redrawStart);
+    globals(this.globalsContext).frontendLocalState.sendVisibleTracks();
+    if (perfDebug(this.globalsContext)) {
+      this.perfStats.rafCanvas.addValue(debugNow(this.globalsContext) - redrawStart);
     }
   }
 
@@ -153,24 +163,24 @@ export class RafScheduler {
 
   private onAnimationFrame(nowMs: number) {
     if (this._shutdown) return;
-    const rafStart = debugNow();
+    const rafStart = debugNow(this.globalsContext);
     this.hasScheduledNextFrame = false;
 
     const doFullRedraw = this.requestedFullRedraw;
     this.requestedFullRedraw = false;
 
-    const actionTime = measure(() => {
+    const actionTime = measure(this.globalsContext, () => {
       for (const action of this.actionCallbacks) action(nowMs);
     });
 
-    const domTime = measure(() => {
+    const domTime = measure(this.globalsContext, () => {
       if (doFullRedraw) this.syncDomRedraw(nowMs);
     });
-    const canvasTime = measure(() => this.syncCanvasRedraw(nowMs));
+    const canvasTime = measure(this.globalsContext, () => this.syncCanvasRedraw(nowMs));
 
-    const totalRafTime = debugNow() - rafStart;
+    const totalRafTime = debugNow(this.globalsContext) - rafStart;
     this.updatePerfStats(actionTime, domTime, canvasTime, totalRafTime);
-    perfDisplay.renderPerfStats();
+    this.perfDisplay?.renderPerfStats();
 
     this.maybeScheduleAnimationFrame();
   }
@@ -178,7 +188,7 @@ export class RafScheduler {
   private updatePerfStats(
       actionsTime: number, domTime: number, canvasTime: number,
       totalRafTime: number) {
-    if (!perfDebug()) return;
+    if (!perfDebug(this.globalsContext)) return;
     this.perfStats.rafActions.addValue(actionsTime);
     this.perfStats.rafDom.addValue(domTime);
     this.perfStats.rafCanvas.addValue(canvasTime);
@@ -186,7 +196,7 @@ export class RafScheduler {
   }
 
   renderPerfStats() {
-    assertTrue(perfDebug());
+    assertTrue(perfDebug(this.globalsContext));
     return m(
         'div',
         m('div',

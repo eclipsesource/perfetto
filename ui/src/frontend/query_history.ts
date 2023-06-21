@@ -14,7 +14,7 @@
 
 import m from 'mithril';
 
-import {globals} from './globals';
+import {bindGlobals, HasGlobalsContextAttrs} from './globals';
 import {STAR} from './icons';
 
 import {
@@ -31,14 +31,14 @@ import {runAnalyzeQuery} from './analyze_page';
 
 const QUERY_HISTORY_KEY = 'queryHistory';
 
-export class QueryHistoryComponent implements m.ClassComponent {
-  view(): m.Child {
+export class QueryHistoryComponent implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs>): m.Child {
     const unstarred: HistoryItemComponentAttrs[] = [];
     const starred: HistoryItemComponentAttrs[] = [];
     for (let i = queryHistoryStorage.data.length - 1; i >= 0; i--) {
       const entry = queryHistoryStorage.data[i];
       const arr = entry.starred ? starred : unstarred;
-      arr.push({index: i, entry});
+      arr.push({globalsContext: attrs.globalsContext, index: i, entry});
     }
     return m(
         '.query-history',
@@ -49,7 +49,7 @@ export class QueryHistoryComponent implements m.ClassComponent {
   }
 }
 
-export interface HistoryItemComponentAttrs {
+export interface HistoryItemComponentAttrs extends HasGlobalsContextAttrs {
   index: number;
   entry: QueryHistoryEntry;
 }
@@ -58,6 +58,8 @@ export class HistoryItemComponent implements
     m.ClassComponent<HistoryItemComponentAttrs> {
   view(vnode: m.Vnode<HistoryItemComponentAttrs>): m.Child {
     const query = vnode.attrs.entry.query;
+    const globals = bindGlobals(vnode.attrs.globalsContext);
+    
     return m(
         '.history-item',
         m('.history-item-buttons',
@@ -74,7 +76,7 @@ export class HistoryItemComponent implements
               ),
           m('button',
             {
-              onclick: () => runAnalyzeQuery(query),
+              onclick: () => runAnalyzeQuery(vnode.attrs.globalsContext, query),
             },
             m(Icon, {icon: 'play_arrow'})),
           m('button',

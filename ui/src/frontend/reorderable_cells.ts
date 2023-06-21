@@ -18,14 +18,14 @@ import m from 'mithril';
 
 import {DropDirection} from '../common/dragndrop_logic';
 
-import {globals} from './globals';
+import {bindGlobals, HasGlobalsContextAttrs} from './globals';
 
 export interface ReorderableCell {
   content: m.Children;
   extraClass?: string;
 }
 
-export interface ReorderableCellGroupAttrs {
+export interface ReorderableCellGroupAttrs extends HasGlobalsContextAttrs {
   cells: ReorderableCell[];
   onReorder: (from: number, to: number, side: DropDirection) => void;
 }
@@ -65,6 +65,7 @@ export class ReorderableCellGroup implements
   }
 
   view(vnode: m.Vnode<ReorderableCellGroupAttrs>): m.Children {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     return vnode.attrs.cells.map(
         (cell, index) => m(
             `td.reorderable-cell${cell.extraClass ?? ''}`,

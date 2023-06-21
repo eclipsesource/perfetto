@@ -26,7 +26,6 @@ import {TPDuration, TPTime} from '../../common/time';
 import {TrackData} from '../../common/track_data';
 import {TrackController} from '../../controller/track_controller';
 import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
 import {NewTrackArgs, Track} from '../../frontend/track';
 
 
@@ -182,7 +181,7 @@ class ThreadStateTrack extends Track<Config, Data> {
       visibleTimeScale: timeScale,
       visibleWindowTime,
       windowSpan,
-    } = globals().frontendLocalState;
+    } = this.globals().frontendLocalState;
     const data = this.data();
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
@@ -227,7 +226,7 @@ class ThreadStateTrack extends Track<Config, Data> {
       const rectEnd = timeScale.tpTimeToPx(tEnd);
       const rectWidth = rectEnd - rectStart;
 
-      const currentSelection = globals().state.currentSelection;
+      const currentSelection = this.globals().state.currentSelection;
       const isSelected = currentSelection &&
           currentSelection.kind === 'THREAD_STATE' &&
           currentSelection.id === data.ids[i];
@@ -274,12 +273,12 @@ class ThreadStateTrack extends Track<Config, Data> {
   onMouseClick({x}: {x: number}) {
     const data = this.data();
     if (data === undefined) return false;
-    const {visibleTimeScale} = globals().frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(x);
     const index = search(data.starts, time.toTPTime());
     if (index === -1) return false;
     const id = data.ids[index];
-    globals().makeSelection(
+    this.globals().makeSelection(
         Actions.selectThreadState({id, trackId: this.trackState.id}));
     return true;
   }

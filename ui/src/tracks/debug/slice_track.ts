@@ -75,7 +75,7 @@ export class DebugTrackV2 extends NamedSliceTrack<DebugTrackV2Types> {
   }
 
   onSliceClick(args: OnSliceClickArgs<DebugTrackV2Types['slice']>) {
-    globals().dispatch(Actions.selectDebugSlice({
+    this.globals().dispatch(Actions.selectDebugSlice({
       id: args.slice.id,
       sqlTableName: this.config.sqlTableName,
       start: args.slice.start,
@@ -87,7 +87,7 @@ export class DebugTrackV2 extends NamedSliceTrack<DebugTrackV2Types> {
   getTrackShellButtons(): Array<m.Vnode<TrackButtonAttrs>> {
     return [m(TrackButton, {
       action: () => {
-        globals().dispatch(Actions.removeDebugTrack({trackId: this.trackId}));
+        this.globals().dispatch(Actions.removeDebugTrack({trackId: this.trackId}));
       },
       i: 'close',
       tooltip: 'Close',
@@ -99,6 +99,7 @@ export class DebugTrackV2 extends NamedSliceTrack<DebugTrackV2Types> {
 let debugTrackCount = 0;
 
 export async function addDebugTrack(
+    globalsContext: string,
     engine: EngineProxy,
     sqlViewName: string,
     trackName: string,
@@ -130,7 +131,7 @@ export async function addDebugTrack(
       from prepared_data
       order by ts;`);
 
-  globals().dispatch(Actions.addDebugTrack({
+  globals(globalsContext).dispatch(Actions.addDebugTrack({
     engineId: engine.engineId,
     name: trackName.trim() || `Debug Track ${debugTrackId}`,
     config: {

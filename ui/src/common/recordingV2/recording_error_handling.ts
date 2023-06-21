@@ -72,7 +72,7 @@ export async function wrapRecordingError<T>(
 // Shows a modal for every known type of error which can arise during recording.
 // In this way, errors occuring at different levels of the recording process
 // can be handled in a central location.
-export function showRecordingModal(message: string): void {
+export function showRecordingModal(globalsContext: string, message: string): void {
   if ([
         'Unable to claim interface.',
         'The specified endpoint is not part of a claimed and selected ' +
@@ -80,7 +80,7 @@ export function showRecordingModal(message: string): void {
         // thrown when calling the 'reset' method on a WebUSB device.
         'Unable to reset the device.',
       ].some((partOfMessage) => message.includes(partOfMessage))) {
-    showWebUSBErrorV2();
+    showWebUSBErrorV2(globalsContext);
   } else if (
       [
         'A transfer error has occurred.',
@@ -88,26 +88,26 @@ export function showRecordingModal(message: string): void {
         'The transfer was cancelled.',
       ].some((partOfMessage) => message.includes(partOfMessage)) ||
       isDeviceDisconnectedError(message)) {
-    showConnectionLostError();
+    showConnectionLostError(globalsContext);
   } else if (message === ALLOW_USB_DEBUGGING) {
-    showAllowUSBDebugging();
+    showAllowUSBDebugging(globalsContext);
   } else if (isMessageComposedOf(
                  message,
                  [BINARY_PUSH_FAILURE, BINARY_PUSH_UNKNOWN_RESPONSE])) {
-    showFailedToPushBinary(message.substring(message.indexOf(':') + 1));
+    showFailedToPushBinary(globalsContext, message.substring(message.indexOf(':') + 1));
   } else if (message === NO_DEVICE_SELECTED) {
-    showNoDeviceSelected();
+    showNoDeviceSelected(globalsContext);
   } else if (WEBSOCKET_UNABLE_TO_CONNECT === message) {
-    showWebsocketConnectionIssue(message);
+    showWebsocketConnectionIssue(globalsContext, message);
   } else if (message === EXTENSION_NOT_INSTALLED) {
-    showExtensionNotInstalled();
+    showExtensionNotInstalled(globalsContext);
   } else if (isMessageComposedOf(message, [
                PARSING_UNKNWON_REQUEST_ID,
                PARSING_UNABLE_TO_DECODE_METHOD,
                PARSING_UNRECOGNIZED_PORT,
                PARSING_UNRECOGNIZED_MESSAGE,
              ])) {
-    showIssueParsingTheTracedResponse(message);
+    showIssueParsingTheTracedResponse(globalsContext, message);
   } else {
     throw new Error(`${message}`);
   }

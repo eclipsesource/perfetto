@@ -23,15 +23,15 @@ import {ControllerAny} from './controller';
 let rootControllerMap = new Map<string, ControllerAny>();
 let runningControllersMap = new Map<string, boolean>();
 
-export function initController(extensionPort: MessagePort, context = '') {
-  assertTrue(!rootControllerMap.has(context));
-  const rootController = new AppController(extensionPort, context);
-  rootControllerMap.set(context, rootController);
-  runningControllersMap.set(context, false);
+export function initController(extensionPort: MessagePort, globalsContext = '') {
+  assertTrue(!rootControllerMap.has(globalsContext));
+  const rootController = new AppController(extensionPort, globalsContext);
+  rootControllerMap.set(globalsContext, rootController);
+  runningControllersMap.set(globalsContext, false);
 }
 
-export function runControllers(context: string) {
-  const runningControllers = runningControllersMap.get(context)
+export function runControllers(globalsContext: string) {
+  const runningControllers = runningControllersMap.get(globalsContext)
   if (runningControllers === undefined) throw new Error('Unknown controller');
   if (runningControllers) throw new Error('Re-entrant call detected');
 
@@ -39,11 +39,11 @@ export function runControllers(context: string) {
   let runAgain = true;
   for (let iter = 0; runAgain; iter++) {
     if (iter > 100) throw new Error('Controllers are stuck in a livelock');
-    runningControllersMap.set(context, true);
+    runningControllersMap.set(globalsContext, true);
     try {
-      runAgain = assertExists(rootControllerMap.get(context)).invoke();
+      runAgain = assertExists(rootControllerMap.get(globalsContext)).invoke();
     } finally {
-      runningControllersMap.set(context, false);
+      runningControllersMap.set(globalsContext, false);
     }
   }
 }

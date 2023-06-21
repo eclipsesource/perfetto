@@ -141,6 +141,7 @@ export function openBufferWithLegacyTraceViewer(
 
   // Popup blocker detected.
   showModal({
+    globalsContext: '',
     title: 'Open trace in the legacy Catapult Trace Viewer',
     content: m(
         'div',

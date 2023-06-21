@@ -129,7 +129,7 @@ export function isStringValue(value: Value): value is StringValue {
 // Recursively render the given value and its children, returning a list of
 // vnodes corresponding to the nodes of the table.
 function*
-    renderValue(name: string, value: Value, depth: number): Generator<m.Child> {
+    renderValue(globalsContext: string, name: string, value: Value, depth: number): Generator<m.Child> {
   const row = [
     m('th',
       {
@@ -137,6 +137,7 @@ function*
       },
       name,
       value.contextMenu ? m(PopupMenuButton, {
+        globalsContext,
         icon: 'arrow_drop_down',
         items: value.contextMenu,
       }) :
@@ -145,13 +146,13 @@ function*
   if (isArray(value)) {
     yield m('tr', row);
     for (let i = 0; i < value.items.length; ++i) {
-      yield* renderValue(`[${i}]`, value.items[i], depth + 1);
+      yield* renderValue(globalsContext, `[${i}]`, value.items[i], depth + 1);
     }
     return;
   } else if (isDict(value)) {
     yield m('tr', row);
     for (const key of Object.keys(value.items)) {
-      yield* renderValue(key, value.items[key], depth + 1);
+      yield* renderValue(globalsContext, key, value.items[key], depth + 1);
     }
     return;
   }
@@ -178,10 +179,10 @@ function*
 }
 
 // Render a given dictionary into a vnode.
-export function renderDict(dict: Dict): m.Child {
+export function renderDict(globalsContext: string, dict: Dict): m.Child {
   const rows: m.Child[] = [];
   for (const key of Object.keys(dict.items)) {
-    for (const vnode of renderValue(key, dict.items[key], 0)) {
+    for (const vnode of renderValue(globalsContext, key, dict.items[key], 0)) {
       rows.push(vnode);
     }
   }

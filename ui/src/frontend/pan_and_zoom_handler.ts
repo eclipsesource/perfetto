@@ -90,6 +90,7 @@ function keyToZoom(e: KeyboardEvent): Zoom {
  * Enables horizontal pan and zoom with mouse-based drag and WASD navigation.
  */
 export class PanAndZoomHandler {
+  private globalsContext: string;
   private mousePositionX: number|null = null;
   private boundOnMouseMove = this.onMouseMove.bind(this);
   private boundOnWheel = this.onWheel.bind(this);
@@ -102,8 +103,8 @@ export class PanAndZoomHandler {
   private zooming: Zoom = Zoom.None;
   private zoomRatio = 0;
   private targetZoomRatio = 0;
-  private panAnimation = new Animation(this.onPanAnimationStep.bind(this));
-  private zoomAnimation = new Animation(this.onZoomAnimationStep.bind(this));
+  private panAnimation: Animation;
+  private zoomAnimation: Animation;
 
   private element: HTMLElement;
   private contentOffsetX: number;
@@ -116,6 +117,7 @@ export class PanAndZoomHandler {
   private endSelection: (edit: boolean) => void;
 
   constructor({
+    globalsContext,
     element,
     contentOffsetX,
     onPanned,
@@ -124,6 +126,7 @@ export class PanAndZoomHandler {
     onSelection,
     endSelection,
   }: {
+    globalsContext: string,
     element: HTMLElement,
     contentOffsetX: number,
     onPanned: (movedPx: number) => void,
@@ -134,6 +137,7 @@ export class PanAndZoomHandler {
          currentX: number, currentY: number, editing: boolean) => void,
     endSelection: (edit: boolean) => void,
   }) {
+    this.globalsContext = globalsContext;
     this.element = element;
     this.contentOffsetX = contentOffsetX;
     this.onPanned = onPanned;
@@ -141,7 +145,9 @@ export class PanAndZoomHandler {
     this.editSelection = editSelection;
     this.onSelection = onSelection;
     this.endSelection = endSelection;
-
+    this.panAnimation = new Animation(globalsContext, this.onPanAnimationStep.bind(this));
+    this.zoomAnimation = new Animation(globalsContext, this.onZoomAnimationStep.bind(this));
+  
     document.body.addEventListener('keydown', this.boundOnKeyDown);
     document.body.addEventListener('keyup', this.boundOnKeyUp);
     this.element.addEventListener('mousemove', this.boundOnMouseMove);
@@ -227,7 +233,7 @@ export class PanAndZoomHandler {
   }
 
   private onMouseMove(e: MouseEvent) {
-    let pageOffset = globals().state.sidebarVisible && !globals().hideSidebar ?
+    let pageOffset = globals(this.globalsContext).state.sidebarVisible && !globals(this.globalsContext).hideSidebar ?
         this.contentOffsetX :
         0;
     
@@ -252,12 +258,12 @@ export class PanAndZoomHandler {
   private onWheel(e: WheelEvent) {
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       this.onPanned(e.deltaX * HORIZONTAL_WHEEL_PAN_SPEED);
-      globals().rafScheduler.scheduleRedraw();
+      globals(this.globalsContext).rafScheduler.scheduleRedraw();
     } else if (e.ctrlKey && this.mousePositionX) {
       const sign = e.deltaY < 0 ? -1 : 1;
       const deltaY = sign * Math.log2(1 + Math.abs(e.deltaY));
       this.onZoomed(this.mousePositionX, deltaY * WHEEL_ZOOM_SPEED);
-      globals().rafScheduler.scheduleRedraw();
+      globals(this.globalsContext).rafScheduler.scheduleRedraw();
     }
   }
 
@@ -265,7 +271,7 @@ export class PanAndZoomHandler {
     this.updateShift(e.shiftKey);
 
     // Handle key events that are not pan or zoom.
-    if (handleKey(e, true)) return;
+    if (handleKey(this.globalsContext, e, true)) return;
 
     if (keyToPan(e) !== Pan.None) {
       if (this.panning !== keyToPan(e)) {
@@ -292,7 +298,7 @@ export class PanAndZoomHandler {
     this.updateShift(e.shiftKey);
 
     // Handle key events that are not pan or zoom.
-    if (handleKey(e, false)) return;
+    if (handleKey(this.globalsContext, e, false)) return;
 
     if (keyToPan(e) === this.panning) {
       this.panning = Pan.None;

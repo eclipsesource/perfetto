@@ -15,14 +15,13 @@
 import m from 'mithril';
 
 import {CallsiteInfo} from '../common/state';
-import {globals} from './globals';
-import {Panel} from './panel';
+import {Panel, PanelAttrs} from './panel';
 
-interface CpuProfileDetailsPanelAttrs {}
+interface CpuProfileDetailsPanelAttrs extends PanelAttrs {}
 
 export class CpuProfileDetailsPanel extends Panel<CpuProfileDetailsPanelAttrs> {
   view() {
-    const sampleDetails = globals().cpuProfileDetails;
+    const sampleDetails = this.globals().cpuProfileDetails;
     const header =
         m('.details-panel-heading', m('h2', `CPU Profile Sample Details`));
     if (!sampleDetails || sampleDetails.id === undefined) {

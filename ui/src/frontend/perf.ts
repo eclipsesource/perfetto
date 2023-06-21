@@ -20,18 +20,18 @@ import {globals} from './globals';
 import {PanelContainer} from './panel_container';
 
 // Shorthand for if globals perf debug mode is on.
-export const perfDebug = () => globals().state.perfDebug;
+export const perfDebug = (globalsContext: string) => globals(globalsContext).state.perfDebug;
 
 // Returns performance.now() if perfDebug is enabled, otherwise 0.
 // This is needed because calling performance.now is generally expensive
 // and should not be done for every frame.
-export const debugNow = () => perfDebug() ? performance.now() : 0;
+export const debugNow = (globalsContext: string) => perfDebug(globalsContext) ? performance.now() : 0;
 
 // Returns execution time of |fn| if perf debug mode is on. Returns 0 otherwise.
-export function measure(fn: () => void): number {
-  const start = debugNow();
+export function measure(globalsContext: string, fn: () => void): number {
+  const start = debugNow(globalsContext);
   fn();
-  return debugNow() - start;
+  return debugNow(globalsContext) - start;
 }
 
 // Stores statistics about samples, and keeps a fixed size buffer of most recent
@@ -89,8 +89,11 @@ export function runningStatStr(stat: RunningStatistics) {
 }
 
 // Globals singleton class that renders performance stats for the whole app.
-class PerfDisplay {
+export class PerfDisplay {
   private containers: PanelContainer[] = [];
+
+  constructor(private readonly globalsContext: string) {}
+
   addContainer(container: PanelContainer) {
     this.containers.push(container);
   }
@@ -101,14 +104,14 @@ class PerfDisplay {
   }
 
   renderPerfStats() {
-    if (!perfDebug()) return;
+    if (!perfDebug(this.globalsContext)) return;
     const perfDisplayEl = document.querySelector('.perf-stats');
     if (!perfDisplayEl) return;
     m.render(perfDisplayEl, [
-      m('section', globals().rafScheduler.renderPerfStats()),
+      m('section', globals(this.globalsContext).rafScheduler.renderPerfStats()),
       m('button.close-button',
         {
-          onclick: () => globals().dispatch(Actions.togglePerfDebug({})),
+          onclick: () => globals(this.globalsContext).dispatch(Actions.togglePerfDebug({})),
         },
         m('i.material-icons', 'close')),
       this.containers.map((c, i) => m('section', c.renderPerfStats(i))),
@@ -116,4 +119,4 @@ class PerfDisplay {
   }
 }
 
-export const perfDisplay = new PerfDisplay();
+export const perfDisplay = (globalsContext: string) => new PerfDisplay(globalsContext);

@@ -19,7 +19,7 @@ import {EngineProxy} from '../common/engine';
 import {QueryResponse, runQuery} from '../common/queries';
 
 import {addTab} from './bottom_tab';
-import {globals} from './globals';
+import {globals, HasGlobalsContextAttrs} from './globals';
 import {createPage} from './pages';
 import {QueryHistoryComponent, queryHistoryStorage} from './query_history';
 import {QueryResultTab} from './query_result_tab';
@@ -42,13 +42,13 @@ const state: AnalyzePageState = {
   enteredText: '',
 };
 
-export function runAnalyzeQuery(query: string) {
+export function runAnalyzeQuery(globalsContext: string, query: string) {
   state.executedQuery = query;
   state.queryResult = undefined;
-  const engine = getEngine();
+  const engine = getEngine(globalsContext);
   if (engine) {
     runQuery(query, engine).then((resp: QueryResponse) => {
-      addTab({
+      addTab(globalsContext, {
         kind: QueryResultTab.kind,
         tag: 'analyze_page_query',
         config: {
@@ -62,57 +62,61 @@ export function runAnalyzeQuery(query: string) {
         return;
       }
       state.queryResult = resp;
-      globals().rafScheduler.scheduleFullRedraw();
+      globals(globalsContext).rafScheduler.scheduleFullRedraw();
     });
   }
 }
 
-function getEngine(): EngineProxy|undefined {
-  const engineId = globals().getCurrentEngine()?.id;
+function getEngine(globalsContext: string): EngineProxy|undefined {
+  const engineId = globals(globalsContext).getCurrentEngine()?.id;
   if (engineId === undefined) {
     return undefined;
   }
-  const engine = globals().engines.get(engineId)?.getProxy('AnalyzePage');
+  const engine = globals(globalsContext).engines.get(engineId)?.getProxy('AnalyzePage');
   return engine;
 }
 
-class QueryInput implements m.ClassComponent {
+class QueryInput implements m.ClassComponent<HasGlobalsContextAttrs> {
   // How many lines to display if the user hasn't resized the input box.
   displayLines = INPUT_MIN_LINES;
 
-  static onKeyDown(e: Event) {
-    const event = e as KeyboardEvent;
-    const target = e.target as HTMLTextAreaElement;
-    const {selectionStart, selectionEnd} = target;
+  private globalsContext = '';
 
-    if (event.code === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      let query = target.value;
-      if (selectionEnd > selectionStart) {
-        query = query.substring(selectionStart, selectionEnd);
+  static onKeyDown(globalsContext: string) {
+    return (e: Event) => {
+      const event = e as KeyboardEvent;
+      const target = e.target as HTMLTextAreaElement;
+      const {selectionStart, selectionEnd} = target;
+
+      if (event.code === 'Enter' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        let query = target.value;
+        if (selectionEnd > selectionStart) {
+          query = query.substring(selectionStart, selectionEnd);
+        }
+        if (!query) return;
+        queryHistoryStorage.saveQuery(query);
+
+        runAnalyzeQuery(globalsContext, query);
       }
-      if (!query) return;
-      queryHistoryStorage.saveQuery(query);
 
-      runAnalyzeQuery(query);
-    }
+      if (event.code === 'Tab') {
+        // Handle tabs to insert spaces.
+        event.preventDefault();
+        const lastLineBreak = target.value.lastIndexOf('\n', selectionEnd);
 
-    if (event.code === 'Tab') {
-      // Handle tabs to insert spaces.
-      event.preventDefault();
-      const lastLineBreak = target.value.lastIndexOf('\n', selectionEnd);
-
-      if (selectionStart === selectionEnd || lastLineBreak < selectionStart) {
-        // Selection does not contain line breaks, therefore is on a single
-        // line. In this case, replace the selection with spaces. Replacement is
-        // done via document.execCommand as opposed to direct manipulation of
-        // element's value attribute because modifying latter programmatically
-        // drops the edit history which breaks undo/redo functionality.
-        document.execCommand('insertText', false, TAB_SPACES_STRING);
-      } else {
-        this.handleMultilineTab(target, event);
+        if (selectionStart === selectionEnd || lastLineBreak < selectionStart) {
+          // Selection does not contain line breaks, therefore is on a single
+          // line. In this case, replace the selection with spaces. Replacement is
+          // done via document.execCommand as opposed to direct manipulation of
+          // element's value attribute because modifying latter programmatically
+          // drops the edit history which breaks undo/redo functionality.
+          document.execCommand('insertText', false, TAB_SPACES_STRING);
+        } else {
+          this.handleMultilineTab(target, event);
+        }
       }
-    }
+    };
   }
 
   // Handle Tab press when the current selection is multiline: find all the
@@ -162,7 +166,7 @@ class QueryInput implements m.ClassComponent {
         Math.min(Math.max(textareaLines, INPUT_MIN_LINES), INPUT_MAX_LINES);
     this.displayLines = clampedNumLines;
     state.enteredText = textareaValue;
-    globals().rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   // This method exists because unfortunatley setting custom properties on an
@@ -179,7 +183,11 @@ class QueryInput implements m.ClassComponent {
     // page and comes back.
   }
 
-  oncreate(vnode: m.VnodeDOM) {
+  oninit(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    this.globalsContext = vnode.attrs.globalsContext;
+  }
+
+  oncreate(vnode: m.VnodeDOM<HasGlobalsContextAttrs>) {
     // This makes sure query persists if user navigates to other pages and comes
     // back to analyze page.
     const existingQuery = state.enteredText;
@@ -192,14 +200,14 @@ class QueryInput implements m.ClassComponent {
     this.setHeightBeforeResize(textarea);
   }
 
-  onupdate(vnode: m.VnodeDOM) {
+  onupdate(vnode: m.VnodeDOM<HasGlobalsContextAttrs>) {
     this.setHeightBeforeResize(vnode.dom as HTMLElement);
   }
 
   view() {
     return m('textarea.query-input', {
       placeholder: INPUT_PLACEHOLDER,
-      onkeydown: (e: Event) => QueryInput.onKeyDown(e),
+      onkeydown: (e: Event) => QueryInput.onKeyDown(this.globalsContext)(e),
       oninput: (e: Event) =>
           this.onInput((e.target as HTMLTextAreaElement).value),
     });
@@ -208,19 +216,21 @@ class QueryInput implements m.ClassComponent {
 
 
 export const AnalyzePage = createPage({
-  view() {
+  view(vnode) {
+    const globalsContext = vnode.attrs.globalsContext;
     return m(
         '.analyze-page',
-        m(QueryInput),
+        m(QueryInput, {globalsContext}),
         state.executedQuery === undefined ? null : m(QueryTable, {
+          globalsContext,
           query: state.executedQuery,
           resp: state.queryResult,
           onClose: () => {
             state.executedQuery = undefined;
             state.queryResult = undefined;
-            globals().rafScheduler.scheduleFullRedraw();
+            globals(globalsContext).rafScheduler.scheduleFullRedraw();
           },
         }),
-        m(QueryHistoryComponent));
+        m(QueryHistoryComponent, {globalsContext}));
   },
 });

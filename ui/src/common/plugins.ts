@@ -34,7 +34,7 @@ import {Selection} from './state';
 // plugins.
 export class PluginContextImpl implements PluginContext {
   readonly pluginId: string;
-  onDetailsPanelSelectionChange?: (newSelection?: Selection) => void;
+  onDetailsPanelSelectionChange?: (globalsContext: string, newSelection?: Selection) => void;
   private trackProviders: TrackProvider[];
 
   constructor(pluginId: string) {
@@ -57,7 +57,7 @@ export class PluginContextImpl implements PluginContext {
   }
 
   registerOnDetailsPanelSelectionChange(
-      onDetailsPanelSelectionChange: (newSelection?: Selection) => void) {
+      onDetailsPanelSelectionChange: (globalsContext: string, newSelection?: Selection) => void) {
     this.onDetailsPanelSelectionChange = onDetailsPanelSelectionChange;
   }
   // ==================================================================
@@ -131,11 +131,11 @@ export class PluginManager {
     return promises;
   }
 
-  onDetailsPanelSelectionChange(pluginId: string, newSelection?: Selection) {
+  onDetailsPanelSelectionChange(pluginId: string, globalsContext: string, newSelection?: Selection) {
     const pluginContext = this.getPluginContext(pluginId);
     if (pluginContext === undefined) return;
     if (pluginContext.onDetailsPanelSelectionChange) {
-      pluginContext.onDetailsPanelSelectionChange(newSelection);
+      pluginContext.onDetailsPanelSelectionChange(globalsContext, newSelection);
     }
   }
 }

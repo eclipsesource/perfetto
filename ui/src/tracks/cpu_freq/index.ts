@@ -28,7 +28,6 @@ import {TPDuration, TPTime} from '../../common/time';
 import {TrackData} from '../../common/track_data';
 import {TrackController} from '../../controller/track_controller';
 import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
 import {NewTrackArgs, Track} from '../../frontend/track';
 
 
@@ -290,7 +289,7 @@ class CpuFreqTrack extends Track<Config, Data> {
       visibleTimeScale,
       visibleWindowTime,
       windowSpan,
-    } = globals().frontendLocalState;
+    } = this.globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined || data.timestamps.length === 0) {
@@ -320,7 +319,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     // Draw the CPU frequency graph.
     const hue = hueForCpu(this.config.cpu);
     let saturation = 45;
-    if (globals().state.hoveredUtid !== -1) {
+    if (this.globals().state.hoveredUtid !== -1) {
       saturation = 0;
     }
     ctx.fillStyle = `hsl(${hue}, ${saturation}%, 70%)`;
@@ -458,7 +457,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     const data = this.data();
     if (data === undefined) return;
     this.mousePos = pos;
-    const {visibleTimeScale} = globals().frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(pos.x);
 
     const [left, right] = searchSegment(data.timestamps, time.toTPTime());

@@ -16,13 +16,14 @@ import m from 'mithril';
 
 import {tpTimeToCode} from '../../common/time';
 import {toTraceTime, TPTimestamp} from '../sql_types';
+import {HasGlobalsContextAttrs} from '../globals';
 
-interface TimestampAttrs {
+interface TimestampAttrs extends HasGlobalsContextAttrs {
   ts: TPTimestamp;
 }
 
 export class Timestamp implements m.ClassComponent<TimestampAttrs> {
-  view(vnode: m.Vnode<TimestampAttrs>) {
-    return tpTimeToCode(toTraceTime(vnode.attrs.ts));
+  view({attrs}: m.Vnode<TimestampAttrs>) {
+    return tpTimeToCode(toTraceTime(attrs.globalsContext, attrs.ts));
   }
 }

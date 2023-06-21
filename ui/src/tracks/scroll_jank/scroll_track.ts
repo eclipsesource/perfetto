@@ -26,7 +26,6 @@ import {
 } from '../../common/state';
 import {TPTime} from '../../common/time';
 import {OnSliceClickArgs} from '../../frontend/base_slice_track';
-import {globals} from '../../frontend/globals';
 import {
   NamedSliceTrack,
   NamedSliceTrackTypes,
@@ -84,7 +83,7 @@ export class TopLevelScrollTrack extends
   }
 
   onSliceClick(args: OnSliceClickArgs<TopLevelScrollTrackTypes['slice']>) {
-    globals().dispatch(Actions.selectTopLevelScrollSlice({
+    this.globals().dispatch(Actions.selectTopLevelScrollSlice({
       id: args.slice.id,
       sqlTableName: this.tableName,
       start: args.slice.start,

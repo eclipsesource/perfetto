@@ -30,15 +30,16 @@ import {SlicePanel} from './slice_panel';
 
 interface ContextMenuItem {
   name: string;
-  shouldDisplay(slice: SliceDetails): boolean;
-  getAction(slice: SliceDetails): void;
+  shouldDisplay(slice: SliceDetails, globalsContext: string): boolean;
+  getAction(slice: SliceDetails, globalsContext: string): void;
 }
 
 const ITEMS: ContextMenuItem[] = [
   {
     name: 'Average duration',
     shouldDisplay: (slice: SliceDetails) => slice.name !== undefined,
-    getAction: (slice: SliceDetails) => runQueryInNewTab(
+    getAction: (slice: SliceDetails, globalsContext: string) => runQueryInNewTab(
+        globalsContext,
         `SELECT AVG(dur) / 1e9 FROM slice WHERE name = '${slice.name!}'`,
         `${slice.name} average dur`,
         ),
@@ -46,7 +47,8 @@ const ITEMS: ContextMenuItem[] = [
   {
     name: 'Binder by TXN',
     shouldDisplay: () => true,
-    getAction: () => runQueryInNewTab(
+    getAction: (_, globalsContext: string) => runQueryInNewTab(
+        globalsContext,
         `SELECT IMPORT('android.binder');
 
          SELECT *
@@ -58,12 +60,13 @@ const ITEMS: ContextMenuItem[] = [
   {
     name: 'Binder call names',
     shouldDisplay: () => true,
-    getAction: (slice: SliceDetails) => {
-      const engine = getEngine();
+    getAction: (slice: SliceDetails, globalsContext: string) => {
+      const engine = getEngine(globalsContext);
       if (engine === undefined) return;
       runQuery(`SELECT IMPORT('android.binder');`, engine)
           .then(
               () => runQueryInNewTab(
+                  globalsContext,
                   `
                 SELECT s.ts, s.dur, tx.aidl_name AS name, s.id
                 FROM android_sync_binder_metrics_by_txn tx
@@ -81,7 +84,8 @@ const ITEMS: ContextMenuItem[] = [
   {
     name: 'Lock graph',
     shouldDisplay: (slice: SliceDetails) => slice.id !== undefined,
-    getAction: (slice: SliceDetails) => runQueryInNewTab(
+    getAction: (slice: SliceDetails, globalsContext: string) => runQueryInNewTab(
+        globalsContext,
         `SELECT IMPORT('android.monitor_contention');
          DROP TABLE IF EXISTS FAST;
          CREATE TABLE FAST
@@ -125,22 +129,22 @@ const ITEMS: ContextMenuItem[] = [
   },
 ];
 
-function getSliceContextMenuItems(slice: SliceDetails): PopupMenuItem[] {
-  return ITEMS.filter((item) => item.shouldDisplay(slice)).map((item) => {
+function getSliceContextMenuItems(slice: SliceDetails, globalsContext: string): PopupMenuItem[] {
+  return ITEMS.filter((item) => item.shouldDisplay(slice, globalsContext)).map((item) => {
     return {
       itemType: 'regular',
       text: item.name,
-      callback: () => item.getAction(slice),
+      callback: () => item.getAction(slice, globalsContext),
     };
   });
 }
 
-function getEngine(): EngineProxy|undefined {
-  const engineId = globals().getCurrentEngine()?.id;
+function getEngine(globalsContext: string): EngineProxy|undefined {
+  const engineId = globals(globalsContext).getCurrentEngine()?.id;
   if (engineId === undefined) {
     return undefined;
   }
-  const engine = globals().engines.get(engineId)?.getProxy('SlicePanel');
+  const engine = globals(globalsContext).engines.get(engineId)?.getProxy('SlicePanel');
   return engine;
 }
 
@@ -285,7 +289,7 @@ class TableBuilder {
 
 export class ChromeSliceDetailsPanel extends SlicePanel {
   view() {
-    const sliceInfo = globals().sliceDetails;
+    const sliceInfo = this.globals().sliceDetails;
     if (sliceInfo.ts !== undefined && sliceInfo.dur !== undefined &&
         sliceInfo.name !== undefined) {
       const defaultBuilder = new TableBuilder();
@@ -297,7 +301,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
               sliceInfo.category);
       defaultBuilder.add(
           'Start time',
-          tpTimeToCode(sliceInfo.ts - globals().state.traceTime.start));
+          tpTimeToCode(sliceInfo.ts - this.globals().state.traceTime.start));
       if (sliceInfo.absTime !== undefined) {
         defaultBuilder.add('Absolute Time', sliceInfo.absTime);
       }
@@ -360,7 +364,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
       builder.add('Slice', {
         kind: 'SLICE',
         sliceId: flow.sliceId,
-        trackId: globals().state.uiTrackIdByTraceTrackId[flow.trackId],
+        trackId: this.globals().state.uiTrackIdByTraceTrackId[flow.trackId],
         description: flow.sliceChromeCustomName === undefined ?
             flow.sliceName :
             flow.sliceChromeCustomName,
@@ -414,6 +418,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
         text: 'Find slices with the same arg value',
         callback: () => {
           runQueryInNewTab(
+              this.globals.context,
               `
               select slice.*
               from slice
@@ -428,7 +433,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
         itemType: 'regular',
         text: 'Visualise argument values',
         callback: () => {
-          globals().dispatch(Actions.addVisualisedArg({argName: fullKey}));
+          this.globals().dispatch(Actions.addVisualisedArg({argName: fullKey}));
         },
       },
     ];
@@ -439,7 +444,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
 
     const immediatelyPrecedingByFlowSlices = [];
     const immediatelyFollowingByFlowSlices = [];
-    for (const flow of globals().connectedFlows) {
+    for (const flow of this.globals().connectedFlows) {
       if (flow.begin.sliceId === sliceInfo.id) {
         immediatelyFollowingByFlowSlices.push({flow: flow.end, dur: flow.dur});
       }
@@ -478,11 +483,12 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
       rows.push(this.renderTable(builder));
     }
 
-    const contextMenuItems = getSliceContextMenuItems(sliceInfo);
+    const contextMenuItems = getSliceContextMenuItems(sliceInfo, this.globals.context);
     if (contextMenuItems.length > 0) {
       rows.push(
           m(PopupMenuButton,
             {
+              globalsContext: this.globals.context,
               icon: 'arrow_drop_down',
               items: contextMenuItems,
             },
@@ -511,6 +517,7 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
         if (row.contents.isArg) {
           contents.push(
               m('span.context-wrapper', m.trust('&nbsp;'), m(PopupMenuButton, {
+                  globalsContext: this.globals.context,
                   icon: 'arrow_drop_down',
                   items: this.getArgumentContextMenuItems(row.contents),
                 })));
@@ -533,13 +540,13 @@ export class ChromeSliceDetailsPanel extends SlicePanel {
                 m('i.material-icons.grey',
                   {
                     onclick: () => {
-                      globals().makeSelection(Actions.selectChromeSlice(
+                      this.globals().makeSelection(Actions.selectChromeSlice(
                           {id: sliceId, trackId, table: 'slice'}));
                       // Ideally we want to have a callback to
                       // findCurrentSelection after this selection has been
                       // made. Here we do not have the info for horizontally
                       // scrolling to ts.
-                      verticalScrollToTrack(trackId, true);
+                      verticalScrollToTrack(this.globals.context, trackId, true);
                     },
                     title: 'Go to destination slice',
                   },

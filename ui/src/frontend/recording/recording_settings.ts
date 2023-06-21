@@ -18,18 +18,19 @@ import m from 'mithril';
 import {Actions} from '../../common/actions';
 import {RecordMode} from '../../common/state';
 import {globals} from '../globals';
-import {Slider, SliderAttrs} from '../record_widgets';
+import {Slider} from '../record_widgets';
 
 import {RecordingSectionAttrs} from './recording_sections';
 
 export class RecordingSettings implements
     m.ClassComponent<RecordingSectionAttrs> {
   view({attrs}: m.CVnode<RecordingSectionAttrs>) {
+    const globalsContext = attrs.globalsContext;
     const S = (x: number) => x * 1000;
     const M = (x: number) => x * 1000 * 60;
     const H = (x: number) => x * 1000 * 60 * 60;
 
-    const cfg = globals().state.recordConfig;
+    const cfg = globals(globalsContext).state.recordConfig;
 
     const recButton = (mode: RecordMode, title: string, img: string) => {
       const checkboxArgs = {
@@ -37,16 +38,16 @@ export class RecordingSettings implements
         onchange: (e: InputEvent) => {
           const checked = (e.target as HTMLInputElement).checked;
           if (!checked) return;
-          const traceCfg = produce(globals().state.recordConfig, (draft) => {
+          const traceCfg = produce(globals(globalsContext).state.recordConfig, (draft) => {
             draft.mode = mode;
           });
-          globals().dispatch(Actions.setRecordConfig({config: traceCfg}));
+          globals(globalsContext).dispatch(Actions.setRecordConfig({config: traceCfg}));
         },
       };
       return m(
           `label${cfg.mode === mode ? '.selected' : ''}`,
           m(`input[type=radio][name=rec_mode]`, checkboxArgs),
-          m(`img[src=${globals().root}assets/${img}]`),
+          m(`img[src=${globals(globalsContext).root}assets/${img}]`),
           m('span', title));
     };
 
@@ -59,15 +60,17 @@ export class RecordingSettings implements
           recButton('LONG_TRACE', 'Long trace', 'rec_long_trace.png')),
 
         m(Slider, {
+          globalsContext,
           title: 'In-memory buffer size',
           icon: '360',
           values: [4, 8, 16, 32, 64, 128, 256, 512],
           unit: 'MB',
           set: (cfg, val) => cfg.bufferSizeMb = val,
           get: (cfg) => cfg.bufferSizeMb,
-        } as SliderAttrs),
+        }),
 
         m(Slider, {
+          globalsContext,
           title: 'Max duration',
           icon: 'timer',
           values: [S(10), S(15), S(30), S(60), M(5), M(30), H(1), H(6), H(12)],
@@ -75,8 +78,9 @@ export class RecordingSettings implements
           unit: 'h:m:s',
           set: (cfg, val) => cfg.durationMs = val,
           get: (cfg) => cfg.durationMs,
-        } as SliderAttrs),
+        }),
         m(Slider, {
+          globalsContext,
           title: 'Max file size',
           icon: 'save',
           cssClass: cfg.mode !== 'LONG_TRACE' ? '.hide' : '',
@@ -84,8 +88,9 @@ export class RecordingSettings implements
           unit: 'MB',
           set: (cfg, val) => cfg.maxFileSizeMb = val,
           get: (cfg) => cfg.maxFileSizeMb,
-        } as SliderAttrs),
+        }),
         m(Slider, {
+          globalsContext,
           title: 'Flush on disk every',
           cssClass: cfg.mode !== 'LONG_TRACE' ? '.hide' : '',
           icon: 'av_timer',
@@ -93,6 +98,6 @@ export class RecordingSettings implements
           unit: 'ms',
           set: (cfg, val) => cfg.fileWritePeriodMs = val,
           get: (cfg) => cfg.fileWritePeriodMs || 0,
-        } as SliderAttrs));
+        }));
   }
 }

@@ -25,11 +25,12 @@ import {
   FlowEventsRenderer,
   FlowEventsRendererArgs,
 } from './flow_events_renderer';
-import {globals} from './globals';
+import {HasGlobalsContextAttrs, bindGlobals} from './globals';
 import {isPanelVNode, Panel, PanelSize} from './panel';
 import {
   debugNow,
   perfDebug,
+  PerfDisplay,
   perfDisplay,
   RunningStatistics,
   runningStatStr,
@@ -43,7 +44,7 @@ const SCROLLING_CANVAS_OVERDRAW_FACTOR = 1.2;
 // We need any here so we can accept vnodes with arbitrary attrs.
 export type AnyAttrsVnode = m.Vnode<any, any>;
 
-export interface Attrs {
+export interface Attrs extends HasGlobalsContextAttrs {
   panels: AnyAttrsVnode[];
   doesScroll: boolean;
   kind: 'TRACKS'|'OVERVIEW'|'DETAILS';
@@ -90,6 +91,9 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   private parentOnScroll: () => void = () => {};
   private canvasRedrawer: () => void;
 
+  private globals = bindGlobals();
+  private perfDisplay?: PerfDisplay;
+
   get canvasOverdrawFactor() {
     return this.attrs.doesScroll ? SCROLLING_CANVAS_OVERDRAW_FACTOR : 1;
   }
@@ -116,10 +120,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   // This finds the tracks covered by the in-progress area selection. When
   // editing areaY is not set, so this will not be used.
   handleAreaSelection() {
-    const area = globals().frontendLocalState.selectedArea;
+    const area = this.globals().frontendLocalState.selectedArea;
     if (area === undefined ||
-        globals().frontendLocalState.areaY.start === undefined ||
-        globals().frontendLocalState.areaY.end === undefined ||
+        this.globals().frontendLocalState.areaY.start === undefined ||
+        this.globals().frontendLocalState.areaY.end === undefined ||
         this.panelInfos.length === 0) {
       return;
     }
@@ -128,22 +132,22 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     const panelContainerTop = this.panelInfos[0].y;
     const panelContainerBottom = this.panelInfos[this.panelInfos.length - 1].y +
         this.panelInfos[this.panelInfos.length - 1].height;
-    if (globals().frontendLocalState.areaY.start! + TOPBAR_HEIGHT <
+    if (this.globals().frontendLocalState.areaY.start! + TOPBAR_HEIGHT <
             panelContainerTop ||
-        globals().frontendLocalState.areaY.start! + TOPBAR_HEIGHT >
+        this.globals().frontendLocalState.areaY.start! + TOPBAR_HEIGHT >
             panelContainerBottom) {
       return;
     }
 
-    const {visibleTimeScale} = globals().frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
 
     // The Y value is given from the top of the pan and zoom region, we want it
     // from the top of the panel container. The parent offset corrects that.
     const panels = this.getPanelsInRegion(
         visibleTimeScale.tpTimeToPx(area.start),
         visibleTimeScale.tpTimeToPx(area.end),
-        globals().frontendLocalState.areaY.start! + TOPBAR_HEIGHT,
-        globals().frontendLocalState.areaY.end! + TOPBAR_HEIGHT);
+        this.globals().frontendLocalState.areaY.start! + TOPBAR_HEIGHT,
+        this.globals().frontendLocalState.areaY.end! + TOPBAR_HEIGHT);
     // Get the track ids from the panels.
     const tracks = [];
     for (const panel of panels) {
@@ -152,7 +156,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         continue;
       }
       if (panel.attrs.trackGroupId !== undefined) {
-        const trackGroup = globals().state.trackGroups[panel.attrs.trackGroupId];
+        const trackGroup = this.globals().state.trackGroups[panel.attrs.trackGroupId];
         // Only select a track group and all child tracks if it is closed.
         if (trackGroup.collapsed) {
           tracks.push(panel.attrs.trackGroupId);
@@ -162,15 +166,17 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         }
       }
     }
-    globals().frontendLocalState.selectArea(area.start, area.end, tracks);
+    this.globals().frontendLocalState.selectArea(area.start, area.end, tracks);
   }
 
   constructor(vnode: m.CVnode<Attrs>) {
     this.attrs = vnode.attrs;
+    this.globals = bindGlobals(vnode.attrs.globalsContext);
     this.canvasRedrawer = () => this.redrawCanvas();
-    globals().rafScheduler.addRedrawCallback(this.canvasRedrawer);
-    perfDisplay.addContainer(this);
-    this.flowEventsRenderer = new FlowEventsRenderer();
+    this.globals().rafScheduler.addRedrawCallback(this.canvasRedrawer);
+    this.perfDisplay = perfDisplay(vnode.attrs.globalsContext);
+    this.perfDisplay.addContainer(this);
+    this.flowEventsRenderer = new FlowEventsRenderer(vnode.attrs.globalsContext);
   }
 
   oncreate(vnodeDom: m.CVnodeDOM<Attrs>) {
@@ -195,7 +201,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       this.readParentSizeFromDom(vnodeDom.dom);
       this.updateCanvasDimensions();
       this.repositionCanvas();
-      globals().rafScheduler.scheduleFullRedraw();
+      this.globals().rafScheduler.scheduleFullRedraw();
     };
 
     // Once ResizeObservers are out, we can stop accessing the window here.
@@ -206,7 +212,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       this.parentOnScroll = () => {
         this.scrollTop = assertExists(vnodeDom.dom.parentElement).scrollTop;
         this.repositionCanvas();
-        globals().rafScheduler.scheduleRedraw();
+        this.globals().rafScheduler.scheduleRedraw();
       };
       vnodeDom.dom.parentElement!.addEventListener(
           'scroll', this.parentOnScroll, {passive: true});
@@ -215,11 +221,12 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
 
   onremove({attrs, dom}: m.CVnodeDOM<Attrs>) {
     window.removeEventListener('resize', this.onResize);
-    globals().rafScheduler.removeRedrawCallback(this.canvasRedrawer);
+    this.globals().rafScheduler.removeRedrawCallback(this.canvasRedrawer);
     if (attrs.doesScroll) {
       dom.parentElement!.removeEventListener('scroll', this.parentOnScroll);
     }
-    perfDisplay.removeContainer(this);
+    this.perfDisplay?.removeContainer(this);
+    this.perfDisplay = undefined;
   }
 
   isTrackGroupAttrs(attrs: unknown): attrs is TrackGroupAttrs {
@@ -233,7 +240,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     return m(
         `.panel${extraClass}`,
         {key, 'data-key': key},
-        perfDebug() ?
+        perfDebug(this.globals.context) ?
             [node, m('.debug-panel-border', {key: 'debug-panel-border'})] :
             node);
   }
@@ -245,7 +252,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     if (this.isTrackGroupAttrs(node.attrs)) {
       return m(
           'div',
-          {key: path},
+          {key: path, globalsContext: this.globals.context},
           this.renderPanel(
               node.attrs.header,
               `${path}-header`,
@@ -280,7 +287,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       this.updateCanvasDimensions();
       this.repositionCanvas();
       if (this.attrs.kind === 'TRACKS') {
-        globals().frontendLocalState.updateLocalLimits(
+        this.globals().frontendLocalState.updateLocalLimits(
             0, this.parentWidth - TRACK_SHELL_WIDTH);
       }
       this.redrawCanvas();
@@ -327,7 +334,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     // pixels, reduce the size of the canvas so it doesn't overlap with
     // the scroll bar.
     this.parentWidth =
-        clientRect.width - globals().frontendLocalState.getScrollbarWidth();
+        clientRect.width - this.globals().frontendLocalState.getScrollbarWidth();
     this.parentHeight = clientRect.height;
     return this.parentHeight !== oldHeight || this.parentWidth !== oldWidth;
   }
@@ -368,7 +375,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   }
 
   private redrawCanvas() {
-    const redrawStart = debugNow();
+    const redrawStart = debugNow(this.globals.context);
     if (!this.ctx) return;
     this.ctx.clearRect(0, 0, this.parentWidth, this.canvasHeight);
     const canvasYStart =
@@ -379,7 +386,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     let panelYStart = 0;
     let totalOnCanvas = 0;
     const flowEventsRendererArgs =
-        new FlowEventsRendererArgs(this.parentWidth, this.canvasHeight);
+        new FlowEventsRendererArgs(this.globals.context, this.parentWidth, this.canvasHeight);
     for (let i = 0; i < this.panelInfos.length; i++) {
       const panel = this.panelInfos[i].vnode;
       const panelHeight = this.panelInfos[i].height;
@@ -404,10 +411,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       const size = {width: this.parentWidth, height: panelHeight};
       clipRect.rect(0, 0, size.width, size.height);
       this.ctx.clip(clipRect);
-      const beforeRender = debugNow();
+      const beforeRender = debugNow(this.globals.context);
       panel.state.renderCanvas(this.ctx, size, panel);
       this.updatePanelStats(
-          i, panel.state, debugNow() - beforeRender, this.ctx, size);
+          i, panel.state, debugNow(this.globals.context) - beforeRender, this.ctx, size);
       this.ctx.restore();
       panelYStart += panelHeight;
     }
@@ -415,7 +422,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     this.drawTopLayerOnCanvas();
     this.flowEventsRenderer.render(this.ctx, flowEventsRendererArgs);
     // Collect performance as the last thing we do.
-    const redrawDur = debugNow() - redrawStart;
+    const redrawDur = debugNow(this.globals.context) - redrawStart;
     this.updatePerfStats(redrawDur, this.panelInfos.length, totalOnCanvas);
   }
 
@@ -423,10 +430,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   // the whole canvas rather than per panel.
   private drawTopLayerOnCanvas() {
     if (!this.ctx) return;
-    const area = globals().frontendLocalState.selectedArea;
+    const area = this.globals().frontendLocalState.selectedArea;
     if (area === undefined ||
-        globals().frontendLocalState.areaY.start === undefined ||
-        globals().frontendLocalState.areaY.end === undefined) {
+        this.globals().frontendLocalState.areaY.start === undefined ||
+        this.globals().frontendLocalState.areaY.end === undefined) {
       return;
     }
     if (this.panelInfos.length === 0 || area.tracks.length === 0) return;
@@ -451,7 +458,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       return;
     }
 
-    const {visibleTimeScale} = globals().frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     const startX = visibleTimeScale.tpTimeToPx(area.start);
     const endX = visibleTimeScale.tpTimeToPx(area.end);
     // To align with where to draw on the canvas subtract the first panel Y.
@@ -474,7 +481,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   private updatePanelStats(
       panelIndex: number, panel: Panel, renderTime: number,
       ctx: CanvasRenderingContext2D, size: PanelSize) {
-    if (!perfDebug()) return;
+    if (!perfDebug(this.globals.context)) return;
     let renderStats = this.panelPerfStats.get(panel);
     if (renderStats === undefined) {
       renderStats = new RunningStatistics();
@@ -492,14 +499,14 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
 
   private updatePerfStats(
       renderTime: number, totalPanels: number, panelsOnCanvas: number) {
-    if (!perfDebug()) return;
+    if (!perfDebug(this.globals.context)) return;
     this.perfStats.renderStats.addValue(renderTime);
     this.perfStats.totalPanels = totalPanels;
     this.perfStats.panelsOnCanvas = panelsOnCanvas;
   }
 
   renderPerfStats(index: number) {
-    assertTrue(perfDebug());
+    assertTrue(perfDebug(this.globals.context));
     return [m(
         'section',
         m('div', `Panel Container ${index + 1}`),

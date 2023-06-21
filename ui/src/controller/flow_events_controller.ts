@@ -16,7 +16,7 @@ import {Engine} from '../common/engine';
 import {featureFlags} from '../common/feature_flags';
 import {LONG, NUM, STR_NULL} from '../common/query_result';
 import {Area} from '../common/state';
-import {Flow, globals} from '../frontend/globals';
+import {Flow, HasGlobalsContextAttrs} from '../frontend/globals';
 import {publishConnectedFlows, publishSelectedFlows} from '../frontend/publish';
 import {
   ACTUAL_FRAMES_SLICE_TRACK_KIND,
@@ -29,7 +29,7 @@ import {
 
 import {Controller} from './controller';
 
-export interface FlowEventsControllerArgs {
+export interface FlowEventsControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 
@@ -48,7 +48,7 @@ export class FlowEventsController extends Controller<'main'> {
   private lastSelectedKind: 'CHROME_SLICE'|'AREA'|'NONE' = 'NONE';
 
   constructor(private args: FlowEventsControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
 
     // Create |CHROME_CUSTOME_SLICE_NAME| helper, which combines slice name
     // and args for some slices (scheduler tasks and mojo messages) for more
@@ -233,11 +233,11 @@ export class FlowEventsController extends Controller<'main'> {
     left join process process_in on process_in.upid = thread_in.upid
     `;
     this.queryFlowEvents(
-        query, (flows: Flow[]) => publishConnectedFlows(flows));
+        query, (flows: Flow[]) => publishConnectedFlows(this.globals.context, flows));
   }
 
   areaSelected(areaId: string) {
-    const area = globals().state.areas[areaId];
+    const area = this.globals().state.areas[areaId];
     if (this.lastSelectedKind === 'AREA' && this.lastSelectedArea &&
         this.lastSelectedArea.tracks.join(',') === area.tracks.join(',') &&
         this.lastSelectedArea.end === area.end &&
@@ -251,7 +251,7 @@ export class FlowEventsController extends Controller<'main'> {
     const trackIds: number[] = [];
 
     for (const uiTrackId of area.tracks) {
-      const track = globals().state.tracks[uiTrackId];
+      const track = this.globals().state.tracks[uiTrackId];
       if (track === undefined) {
         continue;
       }
@@ -305,15 +305,15 @@ export class FlowEventsController extends Controller<'main'> {
       (t2.track_id in ${tracks}
         and (t2.ts <= ${endNs} and t2.ts >= ${startNs}))
     `;
-    this.queryFlowEvents(query, (flows: Flow[]) => publishSelectedFlows(flows));
+    this.queryFlowEvents(query, (flows: Flow[]) => publishSelectedFlows(this.globals.context, flows));
   }
 
   refreshVisibleFlows() {
-    const selection = globals().state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (!selection) {
       this.lastSelectedKind = 'NONE';
-      publishConnectedFlows([]);
-      publishSelectedFlows([]);
+      publishConnectedFlows(this.globals.context, []);
+      publishSelectedFlows(this.globals.context, []);
       return;
     }
 
@@ -323,13 +323,13 @@ export class FlowEventsController extends Controller<'main'> {
         selection.table !== 'annotation') {
       this.sliceSelected(selection.id);
     } else {
-      publishConnectedFlows([]);
+      publishConnectedFlows(this.globals.context, []);
     }
 
     if (selection && selection.kind === 'AREA') {
       this.areaSelected(selection.areaId);
     } else {
-      publishSelectedFlows([]);
+      publishSelectedFlows(this.globals.context, []);
     }
   }
 
