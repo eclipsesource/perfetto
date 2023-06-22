@@ -593,8 +593,18 @@ export class TraceController extends Controller<States> {
   private async listTracks() {
     this.updateStatus('Loading tracks');
     const engine = assertExists<Engine>(this.engine);
-    const actions = await decideTracks(this.globals.context, this.engineId, engine);
+    const actions = await this.getAddTrackActions(engine);
     this.globals().dispatchMultiple(actions);
+  }
+
+  private async getAddTrackActions(engine: Engine): Promise<DeferredAction[]> {
+    if (!this.globals().trackFilteringEnabled) {
+      return decideTracks(this.globals.context, this.engineId, engine);
+    }
+
+    const result = await decideTracks(this.globals.context, this.engineId, engine, true);
+    this.globals().filteredTracks = result.rejected;
+    return result.actions;
   }
 
   private async listThreads() {

@@ -242,7 +242,7 @@ export interface TrackState {
   labels?: string[];
   trackSortKey: TrackSortKey;
   trackGroup?: string;
-  isUserDefined?: boolean;
+  isRemovable?: boolean;
   config: {
     trackId?: number;
     trackIds?: number[];
@@ -254,6 +254,7 @@ export interface TrackGroupState {
   engineId: string;
   name: string;
   collapsed: boolean;
+  isRemovable?: boolean;
   tracks: string[];  // Child track ids.
 }
 
@@ -536,6 +537,7 @@ export interface State {
   /**
    * Open traces.
    */
+  globalsContext: string;
   newEngineMode: NewEngineMode;
   engine?: EngineConfig;
   traceTime: TraceTime;

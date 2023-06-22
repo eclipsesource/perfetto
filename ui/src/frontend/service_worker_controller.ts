@@ -94,7 +94,7 @@ export class ServiceWorkerController {
 
   monitorWorker(sw: ServiceWorker|null) {
     if (!sw) return;
-    sw.addEventListener('error', (e) => reportError(e));
+    sw.addEventListener('error', (e) => reportError('', e));
     sw.addEventListener('statechange', () => this.onStateChange(sw));
     this.onStateChange(sw);  // Trigger updates for the current state.
   }

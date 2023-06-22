@@ -148,7 +148,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
                   },
                 },
                 checkBox) :
-              ''),
+              '',
+          ...this.getTrackGroupActionButtons()),
 
         this.summaryTrack ?
             m(TrackContent,
@@ -167,13 +168,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const shell = assertExists(dom.querySelector('.shell'));
     this.shellWidth = shell.getBoundingClientRect().width;
     // TODO(andrewbb): move this to css_constants
-    if (this.trackGroupState.collapsed) {
-      this.backgroundColor =
+    this.backgroundColor =
           getComputedStyle(dom).getPropertyValue('--collapsed-background');
-    } else {
-      this.backgroundColor =
-          getComputedStyle(dom).getPropertyValue('--expanded-background');
-    }
     if (this.summaryTrack !== undefined) {
       this.summaryTrack.onFullRedraw();
     }
@@ -184,6 +180,27 @@ export class TrackGroupPanel extends Panel<Attrs> {
       this.summaryTrack.onDestroy();
       this.summaryTrack = undefined;
     }
+  }
+
+  getTrackGroupActionButtons(): m.Vnode<any>[] {
+    const result: m.Vnode<any>[] = [];
+    if (this.trackGroupState.isRemovable ?? false) {
+      result.push(m('i.material-icons.track-button.action',
+        {
+          onclick: (e: MouseEvent) => {
+            this.globals().dispatchMultiple([
+              ...this.trackGroupState.tracks.map(trackId => Actions.removeTrack({ trackId })),
+              Actions.removeTrackGroup({
+                  id: this.trackGroupState.id,
+                  summaryTrackId: this.trackGroupState.tracks[0]
+                })
+              ]);
+            e.stopPropagation();
+          }
+        },
+        'delete'));
+    }
+    return result;
   }
 
   highlightIfTrackSelected(ctx: CanvasRenderingContext2D, size: PanelSize) {

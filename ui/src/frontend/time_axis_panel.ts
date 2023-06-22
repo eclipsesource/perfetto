@@ -19,7 +19,7 @@ import {
   tpTimeToString,
 } from '../common/time';
 
-import {TRACK_SHELL_WIDTH} from './css_constants';
+import {getCssStr, TRACK_SHELL_WIDTH} from './css_constants';
 import {
   getMaxMajorTicks,
   TickGenerator,
@@ -34,7 +34,7 @@ export class TimeAxisPanel extends Panel<PanelAttrs> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    ctx.fillStyle = '#999';
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.font = '10px Roboto Condensed';
     ctx.textAlign = 'left';
 

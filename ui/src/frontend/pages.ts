@@ -63,7 +63,7 @@ export function createPage(component: m.Component<PageAttrs>):
       if (globals(globalsContext).state.perfDebug) {
         children.push(m('.perf-stats'));
       }
-      return children;
+      return m('div.perfetto',children);
     },
   };
 

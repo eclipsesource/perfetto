@@ -19,7 +19,7 @@ import {Patch, produce} from 'immer';
 import m from 'mithril';
 
 import {defer} from '../base/deferred';
-import {assertExists, reportError, setErrorHandler} from '../base/logging';
+import {assertExists, reportError} from '../base/logging';
 import {Actions, DeferredAction, StateActions} from '../common/actions';
 import {createEmptyState} from '../common/empty_state';
 import {RECORDING_V2_FLAG} from '../common/feature_flags';
@@ -36,7 +36,6 @@ import {
 import {AnalyzePage} from './analyze_page';
 import {initCssConstants} from './css_constants';
 import {registerDebugGlobals} from './debug';
-import {maybeShowErrorDialog} from './error_dialog';
 import {installFileDropHandler} from './file_drop_handler';
 import {FlagsPage} from './flags_page';
 import {globals} from './globals';
@@ -215,11 +214,11 @@ function main() {
   // appenChild returns.
   const css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = globals('').root + 'perfetto.css';
+  css.href = globals().root + 'perfetto.css';
   css.onload = () => cssLoadPromise.resolve();
   css.onerror = (err) => cssLoadPromise.reject(err);
   const favicon = document.head.querySelector('#favicon') as HTMLLinkElement;
-  if (favicon) favicon.href = globals('').root + 'assets/favicon.png';
+  if (favicon) favicon.href = globals().root + 'assets/favicon.png';
 
   // Load the script to detect if this is a Googler (see comments on globals().ts)
   // and initialize GA after that (or after a timeout if something goes wrong).
@@ -227,20 +226,19 @@ function main() {
   script.src =
       'https://storage.cloud.google.com/perfetto-ui-internal/is_internal_user.js';
   script.async = true;
-  script.onerror = () => globals('').logging.initialize();
-  script.onload = () => globals('').logging.initialize();
-  setTimeout(() => globals('').logging.initialize(), 5000);
+  script.onerror = () => globals().logging.initialize();
+  script.onload = () => globals().logging.initialize();
+  setTimeout(() => globals().logging.initialize(), 5000);
 
   document.head.append(script, css);
 
   // Add Error handlers for JS error and for uncaught exceptions in promises.
-  setErrorHandler((err: string) => maybeShowErrorDialog('', err));
-  window.addEventListener('error', (e) => reportError(e));
-  window.addEventListener('unhandledrejection', (e) => reportError(e));
+  window.addEventListener('error', (e) => reportError('', e, globals().errorHandler));
+  window.addEventListener('unhandledrejection', (e) => reportError('', e, globals().errorHandler));
 
   const extensionLocalChannel = new MessageChannel();
 
-  initWasm(globals('').root);
+  initWasm(globals().root);
   initializeImmerJs();
   initController(extensionLocalChannel.port1);
 
@@ -267,11 +265,11 @@ function main() {
   // `embeddedMode` global is set.
   initGlobalsFromQueryString();
 
-  globals('').initialize('', dispatch, router);
-  globals('').serviceWorkerController.install();
+  globals().initialize(dispatch, router);
+  globals().serviceWorkerController.install();
 
   const frontendApi = new FrontendApi();
-  globals('').publishRedraw = () => globals('').rafScheduler.scheduleFullRedraw();
+  globals().publishRedraw = () => globals().rafScheduler.scheduleFullRedraw();
 
   // We proxy messages between the extension and the controller because the
   // controller's worker can't access chrome.runtime.
@@ -345,7 +343,7 @@ export function setupFurtherFrontend(globalsContext: string) {
     maybeOpenTraceFromRoute(globalsContext, route);
   };
 
-  globals(globalsContext).initialize(globalsContext, dispatch, router);
+  globals(globalsContext).initialize(dispatch, router);
   globals(globalsContext).serviceWorkerController.install();
 
   const furtherFrontendApi = new FrontendApi(globalsContext);

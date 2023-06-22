@@ -219,8 +219,8 @@ async function ConvertTraceToPprof(trace: Blob, pid: number, ts: TPTime) {
 }
 
 selfWorker.onmessage = (msg: MessageEvent) => {
-  self.addEventListener('error', (e) => reportError(e));
-  self.addEventListener('unhandledrejection', (e) => reportError(e));
+  self.addEventListener('error', (e) => reportError('', e));
+  self.addEventListener('unhandledrejection', (e) => reportError('', e));
   setErrorHandler((err: string) => forwardError(err));
   const args = msg.data as Args;
   if (isConvertTraceAndDownload(args)) {

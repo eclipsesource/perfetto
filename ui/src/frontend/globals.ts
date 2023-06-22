@@ -14,8 +14,8 @@
 
 import {BigintMath} from '../base/bigint_math';
 import {HttpRcpEngineCustomizer} from '../common/http_rpc_engine';
-import {assertExists} from '../base/logging';
-import {Actions, DeferredAction} from '../common/actions';
+import {ErrorHandler, assertExists} from '../base/logging';
+import {Actions, AddTrackLikeArgs, DeferredAction} from '../common/actions';
 import {AggregateData} from '../common/aggregation_data';
 import {Args, ArgsTree} from '../common/arg_types';
 import {
@@ -45,6 +45,7 @@ import { RafScheduler } from './raf_scheduler';
 import { Router } from './router';
 import {ServiceWorkerController} from './service_worker_controller';
 import {PxSpan, TimeScale} from './time_scale';
+import { maybeShowErrorDialog } from './error_dialog';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
@@ -219,7 +220,7 @@ class Globals {
 
   bottomTabList?: BottomTabList = undefined;
 
-  private _context = '';
+  private readonly _context;
   private _testing = false;
   private _dispatch?: Dispatch = undefined;
   private _state?: State = undefined;
@@ -266,10 +267,14 @@ class Globals {
   private _cachePrefix: string = '';
 
   private _viewOpener?: ViewOpener = undefined;
+  private _errorHandler: ErrorHandler = maybeShowErrorDialog;
   private _allowFileDrop = true;
   private _httpRpcEngineCustomizer?: HttpRcpEngineCustomizer;
+  private _promptToLoadFromTraceProcessorShell = true;
+  private _trackFilteringEnabled = false;
+  private _filteredTracks: AddTrackLikeArgs[] = [];
   private _httpRpcEnginePort = 9001;
-
+  
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
 
@@ -289,17 +294,20 @@ class Globals {
 
   engines = new Map<string, Engine>();
 
-  initialize(globalsContext: string, dispatch: Dispatch, router: Router) {
-    this._context = globalsContext;
+  constructor(context = '') {
+    this._context = context;
+  }
+
+  initialize(dispatch: Dispatch, router: Router) {
     this._dispatch = dispatch;
     this._router = router;
-    this._state = createEmptyState();
-    this._frontendLocalState = new FrontendLocalState(this.globalsContext);
-    this._rafScheduler = new RafScheduler(globalsContext);
-    this._serviceWorkerController = new ServiceWorkerController(globalsContext);
+    this._state = createEmptyState(this._context);
+    this._frontendLocalState = new FrontendLocalState(this.context);
+    this._rafScheduler = new RafScheduler(this.context);
+    this._serviceWorkerController = new ServiceWorkerController(this.context);
     this._testing =
         self.location && self.location.search.indexOf('testing=1') >= 0;
-    this._logging = initAnalytics(globalsContext);
+    this._logging = initAnalytics(this.context);
 
     // TODO(hjd): Unify trackDataStore, queryResults, overviewStore, threads.
     this._trackDataStore = new Map<string, {}>();
@@ -318,7 +326,7 @@ class Globals {
     this.engines.clear();
   }
 
-  get globalsContext(): string {
+  get context(): string {
     return this._context;
   }
 
@@ -645,6 +653,14 @@ class Globals {
     this._viewOpener = viewOpener;
   }
 
+  get errorHandler(): ErrorHandler {
+    return this._errorHandler;
+  }
+
+  set errorHandler(errorHandler: ErrorHandler) {
+    this._errorHandler = errorHandler;
+  }
+
   get allowFileDrop(): boolean {
     return this._allowFileDrop;
   }
@@ -659,6 +675,30 @@ class Globals {
 
   set httpRpcEngineCustomizer(httpRpcEngineCustomizer: HttpRcpEngineCustomizer | undefined) {
     this._httpRpcEngineCustomizer = httpRpcEngineCustomizer;
+  }
+
+  get promptToLoadFromTraceProcessorShell(): boolean {
+    return this._promptToLoadFromTraceProcessorShell;
+  }
+
+  set promptToLoadFromTraceProcessorShell(promptToLoadFromTraceProcessorShell: boolean) {
+    this._promptToLoadFromTraceProcessorShell = promptToLoadFromTraceProcessorShell;
+  }
+
+  get trackFilteringEnabled(): boolean {
+    return this._trackFilteringEnabled;
+  }
+
+  set trackFilteringEnabled(trackFilteringEnabled: boolean) {
+    this._trackFilteringEnabled = trackFilteringEnabled;
+  }
+
+  get filteredTracks(): AddTrackLikeArgs[] {
+    return this._filteredTracks;
+  }
+
+  set filteredTracks(filteredTracks: AddTrackLikeArgs[]) {
+    this._filteredTracks = [...filteredTracks];
   }
 
   get httpRpcEnginePort(): number {
@@ -788,6 +828,9 @@ export function registerNewGlobals(context: string, globals: Globals) {
   if (allGlobals.has(context)) {
     throw new Error('A Globals object with this context key is present already')
   }
+  // The usual mechanism for creating a new globals is via deep copy,
+  // which includes the original context which we must overwrite
+  Object.assign(globals, { _context: context });
   allGlobals.set(context, globals);
 }
 

@@ -32,6 +32,12 @@ let timeLastReport = 0;
 const queuedErrors = new Array<string>();
 const ERR_QUEUE_MAX_LEN = 10;
 
+export function showErrorDialog(globalsContext: string, errLog: string) {
+  // Force showing the dialog by resetting the last report time
+  timeLastReport = 0;
+  maybeShowErrorDialog(globalsContext, errLog);
+}
+
 export function maybeShowErrorDialog(globalsContext: string, errLog: string) {
   globals(globalsContext).logging.logError(errLog);
   const now = performance.now();
