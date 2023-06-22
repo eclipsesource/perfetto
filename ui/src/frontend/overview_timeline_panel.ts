@@ -25,6 +25,7 @@ import {
   OVERVIEW_TIMELINE_NON_VISIBLE_COLOR,
   SIDEBAR_WIDTH,
   TRACK_SHELL_WIDTH,
+  getCssStr,
 } from './css_constants';
 import {BorderDragStrategy} from './drag/border_drag_strategy';
 import {DragStrategy} from './drag/drag_strategy';
@@ -92,12 +93,11 @@ export class OverviewTimelinePanel extends Panel {
       const maxMajorTicks = getMaxMajorTicks(this.width - TRACK_SHELL_WIDTH);
       const tickGen = new TickGenerator(
           this.traceTime, maxMajorTicks, globals.state.traceTime.start);
-      // Set a background of color --perfetto-overview-background
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--perfetto-overview-background').trim() || 'white';
+      ctx.fillStyle = getCssStr('--overview-background-color');
       ctx.fillRect(TRACK_SHELL_WIDTH, headerHeight, this.width, size.height - headerHeight);
       // Draw time labels on the top header.
       ctx.font = '10px Roboto Condensed';
-      ctx.fillStyle = '#999';
+      ctx.fillStyle = getCssStr('--main-foreground-color');
       for (const {type, time} of tickGen) {
         const xPos = Math.floor(this.timeScale.tpTimeToPx(time));
         if (xPos <= 0) continue;
@@ -134,7 +134,7 @@ export class OverviewTimelinePanel extends Panel {
     }
 
     // Draw bottom border.
-    ctx.fillStyle = '#dadada';
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(0, size.height - 1, this.width, 1);
 
     // Draw semi-opaque rects that occlude the non-visible time range.
@@ -150,7 +150,7 @@ export class OverviewTimelinePanel extends Panel {
     ctx.fillRect(vizEndPx, headerHeight, this.width - vizEndPx, tracksHeight);
 
     // Draw brushes.
-    ctx.fillStyle = '#999';
+    ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(vizStartPx - 1, headerHeight, 1, tracksHeight);
     ctx.fillRect(vizEndPx, headerHeight, 1, tracksHeight);
 
@@ -180,12 +180,13 @@ export class OverviewTimelinePanel extends Panel {
     if (this.timeScale === undefined) return 'default';
     const [vizStartPx, vizEndPx] =
         OverviewTimelinePanel.extractBounds(this.timeScale);
-    const startBound = vizStartPx - 1 + SIDEBAR_WIDTH;
-    const endBound = vizEndPx + SIDEBAR_WIDTH;
+    const offset = globals.hideSidebar ? 0 : SIDEBAR_WIDTH;
+    const startBound = vizStartPx - 1 + offset;
+    const endBound = vizEndPx + offset;
     if (OverviewTimelinePanel.inBorderRange(x, startBound) ||
         OverviewTimelinePanel.inBorderRange(x, endBound)) {
       return 'ew-resize';
-    } else if (x < SIDEBAR_WIDTH + TRACK_SHELL_WIDTH) {
+    } else if (x < offset + TRACK_SHELL_WIDTH) {
       return 'default';
     } else if (x < startBound || endBound < x) {
       return 'crosshair';

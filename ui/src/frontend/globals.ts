@@ -14,8 +14,8 @@
 
 import {BigintMath} from '../base/bigint_math';
 import {HttpRcpEngineCustomizer} from '../common/http_rpc_engine';
-import {assertExists} from '../base/logging';
-import {Actions, DeferredAction} from '../common/actions';
+import {ErrorHandler, assertExists} from '../base/logging';
+import {Actions, AddTrackLikeArgs, DeferredAction} from '../common/actions';
 import {AggregateData} from '../common/aggregation_data';
 import {Args, ArgsTree} from '../common/arg_types';
 import {
@@ -45,6 +45,7 @@ import { RafScheduler } from './raf_scheduler';
 import { Router } from './router';
 import {ServiceWorkerController} from './service_worker_controller';
 import {PxSpan, TimeScale} from './time_scale';
+import { maybeShowErrorDialog } from './error_dialog';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
@@ -265,9 +266,13 @@ class Globals {
   private _cachePrefix: string = '';
 
   private _viewOpener?: ViewOpener = undefined;
+  private _errorHandler: ErrorHandler = maybeShowErrorDialog;
   private _allowFileDrop = true;
   private _httpRpcEngineCustomizer?: HttpRcpEngineCustomizer;
   private _httpRpcEnginePort = 9001;
+  private _promptToLoadFromTraceProcessorShell = true;
+  private _trackFilteringEnabled = false;
+  private _filteredTracks: AddTrackLikeArgs[] = [];
 
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
@@ -639,6 +644,14 @@ class Globals {
     this._viewOpener = viewOpener;
   }
 
+  get errorHandler(): ErrorHandler {
+    return this._errorHandler;
+  }
+
+  set errorHandler(errorHandler: ErrorHandler) {
+    this._errorHandler = errorHandler;
+  }
+
   get allowFileDrop(): boolean {
     return this._allowFileDrop;
   }
@@ -661,6 +674,30 @@ class Globals {
 
   set httpRpcEnginePort(httpRpcEnginePort: number) {
     this._httpRpcEnginePort = httpRpcEnginePort;
+  }
+
+  get promptToLoadFromTraceProcessorShell(): boolean {
+    return this._promptToLoadFromTraceProcessorShell;
+  }
+
+  set promptToLoadFromTraceProcessorShell(promptToLoadFromTraceProcessorShell: boolean) {
+    this._promptToLoadFromTraceProcessorShell = promptToLoadFromTraceProcessorShell;
+  }
+
+  get trackFilteringEnabled(): boolean {
+    return this._trackFilteringEnabled;
+  }
+
+  set trackFilteringEnabled(trackFilteringEnabled: boolean) {
+    this._trackFilteringEnabled = trackFilteringEnabled;
+  }
+
+  get filteredTracks(): AddTrackLikeArgs[] {
+    return this._filteredTracks;
+  }
+
+  set filteredTracks(filteredTracks: AddTrackLikeArgs[]) {
+    this._filteredTracks = [...filteredTracks];
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
