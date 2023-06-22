@@ -21,16 +21,14 @@ import {TPTime} from '../common/time';
 
 import {SELECTION_FILL_COLOR, TRACK_SHELL_WIDTH} from './css_constants';
 import {PerfettoMouseEvent} from './events';
-import {globals} from './globals';
+import {HasGlobalsContextAttrs, bindGlobals, globals} from './globals';
 import {drawGridLines} from './gridline_helper';
 import {BLANK_CHECKBOX, CHECKBOX, PIN} from './icons';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 import {verticalScrollToTrack} from './scroll_helper';
 import {SliceRect, Track} from './track';
 import {trackRegistry} from './track_registry';
-import {
-  drawVerticalLineAtTime,
-} from './vertical_line_helper';
+import {drawVerticalLineAtTime} from './vertical_line_helper';
 
 function getTitleSize(title: string): string|undefined {
   const length = title.length;
@@ -52,18 +50,14 @@ function getTitleSize(title: string): string|undefined {
   return undefined;
 }
 
-function isPinned(id: string) {
-  return globals.state.pinnedTracks.indexOf(id) !== -1;
-}
-
-function isSelected(id: string) {
-  const selection = globals.state.currentSelection;
+function isSelected(globalsContext: string, id: string) {
+  const selection = globals(globalsContext).state.currentSelection;
   if (selection === null || selection.kind !== 'AREA') return false;
-  const selectedArea = globals.state.areas[selection.areaId];
+  const selectedArea = globals(globalsContext).state.areas[selection.areaId];
   return selectedArea.tracks.includes(id);
 }
 
-interface TrackShellAttrs {
+interface TrackShellAttrs extends HasGlobalsContextAttrs {
   track: Track;
   trackState: TrackState;
 }
@@ -73,18 +67,20 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   private dragging = false;
   private dropping: 'before'|'after'|undefined = undefined;
   private attrs?: TrackShellAttrs;
+  private globals = bindGlobals();
 
   oninit(vnode: m.Vnode<TrackShellAttrs>) {
     this.attrs = vnode.attrs;
+    this.globals = bindGlobals(vnode.attrs.globalsContext);
   }
 
   view({attrs}: m.CVnode<TrackShellAttrs>) {
     // The shell should be highlighted if the current search result is inside
     // this track.
     let highlightClass = '';
-    const searchIndex = globals.state.searchIndex;
+    const searchIndex = this.globals().state.searchIndex;
     if (searchIndex !== -1) {
-      const trackId = globals.currentSearchResults.trackIds[searchIndex];
+      const trackId = this.globals().currentSearchResults.trackIds[searchIndex];
       if (trackId === attrs.trackState.id) {
         highlightClass = 'flash';
       }
@@ -92,6 +88,9 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
 
     const dragClass = this.dragging ? `drag` : '';
     const dropClass = this.dropping ? `drop-${this.dropping}` : '';
+    const isPinned = (id: string) => 
+        this.globals().state.pinnedTracks.indexOf(id) !== -1;
+
     return m(
         `.track-shell[draggable=true]`,
         {
@@ -119,7 +118,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
           attrs.track.getContextMenu(),
           m(TrackButton, {
             action: () => {
-              globals.dispatch(
+              this.globals().dispatch(
                   Actions.toggleTrackPinned({trackId: attrs.trackState.id}));
             },
             i: PIN,
@@ -128,16 +127,16 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
             showButton: isPinned(attrs.trackState.id),
             fullHeight: true,
           }),
-          globals.state.currentSelection !== null &&
-                  globals.state.currentSelection.kind === 'AREA' ?
+          this.globals().state.currentSelection !== null &&
+                  this.globals().state.currentSelection!.kind === 'AREA' ?
               m(TrackButton, {
                 action: (e: PerfettoMouseEvent) => {
-                  globals.dispatch(Actions.toggleTrackSelection(
+                  this.globals().dispatch(Actions.toggleTrackSelection(
                       {id: attrs.trackState.id, isTrackGroup: false}));
                   e.stopPropagation();
                 },
-                i: isSelected(attrs.trackState.id) ? CHECKBOX : BLANK_CHECKBOX,
-                tooltip: isSelected(attrs.trackState.id) ?
+                i: isSelected(this.globals.context, attrs.trackState.id) ? CHECKBOX : BLANK_CHECKBOX,
+                tooltip: isSelected(this.globals.context, attrs.trackState.id) ?
                     'Remove track' :
                     'Add track to selection',
                 showButton: true,
@@ -149,14 +148,14 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     const dataTransfer = e.dataTransfer;
     if (dataTransfer === null) return;
     this.dragging = true;
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
     dataTransfer.setData('perfetto/track', `${this.attrs!.trackState.id}`);
     dataTransfer.setDragImage(new Image(), 0, 0);
   }
 
   ondragend() {
     this.dragging = false;
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   ondragover(e: DragEvent) {
@@ -175,22 +174,22 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     } else if (e.offsetY > e.target.scrollHeight / 3 * 2) {
       this.dropping = 'after';
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   ondragleave() {
     this.dropping = undefined;
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   ondrop(e: DragEvent) {
     if (this.dropping === undefined) return;
     const dataTransfer = e.dataTransfer;
     if (dataTransfer === null) return;
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
     const srcId = dataTransfer.getData('perfetto/track');
     const dstId = this.attrs!.trackState.id;
-    globals.dispatch(Actions.moveTrack({srcId, op: this.dropping, dstId}));
+    this.globals().dispatch(Actions.moveTrack({srcId, op: this.dropping, dstId}));
     this.dropping = undefined;
   }
 
@@ -198,7 +197,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     const result = [...attrs.track.getTrackShellButtons()];
     if (attrs.trackState.isRemovable ?? false) {
       result.push(m(TrackButton, {
-        action: () => globals.dispatch(Actions.removeTrack({ trackId: attrs.trackState.id })),
+        action: () => this.globals().dispatch(Actions.removeTrack({ trackId: attrs.trackState.id })),
         i: 'delete',
         tooltip: 'Remove track',
         showButton: false, // Only show on roll-over
@@ -209,7 +208,10 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   }
 }
 
-export interface TrackContentAttrs { track: Track; }
+export interface TrackContentAttrs extends HasGlobalsContextAttrs {
+  track: Track;
+}
+
 export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
   private mouseDownX?: number;
   private mouseDownY?: number;
@@ -217,17 +219,18 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
 
   view(node: m.CVnode<TrackContentAttrs>) {
     const attrs = node.attrs;
+    const globalsContext = attrs.globalsContext;
     return m(
         '.track-content',
         {
           onmousemove: (e: PerfettoMouseEvent) => {
             attrs.track.onMouseMove(
                 {x: e.layerX - TRACK_SHELL_WIDTH, y: e.layerY});
-            globals.rafScheduler.scheduleRedraw();
+            globals(globalsContext).rafScheduler.scheduleRedraw();
           },
           onmouseout: () => {
             attrs.track.onMouseOut();
-            globals.rafScheduler.scheduleRedraw();
+            globals(globalsContext).rafScheduler.scheduleRedraw();
           },
           onmousedown: (e: PerfettoMouseEvent) => {
             this.mouseDownX = e.layerX;
@@ -258,14 +261,14 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
                     {x: e.layerX - TRACK_SHELL_WIDTH, y: e.layerY})) {
               e.stopPropagation();
             }
-            globals.rafScheduler.scheduleRedraw();
+            globals(globalsContext).rafScheduler.scheduleRedraw();
           },
         },
         node.children);
   }
 }
 
-interface TrackComponentAttrs {
+interface TrackComponentAttrs extends HasGlobalsContextAttrs {
   trackState: TrackState;
   track: Track;
 }
@@ -283,15 +286,16 @@ class TrackComponent implements m.ClassComponent<TrackComponentAttrs> {
           id: 'track_' + attrs.trackState.id,
         },
         [
-          m(TrackShell, {track: attrs.track, trackState: attrs.trackState}),
-          m(TrackContent, {track: attrs.track}),
+          m(TrackShell, {globalsContext: attrs.globalsContext, track: attrs.track, trackState: attrs.trackState}),
+          m(TrackContent, {globalsContext: attrs.globalsContext, track: attrs.track}),
         ]);
   }
 
   oncreate({attrs}: m.CVnode<TrackComponentAttrs>) {
-    if (globals.frontendLocalState.scrollToTrackId === attrs.trackState.id) {
-      verticalScrollToTrack(attrs.trackState.id);
-      globals.frontendLocalState.scrollToTrackId = undefined;
+    const globalsContext = attrs.globalsContext;
+    if (globals(globalsContext).frontendLocalState.scrollToTrackId === attrs.trackState.id) {
+      verticalScrollToTrack(globalsContext, attrs.trackState.id);
+      globals(globalsContext).frontendLocalState.scrollToTrackId = undefined;
     }
   }
 }
@@ -322,7 +326,7 @@ export class TrackButton implements m.ClassComponent<TrackButtonAttrs> {
   }
 }
 
-interface TrackPanelAttrs {
+interface TrackPanelAttrs extends PanelAttrs {
   id: string;
   selectable: boolean;
 }
@@ -335,18 +339,18 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
   private trackState: TrackState|undefined;
 
   constructor(vnode: m.CVnode<TrackPanelAttrs>) {
-    super();
+    super(vnode);
     const trackId = vnode.attrs.id;
-    const trackState = globals.state.tracks[trackId];
+    const trackState = this.globals().state.tracks[trackId];
     if (trackState === undefined) {
       return;
     }
-    const engine = globals.engines.get(trackState.engineId);
+    const engine = this.globals().engines.get(trackState.engineId);
     if (engine === undefined) {
       return;
     }
     const trackCreator = trackRegistry.get(trackState.kind);
-    this.track = trackCreator.create({trackId, engine});
+    this.track = trackCreator.create({globalsContext: vnode.attrs.globalsContext, trackId, engine});
     this.trackState = trackState;
   }
 
@@ -354,7 +358,7 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
     if (this.track === undefined || this.trackState === undefined) {
       return m('div', 'No such track');
     }
-    return m(TrackComponent, {trackState: this.trackState, track: this.track});
+    return m(TrackComponent, {globalsContext: this.globals.context, trackState: this.trackState, track: this.track});
   }
 
   oncreate() {
@@ -377,13 +381,13 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
   }
 
   highlightIfTrackSelected(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    const {visibleTimeScale} = globals.frontendLocalState;
-    const selection = globals.state.currentSelection;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
+    const selection = this.globals().state.currentSelection;
     const trackState = this.trackState;
     if (!selection || selection.kind !== 'AREA' || trackState === undefined) {
       return;
     }
-    const selectedArea = globals.state.areas[selection.areaId];
+    const selectedArea = this.globals().state.areas[selection.areaId];
     const selectedAreaDuration = selectedArea.end - selectedArea.start;
     if (selectedArea.tracks.includes(trackState.id)) {
       ctx.fillStyle = SELECTION_FILL_COLOR;
@@ -399,6 +403,7 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
     ctx.save();
 
     drawGridLines(
+        this.globals.context,
         ctx,
         size.width,
         size.height);
@@ -411,53 +416,53 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
 
     this.highlightIfTrackSelected(ctx, size);
 
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     // Draw vertical line when hovering on the notes panel.
-    if (globals.state.hoveredNoteTimestamp !== -1n) {
+    if (this.globals().state.hoveredNoteTimestamp !== -1n) {
       drawVerticalLineAtTime(
           ctx,
           visibleTimeScale,
-          globals.state.hoveredNoteTimestamp,
+          this.globals().state.hoveredNoteTimestamp,
           size.height,
           `#aaa`);
     }
-    if (globals.state.hoverCursorTimestamp !== -1n) {
+    if (this.globals().state.hoverCursorTimestamp !== -1n) {
       drawVerticalLineAtTime(
           ctx,
           visibleTimeScale,
-          globals.state.hoverCursorTimestamp,
+          this.globals().state.hoverCursorTimestamp,
           size.height,
           `#344596`);
     }
 
-    if (globals.state.currentSelection !== null) {
-      if (globals.state.currentSelection.kind === 'SLICE' &&
-          globals.sliceDetails.wakeupTs !== undefined) {
+    if (this.globals().state.currentSelection !== null) {
+      if (this.globals().state.currentSelection!.kind === 'SLICE' &&
+      this.globals().sliceDetails.wakeupTs !== undefined) {
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.sliceDetails.wakeupTs,
+            this.globals().sliceDetails.wakeupTs!,
             size.height,
             `black`);
       }
     }
     // All marked areas should have semi-transparent vertical lines
     // marking the start and end.
-    for (const note of Object.values(globals.state.notes)) {
+    for (const note of Object.values(this.globals().state.notes)) {
       if (note.noteType === 'AREA') {
         const transparentNoteColor =
             'rgba(' + hex.rgb(note.color.substr(1)).toString() + ', 0.65)';
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.state.areas[note.areaId].start,
+            this.globals().state.areas[note.areaId].start,
             size.height,
             transparentNoteColor,
             1);
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.state.areas[note.areaId].end,
+            this.globals().state.areas[note.areaId].end,
             size.height,
             transparentNoteColor,
             1);

@@ -35,8 +35,8 @@ export class AdbConsumerPort extends AdbBaseConsumerPort {
   shellState: AdbShellState = AdbShellState.READY;
   private recordShell?: AdbStream;
 
-  constructor(adb: Adb, consumer: Consumer) {
-    super(adb, consumer);
+  constructor(globalsContext: string, adb: Adb, consumer: Consumer) {
+    super(globalsContext, adb, consumer);
     this.adb = adb;
   }
 

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { HasGlobalsContextAttrs } from '../frontend/globals';
 import {BigintMath} from '../base/bigint_math';
 import {Engine} from '../common/engine';
 import {
@@ -29,7 +30,6 @@ import {
   TPTime,
   TPTimeSpan,
 } from '../common/time';
-import {globals} from '../frontend/globals';
 import {publishTrackData} from '../frontend/publish';
 
 import {Controller} from './controller';
@@ -162,7 +162,7 @@ class Pagination {
   }
 }
 
-export interface LogsControllerArgs {
+export interface LogsControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 
@@ -187,13 +187,13 @@ export class LogsController extends Controller<'main'> {
   private queuedRunRequest = false;
 
   constructor(args: LogsControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
     this.engine = args.engine;
     this.span = new TPTimeSpan(0n, BigInt(10e9));
     this.pagination = new Pagination(0, 0);
     this.hasAnyLogs().then((exists) => {
       this.hasLogs = exists;
-      publishTrackData({
+      publishTrackData(this.globals.context, {
         id: LogExistsKey,
         data: {
           exists,
@@ -226,10 +226,10 @@ export class LogsController extends Controller<'main'> {
   }
 
   private async updateLogTracks() {
-    const newSpan = globals.stateVisibleTime();
+    const newSpan = this.globals().stateVisibleTime();
     const oldSpan = this.span;
 
-    const pagination = globals.state.logsPagination;
+    const pagination = this.globals().state.logsPagination;
     // This can occur when loading old traces.
     // TODO(hjd): Fix the problem of accessing state from a previous version of
     // the UI in a general way.
@@ -242,13 +242,13 @@ export class LogsController extends Controller<'main'> {
     const oldPagination = this.pagination;
 
     const newFilteringCriteria =
-        this.logFilteringCriteria !== globals.state.logFilteringCriteria;
+        this.logFilteringCriteria !== this.globals().state.logFilteringCriteria;
     const needBoundsUpdate = !oldSpan.equals(newSpan) || newFilteringCriteria;
     const needEntriesUpdate =
         !oldPagination.contains(requestedPagination) || needBoundsUpdate;
 
     if (newFilteringCriteria) {
-      this.logFilteringCriteria = globals.state.logFilteringCriteria;
+      this.logFilteringCriteria = this.globals().state.logFilteringCriteria;
       await this.engine.query('drop view if exists filtered_logs');
 
       const globMatch = LogsController.composeGlobMatch(
@@ -274,7 +274,7 @@ export class LogsController extends Controller<'main'> {
     if (needBoundsUpdate) {
       this.span = newSpan;
       const logBounds = await updateLogBounds(this.engine, newSpan);
-      publishTrackData({
+      publishTrackData(this.globals.context, {
         id: LogBoundsKey,
         data: logBounds,
       });
@@ -284,7 +284,7 @@ export class LogsController extends Controller<'main'> {
       this.pagination = requestedPagination.grow(100);
       const logEntries =
           await updateLogEntries(this.engine, newSpan, this.pagination);
-      publishTrackData({
+      publishTrackData(this.globals.context, {
         id: LogEntriesKey,
         data: logEntries,
       });

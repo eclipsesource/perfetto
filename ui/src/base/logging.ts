@@ -14,7 +14,7 @@
 
 import {SCM_REVISION, VERSION} from '../gen/perfetto_version';
 
-export type ErrorHandler = (err: string) => void;
+export type ErrorHandler = (globalsContext: string, err: string) => void;
 
 let errorHandler: ErrorHandler = (_: string) => {};
 
@@ -39,9 +39,9 @@ export function setErrorHandler(handler: ErrorHandler) {
   errorHandler = handler;
 }
 
-export function reportError(err: ErrorEvent|PromiseRejectionEvent|{}): void;
-export function reportError(err: ErrorEvent|PromiseRejectionEvent|{}, handler: ErrorHandler): void;
-export function reportError(err: ErrorEvent|PromiseRejectionEvent|{}, handler = errorHandler) {
+export function reportError(globalsContext: string, err: ErrorEvent|PromiseRejectionEvent|{}): void;
+export function reportError(globalsContext: string, err: ErrorEvent|PromiseRejectionEvent|{}, handler: ErrorHandler): void;
+export function reportError(globalsContext: string, err: ErrorEvent|PromiseRejectionEvent|{}, handler = errorHandler) {
   let errLog = '';
   let errorObj = undefined;
 
@@ -64,7 +64,7 @@ export function reportError(err: ErrorEvent|PromiseRejectionEvent|{}, handler = 
   errLog += `UA: ${navigator.userAgent}\n`;
 
   console.error(errLog, err);
-  handler?.(errLog);
+  handler?.(globalsContext, errLog);
 }
 
 // This function serves two purposes.

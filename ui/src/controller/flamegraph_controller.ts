@@ -28,7 +28,7 @@ import {
 import {NUM, STR} from '../common/query_result';
 import {CallsiteInfo, FlamegraphState, ProfileType} from '../common/state';
 import {tpDurationToSeconds, TPTime} from '../common/time';
-import {FlamegraphDetails, globals} from '../frontend/globals';
+import {FlamegraphDetails, HasGlobalsContextAttrs} from '../frontend/globals';
 import {publishFlamegraphDetails} from '../frontend/publish';
 import {
   Config as PerfSampleConfig,
@@ -67,7 +67,7 @@ function getFlamegraphType(type: ProfileType) {
   }
 }
 
-export interface FlamegraphControllerArgs {
+export interface FlamegraphControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 const MIN_PIXEL_DISPLAYED = 1;
@@ -116,9 +116,9 @@ export class FlamegraphController extends Controller<'main'> {
   private cache: TablesCache;
 
   constructor(private args: FlamegraphControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
     this.cache = new TablesCache(args.engine, 'grouped_callsites');
-    this.areaSelectionHandler = new AreaSelectionHandler();
+    this.areaSelectionHandler = new AreaSelectionHandler(args.globalsContext);
   }
 
   run() {
@@ -127,11 +127,11 @@ export class FlamegraphController extends Controller<'main'> {
       const upids = [];
       if (!area) {
         this.checkCompletionAndPublishFlamegraph(
-            {...globals.flamegraphDetails, isInAreaSelection: false});
+            {...this.globals().flamegraphDetails, isInAreaSelection: false});
         return;
       }
       for (const trackId of area.tracks) {
-        const trackState = globals.state.tracks[trackId];
+        const trackState = this.globals().state.tracks[trackId];
         if (!trackState ||
             trackState.kind !== PERF_SAMPLES_PROFILE_TRACK_KIND) {
           continue;
@@ -140,10 +140,10 @@ export class FlamegraphController extends Controller<'main'> {
       }
       if (upids.length === 0) {
         this.checkCompletionAndPublishFlamegraph(
-            {...globals.flamegraphDetails, isInAreaSelection: false});
+            {...this.globals().flamegraphDetails, isInAreaSelection: false});
         return;
       }
-      globals.dispatch(Actions.openFlamegraph({
+      this.globals().dispatch(Actions.openFlamegraph({
         upids,
         start: area.start,
         end: area.end,
@@ -151,7 +151,7 @@ export class FlamegraphController extends Controller<'main'> {
         viewingOption: PERF_SAMPLES_KEY,
       }));
     }
-    const selection = globals.state.currentFlamegraphState;
+    const selection = this.globals().state.currentFlamegraphState;
     if (!selection || !this.shouldRequestData(selection)) {
       return;
     }
@@ -263,7 +263,7 @@ export class FlamegraphController extends Controller<'main'> {
        where severity = 'error' and name = 'heap_graph_non_finalized_graph'`))
             .firstRow({value: NUM})
             .value > 0;
-    publishFlamegraphDetails(flamegraphDetails);
+    publishFlamegraphDetails(this.globals.context, flamegraphDetails);
   }
 
   async getFlamegraphData(
@@ -454,8 +454,8 @@ export class FlamegraphController extends Controller<'main'> {
 
   getMinSizeDisplayed(flamegraphData: CallsiteInfo[], rootSize?: number):
       number {
-    const timeState = globals.state.frontendLocalState.visibleState;
-    const dur = globals.stateVisibleTime().duration;
+    const timeState = this.globals().state.frontendLocalState.visibleState;
+    const dur = this.globals().stateVisibleTime().duration;
     let width = tpDurationToSeconds(dur / timeState.resolution);
     // TODO(168048193): Remove screen size hack:
     width = Math.max(width, 800);

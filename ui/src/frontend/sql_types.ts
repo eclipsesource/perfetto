@@ -37,8 +37,8 @@ export function asTPTimestamp(v?: bigint): TPTimestamp|undefined {
 }
 
 // TODO: unify this with common/time.ts.
-export function toTraceTime(ts: TPTimestamp): TPTime {
-  return ts - globals.state.traceTime.start;
+export function toTraceTime(globalsContext: string, ts: TPTimestamp): TPTime {
+  return ts - globals(globalsContext).state.traceTime.start;
 }
 
 // Unique id for a process, id into |process| table.

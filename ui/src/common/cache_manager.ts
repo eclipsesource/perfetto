@@ -81,7 +81,7 @@ async function cacheKeys(): Promise<readonly Request[]> {
 }
 
 export async function cacheTrace(
-    traceSource: TraceSource, traceUuid: string): Promise<boolean> {
+    globalsContext: string, traceSource: TraceSource, traceUuid: string): Promise<boolean> {
   let trace;
   let title = '';
   let fileName = '';
@@ -122,14 +122,14 @@ export async function cacheTrace(
   ]);
   await deleteStaleEntries();
   await cachePut(
-      `${globals.cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`, new Response(trace, {headers}));
+      `${globals(globalsContext).cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`, new Response(trace, {headers}));
   return true;
 }
 
-export async function tryGetTrace(traceUuid: string):
+export async function tryGetTrace(globalsContext: string, traceUuid: string):
     Promise<TraceArrayBufferSource|undefined> {
   await deleteStaleEntries();
-  const response = await cacheMatch(`${globals.cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`);
+  const response = await cacheMatch(`${globals(globalsContext).cachePrefix}/_${TRACE_CACHE_NAME}/${traceUuid}`);
 
   if (!response) return undefined;
   return {

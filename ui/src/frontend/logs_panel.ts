@@ -26,13 +26,12 @@ import {
 import {formatTPTime, TPTime} from '../common/time';
 
 import {SELECTED_LOG_ROWS_COLOR} from './css_constants';
-import {globals} from './globals';
 import {LOG_PRIORITIES, LogsFilters} from './logs_filters';
-import {Panel} from './panel';
+import {Panel, PanelAttrs} from './panel';
 
 const ROW_H = 20;
 
-export class LogPanel extends Panel<{}> {
+export class LogPanel extends Panel<PanelAttrs> {
   private scrollContainer?: HTMLElement;
   private bounds?: LogBounds;
   private entries?: LogEntries;
@@ -50,45 +49,45 @@ export class LogPanel extends Panel<{}> {
 
     if (this.visibleRowOffset !== prevOffset ||
         this.visibleRowCount !== prevCount) {
-      globals.dispatch(Actions.updateLogsPagination({
+      this.globals().dispatch(Actions.updateLogsPagination({
         offset: this.visibleRowOffset,
         count: this.visibleRowCount,
       }));
     }
   }
 
-  oncreate({dom}: m.CVnodeDOM) {
+  oncreate({dom}: m.CVnodeDOM<PanelAttrs>) {
     this.scrollContainer = assertExists(
         dom.parentElement!.parentElement!.parentElement as HTMLElement);
     this.scrollContainer.addEventListener(
         'scroll', this.onScroll.bind(this), {passive: true});
     // TODO(stevegolton): Type assersions are a source of bugs.
     // Let's try to find another way of doing this.
-    this.bounds = globals.trackDataStore.get(LogBoundsKey) as LogBounds;
-    this.entries = globals.trackDataStore.get(LogEntriesKey) as LogEntries;
+    this.bounds = this.globals().trackDataStore.get(LogBoundsKey) as LogBounds;
+    this.entries = this.globals().trackDataStore.get(LogEntriesKey) as LogEntries;
     this.recomputeVisibleRowsAndUpdate();
   }
 
-  onbeforeupdate(_: m.CVnodeDOM) {
+  onbeforeupdate(_: m.CVnodeDOM<PanelAttrs>) {
     // TODO(stevegolton): Type assersions are a source of bugs.
     // Let's try to find another way of doing this.
-    this.bounds = globals.trackDataStore.get(LogBoundsKey) as LogBounds;
-    this.entries = globals.trackDataStore.get(LogEntriesKey) as LogEntries;
+    this.bounds = this.globals().trackDataStore.get(LogBoundsKey) as LogBounds;
+    this.entries = this.globals().trackDataStore.get(LogEntriesKey) as LogEntries;
     this.recomputeVisibleRowsAndUpdate();
   }
 
   onScroll() {
     if (this.scrollContainer === undefined) return;
     this.recomputeVisibleRowsAndUpdate();
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   onRowOver(ts: TPTime) {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts}));
+    this.globals().dispatch(Actions.setHoverCursorTimestamp({ts}));
   }
 
   onRowOut() {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
+    this.globals().dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
   }
 
   private totalRows():
@@ -101,7 +100,7 @@ export class LogPanel extends Panel<{}> {
       firstVisibleLogTs,
       lastVisibleLogTs,
     } = this.bounds;
-    const vis = globals.frontendLocalState.visibleWindowTime;
+    const vis = this.globals().frontendLocalState.visibleWindowTime;
 
     const visibleLogSpan =
         new HighPrecisionTimeSpan(firstVisibleLogTs, lastVisibleLogTs);
@@ -111,7 +110,7 @@ export class LogPanel extends Panel<{}> {
     return {isStale, total: totalVisibleLogs, count: visCount, offset};
   }
 
-  view(_: m.CVnode<{}>) {
+  view(_: m.CVnode<PanelAttrs>) {
     const {isStale, total, offset, count} = this.totalRows();
 
     const hasProcessNames = this.entries &&
@@ -155,7 +154,7 @@ export class LogPanel extends Panel<{}> {
                 'onmouseover': this.onRowOver.bind(this, ts),
                 'onmouseout': this.onRowOut.bind(this),
               },
-              m('.cell', formatTPTime(ts - globals.state.traceTime.start)),
+              m('.cell', formatTPTime(ts - this.globals().state.traceTime.start)),
               m('.cell', priorityLetter || '?'),
               m('.cell', tags[i]),
               hasProcessNames ? m('.cell.with-process', processNames[i]) :

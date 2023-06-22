@@ -24,7 +24,6 @@ import {
   bottomTabRegistry,
   NewBottomTabArgs,
 } from '../../frontend/bottom_tab';
-import {globals} from '../../frontend/globals';
 import {asTPTimestamp} from '../../frontend/sql_types';
 import {Duration} from '../../frontend/widgets/duration';
 import {Timestamp} from '../../frontend/widgets/timestamp';
@@ -53,7 +52,7 @@ export class TopLevelScrollDetailsTab extends
             this.config.id}`)
         .then((queryResult) => {
           this.data = queryResult.firstRow({});
-          globals.rafScheduler.scheduleFullRedraw();
+          this.globals().rafScheduler.scheduleFullRedraw();
         });
   }
 
@@ -62,10 +61,10 @@ export class TopLevelScrollDetailsTab extends
       return m('h2', 'Loading');
     }
 
-    const left = dictToTree({
+    const left = dictToTree(this.globals.context, {
       'Scroll Id (gesture_scroll_id)': `${this.data['id']}`,
       'Start time':
-          m(Timestamp, {ts: asTPTimestamp(tpTimeFromSql(this.data['ts']))}),
+          m(Timestamp, {globalsContext: this.globals.context, ts: asTPTimestamp(tpTimeFromSql(this.data['ts']))}),
       'Duration': m(Duration, {dur: tpDurationFromSql(this.data['dur'])}),
     });
     return m(

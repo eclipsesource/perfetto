@@ -17,23 +17,22 @@ import m from 'mithril';
 import {TPTimeSpan} from '../common/time';
 
 import {getCssStr, TRACK_SHELL_WIDTH} from './css_constants';
-import {globals} from './globals';
 import {
   getMaxMajorTicks,
   TickGenerator,
   TickType,
   timeScaleForVisibleWindow,
 } from './gridline_helper';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 
 // This is used to display the summary of search results.
-export class TickmarkPanel extends Panel {
+export class TickmarkPanel extends Panel<PanelAttrs> {
   view() {
     return m('.tickbar');
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
 
     ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
@@ -43,12 +42,12 @@ export class TickmarkPanel extends Panel {
     ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
     ctx.clip();
 
-    const visibleSpan = globals.frontendLocalState.visibleWindow.timestampSpan;
+    const visibleSpan = this.globals().frontendLocalState.visibleWindow.timestampSpan;
     if (size.width > TRACK_SHELL_WIDTH && visibleSpan.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
-      const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+      const map = timeScaleForVisibleWindow(this.globals.context, TRACK_SHELL_WIDTH, size.width);
       for (const {type, time} of new TickGenerator(
-               visibleSpan, maxMajorTicks, globals.state.traceTime.start)) {
+               visibleSpan, maxMajorTicks, this.globals().state.traceTime.start)) {
         const px = Math.floor(map.tpTimeToPx(time));
         if (type === TickType.MAJOR) {
           ctx.fillRect(px, 0, 1, size.height);
@@ -56,7 +55,7 @@ export class TickmarkPanel extends Panel {
       }
     }
 
-    const data = globals.searchSummary;
+    const data = this.globals().searchSummary;
     for (let i = 0; i < data.tsStarts.length; i++) {
       const tStart = data.tsStarts[i];
       const tEnd = data.tsEnds[i];
@@ -74,9 +73,9 @@ export class TickmarkPanel extends Panel {
           Math.ceil(rectEnd - rectStart),
           size.height);
     }
-    const index = globals.state.searchIndex;
+    const index = this.globals().state.searchIndex;
     if (index !== -1) {
-      const start = globals.currentSearchResults.tsStarts[index];
+      const start = this.globals().currentSearchResults.tsStarts[index];
       const triangleStart =
           Math.max(visibleTimeScale.tpTimeToPx(start), 0) + TRACK_SHELL_WIDTH;
       ctx.fillStyle = '#000';

@@ -134,22 +134,23 @@ function getCounterScale(name: string): CounterScaleOptions|undefined {
 
 /** Decide tracks without filtering. */
 export async function decideTracks(
-  engineId: string, engine: Engine): Promise<DeferredAction[]>;
+  globalsContext: string, engineId: string, engine: Engine): Promise<DeferredAction[]>;
 /** Decide tracks without filtering. */
 export async function decideTracks(
-  engineId: string, engine: Engine, filter: false): Promise<DeferredAction[]>;
+  globalsContext: string, engineId: string, engine: Engine, filter: false): Promise<DeferredAction[]>;
 /** Decide tracks with filtering. */
 export async function decideTracks(
-    engineId: string, engine: Engine, filter: true): Promise<TrackDecision>;
+  globalsContext: string, engineId: string, engine: Engine, filter: true): Promise<TrackDecision>;
 
 export async function decideTracks(
-    engineId: string, engine: Engine, filter: boolean = false): Promise<DeferredAction[]|TrackDecision> {
+    globalsContext: string, engineId: string, engine: Engine, filter: boolean = false): Promise<DeferredAction[]|TrackDecision> {
   
-  const result = await (new TrackDecider(engineId, engine)).decideTracks(filter);
+  const result = await (new TrackDecider(globalsContext, engineId, engine)).decideTracks(filter);
   return filter ? result : result.actions;
 }
 
 class TrackDecider {
+  private globalsContext: string;
   private engineId: string;
   private engine: Engine;
   private upidToUuid = new Map<number, string>();
@@ -157,7 +158,8 @@ class TrackDecider {
   private tracksToAdd: AddTrackArgs[] = [];
   private trackGroupsToAdd: AddTrackGroupArgs[] = [];
 
-  constructor(engineId: string, engine: Engine) {
+  constructor(globalsContext: string, engineId: string, engine: Engine) {
+    this.globalsContext = globalsContext;
     this.engineId = engineId;
     this.engine = engine;
   }
@@ -1841,7 +1843,9 @@ class TrackDecider {
 
     // TODO(hjd): Move into plugin API.
     {
-      const result = scrollJankDecideTracks(this.engine, (utid, upid) => {
+      const result = scrollJankDecideTracks(
+        this.globalsContext,
+        this.engine, (utid, upid) => {
         return this.getUuid(utid, upid);
       });
       if (result !== null) {

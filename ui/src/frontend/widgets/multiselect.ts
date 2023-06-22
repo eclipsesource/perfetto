@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import m from 'mithril';
-import {globals} from '../globals';
+import {bindGlobals, GlobalsFunction, HasGlobalsContextAttrs} from '../globals';
 import {DESELECT, SELECT_ALL} from '../icons';
 import {Button} from './button';
 import {Checkbox} from './checkbox';
@@ -35,7 +35,7 @@ export interface MultiSelectDiff {
   checked: boolean;
 }
 
-export interface MultiSelectAttrs {
+export interface MultiSelectAttrs extends HasGlobalsContextAttrs{
   icon?: string;
   label: string;
   options: Option[];
@@ -63,6 +63,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
     return m(
         Popup,
         {
+          globalsContext: attrs.globalsContext,
           trigger: m(Button, {label: this.labelText(attrs), icon}),
           position: popupPosition,
         },
@@ -90,13 +91,14 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
       options,
     } = attrs;
 
+    const globals = bindGlobals(attrs.globalsContext);
     const filteredItems = options.filter(({name}) => {
       return name.toLowerCase().includes(this.searchText.toLowerCase());
     });
 
     return m(
         '.pf-multiselect-popup',
-        this.renderSearchBox(),
+        this.renderSearchBox(globals),
         this.renderListOfItems(attrs, filteredItems),
     );
   }
@@ -114,6 +116,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
         header: `No results for '${this.searchText}'`,
       });
     } else {
+      const globals = bindGlobals(attrs.globalsContext);
       return [m(
           '.pf-list',
           repeatCheckedItemsAtTop && anyChecked &&
@@ -134,7 +137,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
                               options.filter(({checked}) => checked)
                                   .map(({id}) => ({id, checked: false}));
                           onChange(diffs);
-                          globals.rafScheduler.scheduleFullRedraw();
+                          globals().rafScheduler.scheduleFullRedraw();
                         },
                         disabled: !anyChecked,
                       }),
@@ -158,7 +161,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
                       const diffs = options.filter(({checked}) => !checked)
                                         .map(({id}) => ({id, checked: true}));
                       onChange(diffs);
-                      globals.rafScheduler.scheduleFullRedraw();
+                      globals().rafScheduler.scheduleFullRedraw();
                     },
                     disabled: allChecked,
                   }),
@@ -172,7 +175,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
                       const diffs = options.filter(({checked}) => checked)
                                         .map(({id}) => ({id, checked: false}));
                       onChange(diffs);
-                      globals.rafScheduler.scheduleFullRedraw();
+                      globals().rafScheduler.scheduleFullRedraw();
                     },
                     disabled: !anyChecked,
                   }),
@@ -183,29 +186,29 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
     }
   }
 
-  private renderSearchBox() {
+  private renderSearchBox(globals: GlobalsFunction) {
     return m(
         '.pf-search-bar',
         m(TextInput, {
           oninput: (event: Event) => {
             const eventTarget = event.target as HTMLTextAreaElement;
             this.searchText = eventTarget.value;
-            globals.rafScheduler.scheduleFullRedraw();
+            globals().rafScheduler.scheduleFullRedraw();
           },
           value: this.searchText,
           placeholder: 'Filter options...',
           extraClasses: 'pf-search-box',
         }),
-        this.renderClearButton(),
+        this.renderClearButton(globals),
     );
   }
 
-  private renderClearButton() {
+  private renderClearButton(globals: GlobalsFunction) {
     if (this.searchText != '') {
       return m(Button, {
         onclick: () => {
           this.searchText = '';
-          globals.rafScheduler.scheduleFullRedraw();
+          globals().rafScheduler.scheduleFullRedraw();
         },
         label: '',
         icon: 'close',
@@ -221,6 +224,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
       onChange = () => {},
     } = attrs;
 
+    const globals = bindGlobals(attrs.globalsContext);
     return options.map((item) => {
       const {checked, name, id} = item;
       return m(Checkbox, {
@@ -230,7 +234,7 @@ export class MultiSelect implements m.ClassComponent<MultiSelectAttrs> {
         classes: 'pf-multiselect-item',
         onchange: () => {
           onChange([{id, checked: !checked}]);
-          globals.rafScheduler.scheduleFullRedraw();
+          globals().rafScheduler.scheduleFullRedraw();
         },
       });
     });

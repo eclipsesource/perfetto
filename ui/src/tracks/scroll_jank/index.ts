@@ -34,12 +34,12 @@ export const ENABLE_SCROLL_JANK_PLUGIN_V2 = featureFlags.register({
   defaultValue: false,
 });
 
-function onDetailsPanelSelectionChange(newSelection?: Selection) {
+function onDetailsPanelSelectionChange(globalsContext: string, newSelection?: Selection) {
   if (newSelection === undefined ||
       newSelection.kind !== TOP_LEVEL_SCROLL_KIND) {
     return;
   }
-  const bottomTabList = globals.bottomTabList;
+  const bottomTabList = globals(globalsContext).bottomTabList;
   if (!bottomTabList) return;
   bottomTabList.addTab({
     kind: TopLevelScrollDetailsTab.kind,

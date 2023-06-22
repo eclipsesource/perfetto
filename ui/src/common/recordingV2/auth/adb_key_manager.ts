@@ -29,7 +29,7 @@ function hasPasswordCredential() {
 const KEY_IN_MEMORY_TIMEOUT = 1000 * 60 * 30;  // 30 minutes
 
 // Update credential store with the given key.
-export async function maybeStoreKey(key: AdbKey): Promise<void> {
+export async function maybeStoreKey(globalsContext: string, key: AdbKey): Promise<void> {
   if (!hasPasswordCredential()) {
     return;
   }
@@ -37,7 +37,7 @@ export async function maybeStoreKey(key: AdbKey): Promise<void> {
     id: 'webusb-adb-key',
     password: key.serializeKey(),
     name: 'WebUSB ADB Key',
-    iconURL: `${globals.root}assets/favicon.png`,
+    iconURL: `${globals(globalsContext).root}assets/favicon.png`,
   });
   // The 'Save password?' Chrome dialogue only appears if the key is
   // not already stored in Chrome.

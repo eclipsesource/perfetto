@@ -97,11 +97,11 @@ function aggregationAlias(aggregationIndex: number): string {
   return `agg_${aggregationIndex}`;
 }
 
-export function areaFilter(area: Area): string {
+export function areaFilter(globalsContext: string, area: Area): string {
   return `
     ts + dur > ${area.start}
     and ts < ${area.end}
-    and track_id in (${getSelectedTrackIds(area).join(', ')})
+    and track_id in (${getSelectedTrackIds(globalsContext, area).join(', ')})
   `;
 }
 
@@ -131,7 +131,7 @@ export function aggregationIndex(pivotColumns: number, aggregationNo: number) {
   return pivotColumns + aggregationNo;
 }
 
-export function generateQueryFromState(state: PivotTableState):
+export function generateQueryFromState(globalsContext: string, state: PivotTableState):
     PivotTableQuery {
   if (state.selectionArea === undefined) {
     throw new QueryGeneratorError('Should not be called without area');
@@ -167,7 +167,7 @@ export function generateQueryFromState(state: PivotTableState):
   `;
 
   const whereClause = state.constrainToArea ?
-      `where ${areaFilter(globals.state.areas[state.selectionArea.areaId])}` :
+      `where ${areaFilter(globalsContext, globals(globalsContext).state.areas[state.selectionArea.areaId])}` :
       '';
   const text = `
     select

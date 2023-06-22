@@ -32,9 +32,9 @@ import {tpTimeToCode} from '../common/time';
 import {profileType} from '../controller/flamegraph_controller';
 
 import {Flamegraph, NodeRendering} from './flamegraph';
-import {globals} from './globals';
-import {Modal, ModalDefinition} from './modal';
-import {Panel, PanelSize} from './panel';
+import {GlobalsFunction} from './globals';
+import {Modal} from './modal';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 import {debounce} from './rate_limiters';
 import {Router} from './router';
 import {getCurrentTrace} from './sidebar';
@@ -42,7 +42,7 @@ import {convertTraceToPprofAndDownload} from './trace_converter';
 import {Button} from './widgets/button';
 import {findRef} from './widgets/utils';
 
-interface FlamegraphDetailsPanelAttrs {}
+interface FlamegraphDetailsPanelAttrs extends PanelAttrs {}
 
 const HEADER_HEIGHT = 30;
 
@@ -74,7 +74,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   private canvas?: HTMLCanvasElement;
 
   view() {
-    const flamegraphDetails = globals.flamegraphDetails;
+    const flamegraphDetails = this.globals().flamegraphDetails;
     if (flamegraphDetails && flamegraphDetails.type !== undefined &&
         flamegraphDetails.start !== undefined &&
         flamegraphDetails.dur !== undefined &&
@@ -152,10 +152,11 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
 
 
   private maybeShowModal(graphIncomplete?: boolean) {
-    if (!graphIncomplete || globals.state.flamegraphModalDismissed) {
+    if (!graphIncomplete || this.globals().state.flamegraphModalDismissed) {
       return undefined;
     }
     return m(Modal, {
+      globalsContext: this.globals.context,
       title: 'The flamegraph is incomplete',
       vAlign: 'TOP',
       content: m('div',
@@ -164,17 +165,17 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
         {
           text: 'Show the errors',
           primary: true,
-          action: () => Router.navigate('#!/info'),
+          action: () => Router.navigate(this.globals.context, '#!/info'),
         },
         {
           text: 'Skip',
           action: () => {
-            globals.dispatch(Actions.dismissFlamegraphModal({}));
-            globals.rafScheduler.scheduleFullRedraw();
+            this.globals().dispatch(Actions.dismissFlamegraphModal({}));
+            this.globals().rafScheduler.scheduleFullRedraw();
           },
         },
       ],
-    } as ModalDefinition);
+    });
   }
 
   private getTitle(): string {
@@ -198,7 +199,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
     if (this.profileType === undefined) {
       return {};
     }
-    const viewingOption = globals.state.currentFlamegraphState!.viewingOption;
+    const viewingOption = this.globals().state.currentFlamegraphState!.viewingOption;
     switch (this.profileType) {
       case ProfileType.JAVA_HEAP_GRAPH:
         if (viewingOption === OBJECTS_ALLOCATED_NOT_FREED_KEY) {
@@ -217,7 +218,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   private updateFocusRegex() {
-    globals.dispatch(Actions.changeFocusFlamegraphState({
+    this.globals().dispatch(Actions.changeFocusFlamegraphState({
       focusRegex: this.focusRegex,
     }));
   }
@@ -226,13 +227,13 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
     return m(
         'div',
         ...FlamegraphDetailsPanel.selectViewingOptions(
-            assertExists(this.profileType)));
+            assertExists(this.profileType), this.globals));
   }
 
   downloadPprof() {
-    const engine = globals.getCurrentEngine();
+    const engine = this.globals().getCurrentEngine();
     if (!engine) return;
-    getCurrentTrace()
+    getCurrentTrace(this.globals.context)
         .then((file) => {
           assertTrue(
               this.pids.length === 1,
@@ -245,7 +246,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   private changeFlamegraphData() {
-    const data = globals.flamegraphDetails;
+    const data = this.globals().flamegraphDetails;
     const flamegraphData = data.flamegraph === undefined ? [] : data.flamegraph;
     this.flamegraph.updateDataIfChanged(
         this.nodeRendering(), flamegraphData, data.expandedCallsite);
@@ -256,7 +257,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
     // TODO(stevegolton): If we truely want to be standalone, then we shouldn't
     // rely on someone else calling the rafScheduler when the window is resized,
     // but it's good enough for now as we know the ViewerPage will do it.
-    globals.rafScheduler.addRedrawCallback(this.rafRedrawCallback);
+    this.globals().rafScheduler.addRedrawCallback(this.rafRedrawCallback);
   }
 
   onupdate({dom}: m.CVnodeDOM<FlamegraphDetailsPanelAttrs>) {
@@ -264,7 +265,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   onremove(_vnode: m.CVnodeDOM<FlamegraphDetailsPanelAttrs>) {
-    globals.rafScheduler.removeRedrawCallback(this.rafRedrawCallback);
+    this.globals().rafScheduler.removeRedrawCallback(this.rafRedrawCallback);
   }
 
   private static findCanvasElement(dom: Element): HTMLCanvasElement|undefined {
@@ -299,7 +300,7 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
 
   private renderLocalCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     this.changeFlamegraphData();
-    const current = globals.state.currentFlamegraphState;
+    const current = this.globals().state.currentFlamegraphState;
     if (current === null) return;
     const unit =
         current.viewingOption === SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY ||
@@ -311,58 +312,58 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
 
   private onMouseClick({x, y}: {x: number, y: number}): boolean {
     const expandedCallsite = this.flamegraph.onMouseClick({x, y});
-    globals.dispatch(Actions.expandFlamegraphState({expandedCallsite}));
+    this.globals().dispatch(Actions.expandFlamegraphState({expandedCallsite}));
     return true;
   }
 
   private onMouseMove({x, y}: {x: number, y: number}): boolean {
     this.flamegraph.onMouseMove({x, y});
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
     return true;
   }
 
   private onMouseOut() {
     this.flamegraph.onMouseOut();
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
-  private static selectViewingOptions(profileType: ProfileType) {
+  private static selectViewingOptions(profileType: ProfileType, globals: GlobalsFunction) {
     switch (profileType) {
       case ProfileType.PERF_SAMPLE:
-        return [this.buildButtonComponent(PERF_SAMPLES_KEY, 'Samples')];
+        return [this.buildButtonComponent(PERF_SAMPLES_KEY, 'Samples', globals)];
       case ProfileType.JAVA_HEAP_GRAPH:
         return [
           this.buildButtonComponent(
-              SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY, 'Size'),
-          this.buildButtonComponent(OBJECTS_ALLOCATED_NOT_FREED_KEY, 'Objects'),
+              SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY, 'Size', globals),
+          this.buildButtonComponent(OBJECTS_ALLOCATED_NOT_FREED_KEY, 'Objects', globals),
         ];
       case ProfileType.HEAP_PROFILE:
         return [
           this.buildButtonComponent(
-              SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY, 'Unreleased size'),
+              SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY, 'Unreleased size', globals),
           this.buildButtonComponent(
-              OBJECTS_ALLOCATED_NOT_FREED_KEY, 'Unreleased count'),
+              OBJECTS_ALLOCATED_NOT_FREED_KEY, 'Unreleased count', globals),
           this.buildButtonComponent(
-              ALLOC_SPACE_MEMORY_ALLOCATED_KEY, 'Total size'),
-          this.buildButtonComponent(OBJECTS_ALLOCATED_KEY, 'Total count'),
+              ALLOC_SPACE_MEMORY_ALLOCATED_KEY, 'Total size', globals),
+          this.buildButtonComponent(OBJECTS_ALLOCATED_KEY, 'Total count', globals),
         ];
       case ProfileType.NATIVE_HEAP_PROFILE:
         return [
           this.buildButtonComponent(
-              SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY, 'Unreleased malloc size'),
+              SPACE_MEMORY_ALLOCATED_NOT_FREED_KEY, 'Unreleased malloc size', globals),
           this.buildButtonComponent(
-              OBJECTS_ALLOCATED_NOT_FREED_KEY, 'Unreleased malloc count'),
+              OBJECTS_ALLOCATED_NOT_FREED_KEY, 'Unreleased malloc count', globals),
           this.buildButtonComponent(
-              ALLOC_SPACE_MEMORY_ALLOCATED_KEY, 'Total malloc size'),
+              ALLOC_SPACE_MEMORY_ALLOCATED_KEY, 'Total malloc size', globals),
           this.buildButtonComponent(
-              OBJECTS_ALLOCATED_KEY, 'Total malloc count'),
+              OBJECTS_ALLOCATED_KEY, 'Total malloc count', globals),
         ];
       case ProfileType.JAVA_HEAP_SAMPLES:
         return [
           this.buildButtonComponent(
-              ALLOC_SPACE_MEMORY_ALLOCATED_KEY, 'Total allocation size'),
+              ALLOC_SPACE_MEMORY_ALLOCATED_KEY, 'Total allocation size', globals),
           this.buildButtonComponent(
-              OBJECTS_ALLOCATED_KEY, 'Total allocation count'),
+              OBJECTS_ALLOCATED_KEY, 'Total allocation count', globals),
         ];
       default:
         throw new Error(`Unexpected profile type ${profileType}`);
@@ -370,16 +371,16 @@ export class FlamegraphDetailsPanel extends Panel<FlamegraphDetailsPanelAttrs> {
   }
 
   private static buildButtonComponent(
-      viewingOption: FlamegraphStateViewingOption, text: string) {
+      viewingOption: FlamegraphStateViewingOption, text: string, globals: GlobalsFunction) {
     const active =
-        (globals.state.currentFlamegraphState !== null &&
-         globals.state.currentFlamegraphState.viewingOption === viewingOption);
+        (globals().state.currentFlamegraphState !== null &&
+         globals().state.currentFlamegraphState!.viewingOption === viewingOption);
     return m(Button, {
       label: text,
       active,
       minimal: true,
       onclick: () => {
-        globals.dispatch(Actions.changeViewFlamegraphState({viewingOption}));
+        globals().dispatch(Actions.changeViewFlamegraphState({viewingOption}));
       },
     });
   }

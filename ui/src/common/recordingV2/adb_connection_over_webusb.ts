@@ -95,7 +95,7 @@ export class AdbConnectionOverWebusb extends AdbConnectionImpl {
   // Once we've sent the public key, for future recordings we only need to
   // sign with the private key, so the user doesn't need to give permissions
   // again.
-  constructor(private device: USBDevice, private keyManager: AdbKeyManager) {
+  constructor(private globalsContext: string, private device: USBDevice, private keyManager: AdbKeyManager) {
     super();
   }
 
@@ -351,7 +351,7 @@ export class AdbConnectionOverWebusb extends AdbConnectionImpl {
           await this.sendMessage(
               'AUTH', AuthCmd.RSAPUBLICKEY, 0, key.getPublicKey() + '\0');
           this.onStatus(ALLOW_USB_DEBUGGING);
-          await maybeStoreKey(key);
+          await maybeStoreKey(this.globalsContext, key);
         }
       } else if (msg.cmd === 'CNXN') {
         assertTrue(

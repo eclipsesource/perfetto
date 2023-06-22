@@ -36,8 +36,8 @@ import {Button} from './widgets/button';
 import {Popup, PopupPosition} from './widgets/popup';
 
 
-export function runQueryInNewTab(query: string, title: string, tag?: string) {
-  return addTab({
+export function runQueryInNewTab(globalsContext: string, query: string, title: string, tag?: string) {
+  return addTab(globalsContext, {
     kind: QueryResultTab.kind,
     tag,
     config: {
@@ -79,7 +79,7 @@ export class QueryResultTab extends BottomTab<QueryResultTabConfig> {
     } else {
       const result = await runQuery(this.config.query, this.engine);
       this.queryResponse = result;
-      globals.rafScheduler.scheduleFullRedraw();
+      globals(args.globalsContext).rafScheduler.scheduleFullRedraw();
       if (result.error !== undefined) {
         return;
       }
@@ -90,7 +90,7 @@ export class QueryResultTab extends BottomTab<QueryResultTabConfig> {
     if (uuid !== '') {
       this.sqlViewName = await this.createViewForDebugTrack(uuid);
       if (this.sqlViewName) {
-        globals.rafScheduler.scheduleFullRedraw();
+        globals(args.globalsContext).rafScheduler.scheduleFullRedraw();
       }
     }
   }
@@ -103,18 +103,21 @@ export class QueryResultTab extends BottomTab<QueryResultTabConfig> {
 
   viewTab(): m.Child {
     return m(QueryTable, {
+      globalsContext: this.globals.context,
       query: this.config.query,
       resp: this.queryResponse,
-      onClose: () => closeTab(this.uuid),
+      onClose: () => closeTab(this.globals.context, this.uuid),
       contextButtons: [
         this.sqlViewName === undefined ?
             null :
             m(Popup,
               {
+                globalsContext: this.globals.context,
                 trigger: m(Button, {label: 'Show debug track', minimal: true}),
                 position: PopupPosition.Top,
               },
               m(AddDebugTrackMenu, {
+                globalsContext: this.globals.context,
                 sqlViewName: this.sqlViewName,
                 columns: assertExists(this.queryResponse).columns,
                 engine: this.engine,

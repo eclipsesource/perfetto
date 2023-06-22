@@ -32,7 +32,7 @@ import {SCM_REVISION, VERSION} from '../gen/perfetto_version';
 import {Animation} from './animation';
 import {onClickCopy} from './clipboard';
 import {downloadData, downloadUrl} from './download_utils';
-import {globals} from './globals';
+import {HasGlobalsContextAttrs, bindGlobals, globals} from './globals';
 import {toggleHelp} from './help_modal';
 import {
   isLegacyTrace,
@@ -119,8 +119,8 @@ const GITILES_URL =
 
 let lastTabTitle = '';
 
-function getBugReportUrl(): string {
-  if (globals.isInternalUser) {
+function getBugReportUrl(globalsContext: string): string {
+  if (globals(globalsContext).isInternalUser) {
     return 'https://goto.google.com/perfetto-ui-bug';
   } else {
     return 'https://github.com/google/perfetto/issues/new';
@@ -141,14 +141,14 @@ const WIDGETS_PAGE_IN_NAV_FLAG = featureFlags.register({
   defaultValue: false,
 });
 
-function shouldShowHiringBanner(): boolean {
-  return globals.isInternalUser && HIRING_BANNER_FLAG.get();
+function shouldShowHiringBanner(globalsContext: string): boolean {
+  return globals(globalsContext).isInternalUser && HIRING_BANNER_FLAG.get();
 }
 
-function createCannedQuery(query: string, title: string): (_: Event) => void {
-  return (e: Event) => {
+function createCannedQuery(query: string, title: string): (globalsContext: string, e: Event) => void {
+  return (globalsContext: string, e: Event) => {
     e.preventDefault();
-    runQueryInNewTab(query, title);
+    runQueryInNewTab(globalsContext, query, title);
   };
 }
 
@@ -160,10 +160,10 @@ const EXAMPLE_CHROME_TRACE_URL =
 
 interface SectionItem {
   t: string;
-  a: string|((e: Event) => void);
+  a: string|((globalsContext: string, e: Event) => void);
   i: string;
-  isPending?: () => boolean;
-  isVisible?: () => boolean;
+  isPending?: (globalsContext: string) => boolean;
+  isVisible?: (globalsContext: string) => boolean;
   internalUserOnly?: boolean;
   checkDownloadDisabled?: boolean;
   checkMetatracingEnabled?: boolean;
@@ -215,7 +215,7 @@ const SECTIONS: Section[] = [
         a: shareTrace,
         i: 'share',
         internalUserOnly: true,
-        isPending: () => globals.getConversionJobStatus('create_permalink') ===
+        isPending: (globalsContext: string) => globals(globalsContext).getConversionJobStatus('create_permalink') ===
             ConversionJobStatus.InProgress,
       },
       {
@@ -240,14 +240,14 @@ const SECTIONS: Section[] = [
         t: 'Switch to legacy UI',
         a: openCurrentTraceWithOldUI,
         i: 'filter_none',
-        isPending: () => globals.getConversionJobStatus('open_in_legacy') ===
+        isPending: (globalsContext: string) => globals(globalsContext).getConversionJobStatus('open_in_legacy') ===
             ConversionJobStatus.InProgress,
       },
       {
         t: 'Convert to .json',
         a: convertTraceToJson,
         i: 'file_download',
-        isPending: () => globals.getConversionJobStatus('convert_json') ===
+        isPending: (globalsContext: string) => globals(globalsContext).getConversionJobStatus('convert_json') ===
             ConversionJobStatus.InProgress,
         checkDownloadDisabled: true,
       },
@@ -256,8 +256,8 @@ const SECTIONS: Section[] = [
         t: 'Convert to .systrace',
         a: convertTraceToSystrace,
         i: 'file_download',
-        isVisible: () => globals.hasFtrace,
-        isPending: () => globals.getConversionJobStatus('convert_systrace') ===
+        isVisible: (globalsContext: string) => globals(globalsContext).hasFtrace,
+        isPending: (globalsContext: string) => globals(globalsContext).getConversionJobStatus('convert_systrace') ===
             ConversionJobStatus.InProgress,
         checkDownloadDisabled: true,
       },
@@ -293,7 +293,7 @@ const SECTIONS: Section[] = [
       {t: 'Flags', a: navigateFlags, i: 'emoji_flags'},
       {
         t: 'Report a bug',
-        a: () => window.open(getBugReportUrl()),
+        a: (globalsContext: string) => window.open(getBugReportUrl(globalsContext)),
         i: 'bug_report',
       },
     ],
@@ -353,9 +353,9 @@ const SECTIONS: Section[] = [
 
 ];
 
-function openHelp(e: Event) {
+function openHelp(globalsContext: string, e: Event) {
   e.preventDefault();
-  toggleHelp();
+  toggleHelp(globalsContext);
 }
 
 function getFileElement(): HTMLInputElement {
@@ -363,19 +363,19 @@ function getFileElement(): HTMLInputElement {
       document.querySelector<HTMLInputElement>('input[type=file]'));
 }
 
-function popupFileSelectionDialog(e: Event) {
+function popupFileSelectionDialog(_context: string, e: Event) {
   e.preventDefault();
   delete getFileElement().dataset['useCatapultLegacyUi'];
   getFileElement().click();
 }
 
-function popupFileSelectionDialogOldUI(e: Event) {
+function popupFileSelectionDialogOldUI(_context: string, e: Event) {
   e.preventDefault();
   getFileElement().dataset['useCatapultLegacyUi'] = '1';
   getFileElement().click();
 }
 
-function downloadTraceFromUrl(url: string): Promise<File> {
+function downloadTraceFromUrl(globalsContext: string, url: string): Promise<File> {
   return m.request({
     method: 'GET',
     url,
@@ -385,7 +385,7 @@ function downloadTraceFromUrl(url: string): Promise<File> {
       xhr.responseType = 'blob';
       xhr.onprogress = (progress) => {
         const percent = (100 * progress.loaded / progress.total).toFixed(1);
-        globals.dispatch(Actions.updateStatus({
+        globals(globalsContext).dispatch(Actions.updateStatus({
           msg: `Downloading trace ${percent}%`,
           timestamp: Date.now() / 1000,
         }));
@@ -397,41 +397,41 @@ function downloadTraceFromUrl(url: string): Promise<File> {
   });
 }
 
-export async function getCurrentTrace(): Promise<Blob> {
+export async function getCurrentTrace(globalsContext: string): Promise<Blob> {
   // Caller must check engine exists.
-  const engine = assertExists(globals.getCurrentEngine());
+  const engine = assertExists(globals(globalsContext).getCurrentEngine());
   const src = engine.source;
   if (src.type === 'ARRAY_BUFFER') {
     return new Blob([src.buffer]);
   } else if (src.type === 'FILE') {
     return src.file;
   } else if (src.type === 'URL') {
-    return downloadTraceFromUrl(src.url);
+    return downloadTraceFromUrl(globalsContext, src.url);
   } else {
     throw new Error(`Loading to catapult from source with type ${src.type}`);
   }
 }
 
-function openCurrentTraceWithOldUI(e: Event) {
+function openCurrentTraceWithOldUI(globalsContext: string, e: Event) {
   e.preventDefault();
-  assertTrue(isTraceLoaded());
-  globals.logging.logEvent('Trace Actions', 'Open current trace in legacy UI');
+  assertTrue(isTraceLoaded(globalsContext));
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Open current trace in legacy UI');
   if (!isTraceLoaded) return;
-  getCurrentTrace()
+  getCurrentTrace(globalsContext)
       .then((file) => {
-        openInOldUIWithSizeCheck(file);
+        openInOldUIWithSizeCheck(globalsContext, file);
       })
       .catch((error) => {
         throw new Error(`Failed to get current trace ${error}`);
       });
 }
 
-function convertTraceToSystrace(e: Event) {
+function convertTraceToSystrace(globalsContext: string, e: Event) {
   e.preventDefault();
-  assertTrue(isTraceLoaded());
-  globals.logging.logEvent('Trace Actions', 'Convert to .systrace');
+  assertTrue(isTraceLoaded(globalsContext));
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Convert to .systrace');
   if (!isTraceLoaded) return;
-  getCurrentTrace()
+  getCurrentTrace(globalsContext)
       .then((file) => {
         convertTraceToSystraceAndDownload(file);
       })
@@ -440,12 +440,12 @@ function convertTraceToSystrace(e: Event) {
       });
 }
 
-function convertTraceToJson(e: Event) {
+function convertTraceToJson(globalsContext: string, e: Event) {
   e.preventDefault();
-  assertTrue(isTraceLoaded());
-  globals.logging.logEvent('Trace Actions', 'Convert to .json');
+  assertTrue(isTraceLoaded(globalsContext));
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Convert to .json');
   if (!isTraceLoaded) return;
-  getCurrentTrace()
+  getCurrentTrace(globalsContext)
       .then((file) => {
         convertTraceToJsonAndDownload(file);
       })
@@ -454,19 +454,19 @@ function convertTraceToJson(e: Event) {
       });
 }
 
-export function isTraceLoaded(): boolean {
-  return globals.getCurrentEngine() !== undefined;
+export function isTraceLoaded(globalsContext: string): boolean {
+  return globals(globalsContext).getCurrentEngine() !== undefined;
 }
 
-function openTraceUrl(url: string): (e: Event) => void {
-  return (e) => {
-    globals.logging.logEvent('Trace Actions', 'Open example trace');
+function openTraceUrl(url: string): (globalsContext: string, e: Event) => void {
+  return (globalsContext, e) => {
+    globals(globalsContext).logging.logEvent('Trace Actions', 'Open example trace');
     e.preventDefault();
-    globals.dispatch(Actions.openTraceFromUrl({url}));
+    globals(globalsContext).dispatch(Actions.openTraceFromUrl({url}));
   };
 }
 
-function onInputElementFileSelectionChanged(e: Event) {
+function onInputElementFileSelectionChanged(globalsContext: string, e: Event) {
   if (!(e.target instanceof HTMLInputElement)) {
     throw new Error('Not an input element');
   }
@@ -476,25 +476,25 @@ function onInputElementFileSelectionChanged(e: Event) {
   e.target.value = '';
 
   if (e.target.dataset['useCatapultLegacyUi'] === '1') {
-    openWithLegacyUi(file);
+    openWithLegacyUi(globalsContext, file);
     return;
   }
 
-  globals.logging.logEvent('Trace Actions', 'Open trace from file');
-  globals.dispatch(Actions.openTraceFromFile({file}));
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Open trace from file');
+  globals(globalsContext).dispatch(Actions.openTraceFromFile({file}));
 }
 
-async function openWithLegacyUi(file: File) {
+async function openWithLegacyUi(globalsContext: string, file: File) {
   // Switch back to the old catapult UI.
-  globals.logging.logEvent('Trace Actions', 'Open trace in Legacy UI');
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Open trace in Legacy UI');
   if (await isLegacyTrace(file)) {
     openFileWithLegacyTraceViewer(file);
     return;
   }
-  openInOldUIWithSizeCheck(file);
+  openInOldUIWithSizeCheck(globalsContext, file);
 }
 
-function openInOldUIWithSizeCheck(trace: Blob) {
+function openInOldUIWithSizeCheck(globalsContext: string, trace: Blob) {
   // Perfetto traces smaller than 50mb can be safely opened in the legacy UI.
   if (trace.size < 1024 * 1024 * 50) {
     convertToJson(trace);
@@ -504,6 +504,7 @@ function openInOldUIWithSizeCheck(trace: Blob) {
   // Give the user the option to truncate larger perfetto traces.
   const size = Math.round(trace.size / (1024 * 1024));
   showModal({
+    globalsContext,
     title: 'Legacy UI may fail to open this trace',
     content:
         m('div',
@@ -538,44 +539,44 @@ function openInOldUIWithSizeCheck(trace: Blob) {
   return;
 }
 
-function navigateRecord(e: Event) {
+function navigateRecord(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/record');
+  Router.navigate(globalsContext, '#!/record');
 }
 
-function navigateWidgets(e: Event) {
+function navigateWidgets(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/widgets');
+  Router.navigate(globalsContext, '#!/widgets');
 }
 
-function navigateAnalyze(e: Event) {
+function navigateAnalyze(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/query');
+  Router.navigate(globalsContext, '#!/query');
 }
 
-function navigateFlags(e: Event) {
+function navigateFlags(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/flags');
+  Router.navigate(globalsContext, '#!/flags');
 }
 
-function navigateMetrics(e: Event) {
+function navigateMetrics(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/metrics');
+  Router.navigate(globalsContext, '#!/metrics');
 }
 
-function navigateInfo(e: Event) {
+function navigateInfo(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/info');
+  Router.navigate(globalsContext, '#!/info');
 }
 
-function navigateViewer(e: Event) {
+function navigateViewer(globalsContext: string, e: Event) {
   e.preventDefault();
-  Router.navigate('#!/viewer');
+  Router.navigate(globalsContext, '#!/viewer');
 }
 
-function shareTrace(e: Event) {
+function shareTrace(globalsContext: string, e: Event) {
   e.preventDefault();
-  const engine = assertExists(globals.getCurrentEngine());
+  const engine = assertExists(globals(globalsContext).getCurrentEngine());
   const traceUrl = (engine.source as (TraceArrayBufferSource)).url || '';
 
   // If the trace is not shareable (has been pushed via postMessage()) but has
@@ -592,29 +593,30 @@ function shareTrace(e: Event) {
     }
 
     showModal({
+      globalsContext,
       title: 'Cannot create permalink from external trace',
       content: m('div', msg),
     });
     return;
   }
 
-  if (!isShareable() || !isTraceLoaded()) return;
+  if (!isShareable() || !isTraceLoaded(globalsContext)) return;
 
   const result = confirm(
       `Upload UI state and generate a permalink. ` +
       `The trace will be accessible by anybody with the permalink.`);
   if (result) {
-    globals.logging.logEvent('Trace Actions', 'Create permalink');
-    globals.dispatch(Actions.createPermalink({isRecordingConfig: false}));
+    globals(globalsContext).logging.logEvent('Trace Actions', 'Create permalink');
+    globals(globalsContext).dispatch(Actions.createPermalink({isRecordingConfig: false}));
   }
 }
 
-function downloadTrace(e: Event) {
+function downloadTrace(globalsContext: string, e: Event) {
   e.preventDefault();
-  if (!isDownloadable() || !isTraceLoaded()) return;
-  globals.logging.logEvent('Trace Actions', 'Download trace');
+  if (!isDownloadable() || !isTraceLoaded(globalsContext)) return;
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Download trace');
 
-  const engine = globals.getCurrentEngine();
+  const engine = globals(globalsContext).getCurrentEngine();
   if (!engine) return;
   let url = '';
   let fileName = `trace${TRACE_SUFFIX}`;
@@ -642,27 +644,27 @@ function downloadTrace(e: Event) {
   downloadUrl(fileName, url);
 }
 
-function getCurrentEngine(): Engine|undefined {
-  const engineId = globals.getCurrentEngine()?.id;
+function getCurrentEngine(globalsContext: string): Engine|undefined {
+  const engineId = globals(globalsContext).getCurrentEngine()?.id;
   if (engineId === undefined) return undefined;
-  return globals.engines.get(engineId);
+  return globals(globalsContext).engines.get(engineId);
 }
 
-function highPrecisionTimersAvailable(): boolean {
+function highPrecisionTimersAvailable(globalsContext: string): boolean {
   // High precision timers are available either when the page is cross-origin
   // isolated or when the trace processor is a standalone binary.
   return window.crossOriginIsolated ||
-      globals.getCurrentEngine()?.mode === 'HTTP_RPC';
+      globals(globalsContext).getCurrentEngine()?.mode === 'HTTP_RPC';
 }
 
-function recordMetatrace(e: Event) {
+function recordMetatrace(globalsContext: string, e: Event) {
   e.preventDefault();
-  globals.logging.logEvent('Trace Actions', 'Record metatrace');
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Record metatrace');
 
-  const engine = getCurrentEngine();
+  const engine = getCurrentEngine(globalsContext);
   if (!engine) return;
 
-  if (!highPrecisionTimersAvailable()) {
+  if (!highPrecisionTimersAvailable(globalsContext)) {
     const PROMPT =
         `High-precision timers are not available to WASM trace processor yet.
 
@@ -676,6 +678,7 @@ Note that events under timer precision (1ms) will dropped.
 Alternatively, connect to a trace_processor_shell --httpd instance.
 `;
     showModal({
+      globalsContext,
       title: `Trace processor doesn't have high-precision timers`,
       content: m('.modal-pre', PROMPT),
       buttons: [
@@ -697,13 +700,13 @@ Alternatively, connect to a trace_processor_shell --httpd instance.
   }
 }
 
-async function finaliseMetatrace(e: Event) {
+async function finaliseMetatrace(globalsContext: string, e: Event) {
   e.preventDefault();
-  globals.logging.logEvent('Trace Actions', 'Finalise metatrace');
+  globals(globalsContext).logging.logEvent('Trace Actions', 'Finalise metatrace');
 
   const jsEvents = disableMetatracingAndGetTrace();
 
-  const engine = getCurrentEngine();
+  const engine = getCurrentEngine(globalsContext);
   if (!engine) return;
 
   const result = await engine.stopAndGetMetatrace();
@@ -715,15 +718,16 @@ async function finaliseMetatrace(e: Event) {
 }
 
 
-const EngineRPCWidget: m.Component = {
-  view() {
+const EngineRPCWidget: m.Component<HasGlobalsContextAttrs> = {
+  view(vnode) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     let cssClass = '';
     let title = 'Number of pending SQL queries';
     let label: string;
     let failed = false;
     let mode: EngineMode|undefined;
 
-    const engine = globals.state.engine;
+    const engine = globals().state.engine;
     if (engine !== undefined) {
       mode = engine.mode;
       if (engine.failed !== undefined) {
@@ -739,8 +743,8 @@ const EngineRPCWidget: m.Component = {
     // RPC server is shut down after we load the UI and cached httpRpcState)
     // this will eventually become  consistent once the engine is created.
     if (mode === undefined) {
-      if (globals.frontendLocalState.httpRpcState.connected &&
-          globals.state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
+      if (globals().frontendLocalState.httpRpcState.connected &&
+          globals().state.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
         mode = 'HTTP_RPC';
       } else {
         mode = 'WASM';
@@ -760,16 +764,17 @@ const EngineRPCWidget: m.Component = {
         `.dbg-info-square${cssClass}`,
         {title},
         m('div', label),
-        m('div', `${failed ? 'FAIL' : globals.numQueuedQueries}`));
+        m('div', `${failed ? 'FAIL' : globals().numQueuedQueries}`));
   },
 };
 
-const ServiceWorkerWidget: m.Component = {
-  view() {
+const ServiceWorkerWidget: m.Component<HasGlobalsContextAttrs> = {
+  view(vnode) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     let cssClass = '';
     let title = 'Service Worker: ';
     let label = 'N/A';
-    const ctl = globals.serviceWorkerController;
+    const ctl = globals().serviceWorkerController;
     if ((!('serviceWorker' in navigator))) {
       label = 'N/A';
       title += 'not supported by the browser (requires HTTPS)';
@@ -791,11 +796,12 @@ const ServiceWorkerWidget: m.Component = {
     }
 
     const toggle = async () => {
-      if (globals.serviceWorkerController.bypassed) {
-        globals.serviceWorkerController.setBypass(false);
+      if (globals().serviceWorkerController.bypassed) {
+        globals().serviceWorkerController.setBypass(false);
         return;
       }
       showModal({
+        globalsContext: globals.context,
         title: 'Disable service worker?',
         content: m(
             'div',
@@ -813,7 +819,7 @@ const ServiceWorkerWidget: m.Component = {
             text: 'Disable and reload',
             primary: true,
             action: () => {
-              globals.serviceWorkerController.setBypass(true).then(
+              globals().serviceWorkerController.setBypass(true).then(
                   () => location.reload());
             },
           },
@@ -830,13 +836,14 @@ const ServiceWorkerWidget: m.Component = {
   },
 };
 
-const SidebarFooter: m.Component = {
-  view() {
+const SidebarFooter: m.Component<HasGlobalsContextAttrs> = {
+  view(vnode) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     return m(
         '.sidebar-footer',
         m('button',
           {
-            onclick: () => globals.dispatch(Actions.togglePerfDebug({})),
+            onclick: () => globals().dispatch(Actions.togglePerfDebug({})),
           },
           m('i.material-icons',
             {title: 'Toggle Perf Debug Mode'},
@@ -860,27 +867,28 @@ const SidebarFooter: m.Component = {
 class HiringBanner implements m.ClassComponent {
   view() {
     return m(
-        '.hiring-banner',
-        m('a',
-          {
-            href: 'http://go/perfetto-open-roles',
-            target: '_blank',
-          },
-          'We\'re hiring!'));
+      '.hiring-banner',
+      m('a',
+      {
+        href: 'http://go/perfetto-open-roles',
+        target: '_blank',
+      },
+      'We\'re hiring!'));
+    }
   }
-}
-
-export class Sidebar implements m.ClassComponent {
-  private _redrawWhileAnimating =
-      new Animation(() => globals.rafScheduler.scheduleFullRedraw());
-  view() {
-    if (globals.hideSidebar) return null;
+  
+export class Sidebar implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>) {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
+    if (globals().hideSidebar) return null;
+    const redrawWhileAnimating =
+        new Animation('', () => globals().rafScheduler.scheduleFullRedraw());
     const vdomSections = [];
     for (const section of SECTIONS) {
-      if (section.hideIfNoTraceLoaded && !isTraceLoaded()) continue;
+      if (section.hideIfNoTraceLoaded && !isTraceLoaded(globals.context)) continue;
       const vdomItems = [];
       for (const item of section.items) {
-        if (item.isVisible !== undefined && !item.isVisible()) {
+        if (item.isVisible !== undefined && !item.isVisible(globals.context)) {
           continue;
         }
         let css = '';
@@ -891,11 +899,11 @@ export class Sidebar implements m.ClassComponent {
           disabled: false,
           id: item.t.toLowerCase().replace(/[^\w]/g, '_'),
         };
-        if (item.isPending && item.isPending()) {
-          attrs.onclick = (e) => e.preventDefault();
+        if (item.isPending && item.isPending(globals.context)) {
+          attrs.onclick = (_context, e) => e.preventDefault();
           css = '.pending';
         }
-        if (item.internalUserOnly && !globals.isInternalUser) {
+        if (item.internalUserOnly && !globals().isInternalUser) {
           continue;
         }
         if (item.checkMetatracingEnabled || item.checkMetatracingDisabled) {
@@ -908,13 +916,13 @@ export class Sidebar implements m.ClassComponent {
             continue;
           }
           if (item.checkMetatracingDisabled &&
-              !highPrecisionTimersAvailable()) {
+              !highPrecisionTimersAvailable(globals.context)) {
             attrs.disabled = true;
           }
         }
         if (item.checkDownloadDisabled && !isDownloadable()) {
           attrs = {
-            onclick: (e) => {
+            onclick: (_context, e) => {
               e.preventDefault();
               alert('Can not download external trace.');
             },
@@ -928,7 +936,7 @@ export class Sidebar implements m.ClassComponent {
             'li', m(`a${css}`, attrs, m('i.material-icons', item.i), item.t)));
       }
       if (section.appendOpenedTraceTitle) {
-        const engine = globals.state.engine;
+        const engine = globals().state.engine;
         if (engine !== undefined) {
           let traceTitle = '';
           let traceUrl = '';
@@ -971,7 +979,7 @@ export class Sidebar implements m.ClassComponent {
               {
                 onclick: () => {
                   section.expanded = !section.expanded;
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 },
               },
               m('h1', {title: section.summary}, section.title),
@@ -981,25 +989,25 @@ export class Sidebar implements m.ClassComponent {
     return m(
         'nav.sidebar',
         {
-          class: globals.state.sidebarVisible ? 'show-sidebar' : 'hide-sidebar',
+          class: globals().state.sidebarVisible ? 'show-sidebar' : 'hide-sidebar',
           // 150 here matches --sidebar-timing in the css.
           // TODO(hjd): Should link to the CSS variable.
-          ontransitionstart: () => this._redrawWhileAnimating.start(150),
-          ontransitionend: () => this._redrawWhileAnimating.stop(),
+          ontransitionstart: () => redrawWhileAnimating.start(150),
+          ontransitionend: () => redrawWhileAnimating.stop(),
         },
-        shouldShowHiringBanner() ? m(HiringBanner) : null,
+        shouldShowHiringBanner(globals.context) ? m(HiringBanner) : null,
         m(
             `header.${getCurrentChannel()}`,
-            m(`img[src=${globals.root}assets/brand.png].brand`),
+            m(`img[src=${globals().root}assets/brand.png].brand`),
             m('button.sidebar-button',
               {
                 onclick: () => {
-                  globals.dispatch(Actions.toggleSidebar({}));
+                  globals().dispatch(Actions.toggleSidebar({}));
                 },
               },
               m('i.material-icons',
                 {
-                  title: globals.state.sidebarVisible ? 'Hide menu' :
+                  title: globals().state.sidebarVisible ? 'Hide menu' :
                                                         'Show menu',
                 },
                 'menu')),
@@ -1024,7 +1032,7 @@ function createTraceLink(title: string, url: string) {
     href: url,
     title: 'Click to copy the URL',
     target: '_blank',
-    onclick: onClickCopy(url),
+    onclick: onClickCopy('', url),
   };
   return m('a.trace-file-name', linkProps, title);
 }

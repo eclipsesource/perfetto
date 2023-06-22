@@ -39,12 +39,13 @@ function extractChromeCategories(dataSources: DataSource[]): string[]|
 class ChromeCategoriesSelection implements
     m.ClassComponent<RecordingSectionAttrs> {
   view({attrs}: m.CVnode<RecordingSectionAttrs>) {
+    const globalsContext = attrs.globalsContext;
     // If we are attempting to record via the Chrome extension, we receive the
     // list of actually supported categories via DevTools. Otherwise, we fall
     // back to an integrated list of categories from a recent version of Chrome.
-    let categories = globals.state.chromeCategories ||
+    let categories = globals(globalsContext).state.chromeCategories ||
         extractChromeCategories(attrs.dataSources);
-    if (!categories || !isChromeTarget(globals.state.recordingTarget)) {
+    if (!categories || !isChromeTarget(globals(globalsContext).state.recordingTarget)) {
       categories = getBuiltinChromeCategoryList();
     }
 
@@ -62,12 +63,14 @@ class ChromeCategoriesSelection implements
     return m(
         '.chrome-categories',
         m(CategoriesCheckboxList, {
+          globalsContext,
           categories: defaultCategories,
           title: 'Additional categories',
           get: (cfg) => cfg.chromeCategoriesSelected,
           set: (cfg, val) => cfg.chromeCategoriesSelected = val,
         }),
         m(CategoriesCheckboxList, {
+          globalsContext,
           categories: disabledByDefaultCategories,
           title: 'High overhead categories',
           get: (cfg) => cfg.chromeHighOverheadCategoriesSelected,
@@ -78,6 +81,7 @@ class ChromeCategoriesSelection implements
 
 export class ChromeSettings implements m.ClassComponent<RecordingSectionAttrs> {
   view({attrs}: m.CVnode<RecordingSectionAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         `.record-section${attrs.cssClass}`,
         CompactProbe({
@@ -121,6 +125,7 @@ export class ChromeSettings implements m.ClassComponent<RecordingSectionAttrs> {
           isEnabled: (cfg) => cfg.chromeLogs,
         }),
         m(Toggle, {
+          globalsContext,
           title: 'Remove untyped and sensitive data like URLs from the trace',
           descr: 'Not recommended unless you intend to share the trace' +
               ' with third-parties.',

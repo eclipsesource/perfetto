@@ -55,6 +55,8 @@ export class ServiceWorkerController {
   private _bypassed = false;
   private _installing = false;
 
+  constructor(private readonly globalsContext: string) {}
+
   // Caller should reload().
   async setBypass(bypass: boolean) {
     if (!('serviceWorker' in navigator)) return;  // Not supported.
@@ -71,11 +73,11 @@ export class ServiceWorkerController {
       }
       this.install();
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   onStateChange(sw: ServiceWorker) {
-    globals.rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
     if (sw.state === 'installing') {
       this._installing = true;
     } else if (sw.state === 'activated') {
@@ -85,14 +87,14 @@ export class ServiceWorkerController {
       // Ctrl+Shift+R). In these cases, we are already at the last
       // version.
       if (sw !== this._initialWorker && this._initialWorker) {
-        globals.frontendLocalState.newVersionAvailable = true;
+        globals(this.globalsContext).frontendLocalState.newVersionAvailable = true;
       }
     }
   }
 
   monitorWorker(sw: ServiceWorker|null) {
     if (!sw) return;
-    sw.addEventListener('error', (e) => reportError(e));
+    sw.addEventListener('error', (e) => reportError('', e));
     sw.addEventListener('statechange', () => this.onStateChange(sw));
     this.onStateChange(sw);  // Trigger updates for the current state.
   }
@@ -125,7 +127,7 @@ export class ServiceWorkerController {
     // In production cases versionDir == VERSION. We use this here for ease of
     // testing (so we can have /v1.0.0a/ /v1.0.0b/ even if they have the same
     // version code).
-    const versionDir = globals.root.split('/').slice(-2)[0];
+    const versionDir = globals(this.globalsContext).root.split('/').slice(-2)[0];
     const swUri = `/service_worker.js?v=${versionDir}`;
     navigator.serviceWorker.register(swUri).then((registration) => {
       this._initialWorker = registration.active;

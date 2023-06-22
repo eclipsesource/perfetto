@@ -54,8 +54,8 @@ export class WasmEngineProxy extends Engine {
   readonly id: string;
   private port: MessagePort;
 
-  constructor(id: string, port: MessagePort, loadingTracker?: LoadingTracker) {
-    super(loadingTracker);
+  constructor(globalsContext: string, id: string, port: MessagePort, loadingTracker?: LoadingTracker) {
+    super(globalsContext, loadingTracker);
     this.id = id;
     this.port = port;
     this.port.onmessage = this.onMessage.bind(this);

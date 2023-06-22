@@ -16,7 +16,7 @@ import m from 'mithril';
 
 import {SortDirection} from '../common/state';
 
-import {globals} from './globals';
+import {HasGlobalsContextAttrs, globals} from './globals';
 
 export interface RegularPopupMenuItem {
   itemType: 'regular';
@@ -45,7 +45,7 @@ export interface GroupPopupMenuItem {
 
 export type PopupMenuItem = RegularPopupMenuItem|GroupPopupMenuItem;
 
-export interface PopupMenuButtonAttrs {
+export interface PopupMenuButtonAttrs extends HasGlobalsContextAttrs {
   // Icon for button opening a menu
   icon: string;
   // List of popup menu items
@@ -122,6 +122,11 @@ export function popupMenuIcon(sortDirection?: SortDirection) {
 export class PopupMenuButton implements m.ClassComponent<PopupMenuButtonAttrs> {
   popupShown = false;
   expandedGroups: Set<string> = new Set();
+  protected globalsContext = '';
+
+  oninit({attrs}: m.CVnode<PopupMenuButtonAttrs>) {
+    this.globalsContext = attrs.globalsContext;
+  }
 
   setVisible(visible: boolean) {
     this.popupShown = visible;
@@ -130,7 +135,7 @@ export class PopupMenuButton implements m.ClassComponent<PopupMenuButtonAttrs> {
     } else {
       popupHolder.clear();
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   renderItem(item: PopupMenuItem): m.Child {
@@ -158,7 +163,7 @@ export class PopupMenuButton implements m.ClassComponent<PopupMenuButtonAttrs> {
                   } else {
                     this.expandedGroups.add(item.itemId);
                   }
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
                 },
               },
               // Show text with up/down arrow, depending on expanded state.

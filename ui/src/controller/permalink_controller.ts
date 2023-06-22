@@ -54,35 +54,36 @@ function isMultiEngineState(state: State|
 
 export class PermalinkController extends Controller<'main'> {
   private lastRequestId?: string;
-  constructor() {
-    super('main');
+  
+  constructor(args: {globalsContext: string}) {
+    super('main', args.globalsContext);
   }
 
   run() {
-    if (globals.state.permalink.requestId === undefined ||
-        globals.state.permalink.requestId === this.lastRequestId) {
+    if (this.globals().state.permalink.requestId === undefined ||
+        this.globals().state.permalink.requestId === this.lastRequestId) {
       return;
     }
-    const requestId = assertExists(globals.state.permalink.requestId);
+    const requestId = assertExists(this.globals().state.permalink.requestId);
     this.lastRequestId = requestId;
 
     // if the |hash| is not set, this is a request to create a permalink.
-    if (globals.state.permalink.hash === undefined) {
+    if (this.globals().state.permalink.hash === undefined) {
       const isRecordingConfig =
-          assertExists(globals.state.permalink.isRecordingConfig);
+          assertExists(this.globals().state.permalink.isRecordingConfig);
 
       const jobName = 'create_permalink';
-      publishConversionJobStatusUpdate({
+      publishConversionJobStatusUpdate(this.globals.context, {
         jobName,
         jobStatus: ConversionJobStatus.InProgress,
       });
 
-      PermalinkController.createPermalink(isRecordingConfig)
+      PermalinkController.createPermalink(isRecordingConfig, this.globals.context)
           .then((hash) => {
-            globals.dispatch(Actions.setPermalink({requestId, hash}));
+            this.globals().dispatch(Actions.setPermalink({requestId, hash}));
           })
           .finally(() => {
-            publishConversionJobStatusUpdate({
+            publishConversionJobStatusUpdate(this.globals.context, {
               jobName,
               jobStatus: ConversionJobStatus.NotRunning,
             });
@@ -91,7 +92,7 @@ export class PermalinkController extends Controller<'main'> {
     }
 
     // Otherwise, this is a request to load the permalink.
-    PermalinkController.loadState(globals.state.permalink.hash)
+    PermalinkController.loadState(this.globals().state.permalink.hash!, this.globals.context)
         .then((stateOrConfig) => {
           if (PermalinkController.isRecordConfig(stateOrConfig)) {
             // This permalink state only contains a RecordConfig. Show the
@@ -99,16 +100,16 @@ export class PermalinkController extends Controller<'main'> {
             const validConfig =
                 runValidator(recordConfigValidator, stateOrConfig as unknown)
                     .result;
-            globals.dispatch(Actions.setRecordConfig({config: validConfig}));
-            Router.navigate('#!/record');
+            this.globals().dispatch(Actions.setRecordConfig({config: validConfig}));
+            Router.navigate(this.globals.context, '#!/record');
             return;
           }
-          globals.dispatch(Actions.setState({newState: stateOrConfig}));
+          this.globals().dispatch(Actions.setState({newState: stateOrConfig}));
           this.lastRequestId = stateOrConfig.permalink.requestId;
         });
   }
 
-  private static upgradeState(state: State): State {
+  private static upgradeState(state: State, globalsContext: string): State {
     if (state.version !== STATE_VERSION) {
       const newState = createEmptyState();
       // Old permalinks from state versions prior to version 24
@@ -130,7 +131,7 @@ export class PermalinkController extends Controller<'main'> {
       const message = `Unable to parse old state version. Discarding state ` +
           `and loading trace.`;
       console.warn(message);
-      PermalinkController.updateStatus(message);
+      PermalinkController.updateStatus(message, globalsContext);
       return newState;
     } else {
       // Loaded state is presumed to be compatible with the State type
@@ -148,14 +149,14 @@ export class PermalinkController extends Controller<'main'> {
         ['STOP_WHEN_FULL', 'RING_BUFFER', 'LONG_TRACE'].includes(mode);
   }
 
-  private static async createPermalink(isRecordingConfig: boolean):
+  private static async createPermalink(isRecordingConfig: boolean, globalsContext: string):
       Promise<string> {
-    let uploadState: State|RecordConfig = globals.state;
+    let uploadState: State|RecordConfig = globals(globalsContext).state;
 
     if (isRecordingConfig) {
-      uploadState = globals.state.recordConfig;
+      uploadState = globals(globalsContext).state.recordConfig;
     } else {
-      const engine = assertExists(globals.getCurrentEngine());
+      const engine = assertExists(globals(globalsContext).getCurrentEngine());
       let dataToUpload: File|ArrayBuffer|undefined = undefined;
       let traceName = `trace ${engine.id}`;
       if (engine.source.type === 'FILE') {
@@ -168,10 +169,10 @@ export class PermalinkController extends Controller<'main'> {
       }
 
       if (dataToUpload !== undefined) {
-        PermalinkController.updateStatus(`Uploading ${traceName}`);
+        PermalinkController.updateStatus(`Uploading ${traceName}`, globalsContext);
         const url = await saveTrace(dataToUpload);
         // Convert state to use URLs and remove permalink.
-        uploadState = produce(globals.state, (draft) => {
+        uploadState = produce(globals(globalsContext).state, (draft) => {
           assertExists(draft.engine).source = {type: 'URL', url};
           draft.permalink = {};
         });
@@ -179,13 +180,13 @@ export class PermalinkController extends Controller<'main'> {
     }
 
     // Upload state.
-    PermalinkController.updateStatus(`Creating permalink...`);
+    PermalinkController.updateStatus(`Creating permalink...`, globalsContext);
     const hash = await saveState(uploadState);
-    PermalinkController.updateStatus(`Permalink ready`);
+    PermalinkController.updateStatus(`Permalink ready`, globalsContext);
     return hash;
   }
 
-  private static async loadState(id: string): Promise<State|RecordConfig> {
+  private static async loadState(id: string, globalsContext: string): Promise<State|RecordConfig> {
     const url = `https://storage.googleapis.com/${BUCKET_NAME}/${id}`;
     const response = await fetch(url);
     if (!response.ok) {
@@ -208,14 +209,14 @@ export class PermalinkController extends Controller<'main'> {
       }
     }
     if (!this.isRecordConfig(state)) {
-      return this.upgradeState(state);
+      return this.upgradeState(state, globalsContext);
     }
     return state;
   }
 
-  private static updateStatus(msg: string): void {
+  private static updateStatus(msg: string, globalsContext: string): void {
     // TODO(hjd): Unify loading updates.
-    globals.dispatch(Actions.updateStatus({
+    globals(globalsContext).dispatch(Actions.updateStatus({
       msg,
       timestamp: Date.now() / 1000,
     }));

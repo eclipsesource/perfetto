@@ -18,14 +18,14 @@ import m from 'mithril';
 
 import {DropDirection} from '../common/dragndrop_logic';
 
-import {globals} from './globals';
+import {bindGlobals, HasGlobalsContextAttrs} from './globals';
 
 export interface ReorderableCell {
   content: m.Children;
   extraClass?: string;
 }
 
-export interface ReorderableCellGroupAttrs {
+export interface ReorderableCellGroupAttrs extends HasGlobalsContextAttrs {
   cells: ReorderableCell[];
   onReorder: (from: number, to: number, side: DropDirection) => void;
 }
@@ -65,6 +65,7 @@ export class ReorderableCellGroup implements
   }
 
   view(vnode: m.Vnode<ReorderableCellGroupAttrs>): m.Children {
+    const globals = bindGlobals(vnode.attrs.globalsContext);
     return vnode.attrs.cells.map(
         (cell, index) => m(
             `td.reorderable-cell${cell.extraClass ?? ''}`,
@@ -77,7 +78,7 @@ export class ReorderableCellGroup implements
                   e.dataTransfer.setDragImage(placeholderElement, 0, 0);
                 }
 
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
               ondragover: (e: DragEvent) => {
                 let target = e.target as HTMLElement;
@@ -107,7 +108,7 @@ export class ReorderableCellGroup implements
 
 
                 if (redraw) {
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals().rafScheduler.scheduleFullRedraw();
                 }
               },
               ondragenter: (e: DragEvent) => {
@@ -129,7 +130,7 @@ export class ReorderableCellGroup implements
                 }
 
                 this.draggingTo = -1;
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
               ondragend: () => {
                 if (this.draggingTo !== this.draggingFrom &&
@@ -140,7 +141,7 @@ export class ReorderableCellGroup implements
 
                 this.draggingFrom = -1;
                 this.draggingTo = -1;
-                globals.rafScheduler.scheduleFullRedraw();
+                globals().rafScheduler.scheduleFullRedraw();
               },
             },
             cell.content));

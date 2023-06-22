@@ -15,7 +15,7 @@
 import m from 'mithril';
 import {assertExists, assertTrue} from '../base/logging';
 import {PageAttrs} from './pages';
-import { globals } from './globals';
+import { GlobalsFunction, bindGlobals, globals } from './globals';
 
 export const ROUTE_PREFIX = '#!';
 const DEFAULT_ROUTE = '/';
@@ -83,6 +83,7 @@ export interface RoutesMap {
 // or ?local_cache_key=". That logic lives in trace_url_handler.ts, which is
 // triggered by Router.onRouteChanged().
 export class Router {
+  private readonly globals: GlobalsFunction;
   private readonly recentChanges: number[] = [];
   private routes: RoutesMap;
 
@@ -90,8 +91,9 @@ export class Router {
   // This event is decoupled for testing and to avoid circular deps.
   onRouteChanged: (route: Route) => (void) = () => {};
 
-  constructor(routes: RoutesMap) {
+  constructor(globalsContext: string, routes: RoutesMap) {
     assertExists(routes[DEFAULT_ROUTE]);
+    this.globals = bindGlobals(globalsContext);
     this.routes = routes;
     window.onhashchange = (e: HashChangeEvent) => this.onHashChange(e);
   }
@@ -102,7 +104,7 @@ export class Router {
     const oldRoute = Router.parseUrl(e.oldURL);
     const newRoute = Router.parseUrl(e.newURL);
 
-    if (globals.disableHashBasedRouting && newRoute.page.length === 0 && newRoute.subpage.length === 0) {
+    if (this.globals().disableHashBasedRouting && newRoute.page.length === 0 && newRoute.subpage.length === 0) {
       // the application that disabled hash based routing 
       // made a change that either removed our routes or was unrelated
       // -> no op
@@ -126,10 +128,10 @@ export class Router {
       newRoute.args.local_cache_key = oldRoute.args.local_cache_key;
     }
 
-    const args = Router.buildQueryString(newRoute.args);
+    const args = Router.buildQueryString(this.globals.context, newRoute.args);
     let normalizedFragment = `#!${newRoute.page}${newRoute.subpage}`;
     normalizedFragment += args.length > 0 ? '?' + args : '';
-    if (globals.disableHashBasedRouting) {
+    if (this.globals().disableHashBasedRouting) {
       normalizedFragment = Router.hashBasedToParamBasedFragment(normalizedFragment);
     }
 
@@ -157,8 +159,8 @@ export class Router {
     }
   }
 
-  static buildQueryString(args: RouteArgs): string {
-    return globals.disableHashBasedRouting
+  static buildQueryString(globalsContext:string, args: RouteArgs): string {
+    return globals(globalsContext).disableHashBasedRouting
       ? Router.emptyPreservingBuildQueryString(args)
       : m.buildQueryString(args);
   }
@@ -200,12 +202,12 @@ export class Router {
     if (component === undefined) {
       component = assertExists(this.routes[DEFAULT_ROUTE]);
     }
-    return m(component, {subpage: route.subpage} as PageAttrs);
+    return m(component, {globalsContext: this.globals.context, subpage: route.subpage});
   }
 
-  static navigate(newHash: string) {
+  static navigate(globalsContext: string, newHash: string) {
     assertTrue(newHash.startsWith(ROUTE_PREFIX));
-    if (!globals.disableHashBasedRouting) {
+    if (!globals(globalsContext).disableHashBasedRouting) {
       window.location.hash = newHash;
     } else {
       // Hash based routing is disabled (usually because perfetto is embedded in an application that uses the hash itself).
@@ -227,7 +229,7 @@ export class Router {
   // Sample output:
   // {page: '/record', subpage: '/gpu', args: {local_cache_key: 'abcd-1234'}}
   static parseFragment(hash: string): Route {
-    if (globals.disableHashBasedRouting) {
+    if (globals('').disableHashBasedRouting) {
       hash = Router.paramBasedToHashBasedFragment(hash);
     }
     const prefixLength = ROUTE_PREFIX.length;

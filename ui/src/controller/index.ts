@@ -20,26 +20,30 @@ import {assertExists, assertTrue} from '../base/logging';
 import {AppController} from './app_controller';
 import {ControllerAny} from './controller';
 
-let rootController: ControllerAny;
-let runningControllers = false;
+let rootControllerMap = new Map<string, ControllerAny>();
+let runningControllersMap = new Map<string, boolean>();
 
-export function initController(extensionPort: MessagePort) {
-  assertTrue(rootController === undefined);
-  rootController = new AppController(extensionPort);
+export function initController(extensionPort: MessagePort, globalsContext = '') {
+  assertTrue(!rootControllerMap.has(globalsContext));
+  const rootController = new AppController(extensionPort, globalsContext);
+  rootControllerMap.set(globalsContext, rootController);
+  runningControllersMap.set(globalsContext, false);
 }
 
-export function runControllers() {
+export function runControllers(globalsContext: string) {
+  const runningControllers = runningControllersMap.get(globalsContext)
+  if (runningControllers === undefined) throw new Error('Unknown controller');
   if (runningControllers) throw new Error('Re-entrant call detected');
 
   // Run controllers locally until all state machines reach quiescence.
   let runAgain = true;
   for (let iter = 0; runAgain; iter++) {
     if (iter > 100) throw new Error('Controllers are stuck in a livelock');
-    runningControllers = true;
+    runningControllersMap.set(globalsContext, true);
     try {
-      runAgain = assertExists(rootController).invoke();
+      runAgain = assertExists(rootControllerMap.get(globalsContext)).invoke();
     } finally {
-      runningControllers = false;
+      runningControllersMap.set(globalsContext, false);
     }
   }
 }

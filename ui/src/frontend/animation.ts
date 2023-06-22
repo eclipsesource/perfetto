@@ -19,7 +19,9 @@ export class Animation {
   private endMs = 0;
   private boundOnAnimationFrame = this.onAnimationFrame.bind(this);
 
-  constructor(private onAnimationStep: (timeSinceStartMs: number) => void) {}
+  constructor(
+      private globalsContext: string,
+      private onAnimationStep: (timeSinceStartMs: number) => void) {}
 
   start(durationMs: number) {
     const nowMs = performance.now();
@@ -31,12 +33,12 @@ export class Animation {
     }
     this.startMs = nowMs;
     this.endMs = nowMs + durationMs;
-    globals.rafScheduler.start(this.boundOnAnimationFrame);
+    globals(this.globalsContext).rafScheduler.start(this.boundOnAnimationFrame);
   }
 
   stop() {
     this.endMs = 0;
-    globals.rafScheduler.stop(this.boundOnAnimationFrame);
+    globals(this.globalsContext).rafScheduler.stop(this.boundOnAnimationFrame);
   }
 
   get startTimeMs(): number {
@@ -45,7 +47,7 @@ export class Animation {
 
   private onAnimationFrame(nowMs: number) {
     if (nowMs >= this.endMs) {
-      globals.rafScheduler.stop(this.boundOnAnimationFrame);
+      globals(this.globalsContext).rafScheduler.stop(this.boundOnAnimationFrame);
       return;
     }
     this.onAnimationStep(Math.max(Math.round(nowMs - this.startMs), 0));

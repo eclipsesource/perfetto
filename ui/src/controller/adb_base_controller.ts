@@ -15,7 +15,7 @@
 import {extractDurationFromTraceConfig} from '../base/trace_config_utils';
 import {extractTraceConfig} from '../base/trace_config_utils';
 import {isAdbTarget} from '../common/state';
-import {globals} from '../frontend/globals';
+import {GlobalsFunction, bindGlobals} from '../frontend/globals';
 
 import {Adb} from './adb_interfaces';
 import {ReadBuffersResponse} from './consumer_port_types';
@@ -39,12 +39,14 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
   // removed.
   private commandQueue: Command[] = [];
 
+  protected globals: GlobalsFunction;
   protected adb: Adb;
   protected state = AdbConnectionState.READY_TO_CONNECT;
   protected device?: USBDevice;
 
-  protected constructor(adb: Adb, consumer: Consumer) {
+  protected constructor(globalsContext: string, adb: Adb, consumer: Consumer) {
     super(consumer);
+    this.globals = bindGlobals(globalsContext);
     this.adb = adb;
   }
 
@@ -73,7 +75,7 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
         this.device = await this.findDevice();
         if (!this.device) {
           this.state = AdbConnectionState.READY_TO_CONNECT;
-          const target = globals.state.recordingTarget;
+          const target = this.globals().state.recordingTarget;
           throw Error(`Device with serial ${
               isAdbTarget(target) ? target.serial : 'n/a'} not found.`);
         }
@@ -84,7 +86,7 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
         await this.adb.connect(this.device);
 
         // During the authentication the device may have been disconnected.
-        if (!globals.state.recordingInProgress || this.deviceDisconnected()) {
+        if (!this.globals().state.recordingInProgress || this.deviceDisconnected()) {
           throw Error('Recording not in progress after adb authorization.');
         }
 
@@ -130,7 +132,7 @@ export abstract class AdbBaseConsumerPort extends RpcConsumerPort {
 
   async findDevice(): Promise<USBDevice|undefined> {
     if (!('usb' in navigator)) return undefined;
-    const connectedDevice = globals.state.recordingTarget;
+    const connectedDevice = this.globals().state.recordingTarget;
     if (!isAdbTarget(connectedDevice)) return undefined;
     const devices = await navigator.usb.getDevices();
     return devices.find((d) => d.serialNumber === connectedDevice.serial);

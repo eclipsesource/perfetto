@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { HasGlobalsContextAttrs } from '../../frontend/globals';
 import {
   AggregateData,
   Column,
@@ -21,12 +22,11 @@ import {
 import {Engine} from '../../common/engine';
 import {NUM} from '../../common/query_result';
 import {Area, Sorting} from '../../common/state';
-import {globals} from '../../frontend/globals';
 import {publishAggregateData} from '../../frontend/publish';
 import {AreaSelectionHandler} from '../area_selection_handler';
 import {Controller} from '../controller';
 
-export interface AggregationControllerArgs {
+export interface AggregationControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
   kind: string;
 }
@@ -51,15 +51,15 @@ export abstract class AggregationController extends Controller<'main'> {
   abstract getColumnDefinitions(): ColumnDef[];
 
   constructor(private args: AggregationControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
     this.kind = this.args.kind;
-    this.areaSelectionHandler = new AreaSelectionHandler();
+    this.areaSelectionHandler = new AreaSelectionHandler(args.globalsContext);
   }
 
   run() {
-    const selection = globals.state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (selection === null || selection.kind !== 'AREA') {
-      publishAggregateData({
+      publishAggregateData(this.globals.context, {
         data: {
           tabName: this.getTabName(),
           columns: [],
@@ -71,7 +71,7 @@ export abstract class AggregationController extends Controller<'main'> {
       return;
     }
     const aggregatePreferences =
-        globals.state.aggregatePreferences[this.args.kind];
+        this.globals().state.aggregatePreferences[this.args.kind];
 
     const sortingChanged = aggregatePreferences &&
         this.previousSorting !== aggregatePreferences.sorting;
@@ -84,7 +84,7 @@ export abstract class AggregationController extends Controller<'main'> {
       this.requestingData = true;
       if (sortingChanged) this.previousSorting = aggregatePreferences.sorting;
       this.getAggregateData(area, hasAreaChanged)
-          .then((data) => publishAggregateData({data, kind: this.args.kind}))
+          .then((data) => publishAggregateData(this.globals.context, {data, kind: this.args.kind}))
           .finally(() => {
             this.requestingData = false;
             if (this.queuedRequest) {
@@ -111,7 +111,7 @@ export abstract class AggregationController extends Controller<'main'> {
 
     const defs = this.getColumnDefinitions();
     const colIds = defs.map((col) => col.columnId);
-    const pref = globals.state.aggregatePreferences[this.kind];
+    const pref = this.globals().state.aggregatePreferences[this.kind];
     let sorting = `${this.getDefaultSorting().column} ${
         this.getDefaultSorting().direction}`;
     if (pref && pref.sorting) {

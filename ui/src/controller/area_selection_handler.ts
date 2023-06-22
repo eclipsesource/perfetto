@@ -16,15 +16,17 @@ import {Area, AreaById} from '../common/state';
 import {globals} from '../frontend/globals';
 
 export class AreaSelectionHandler {
+  constructor(private globalsContext: string) {}
+
   private previousArea?: Area;
 
   getAreaChange(): [boolean, AreaById|undefined] {
-    const currentSelection = globals.state.currentSelection;
+    const currentSelection = globals(this.globalsContext).state.currentSelection;
     if (currentSelection === null || currentSelection.kind !== 'AREA') {
       return [false, undefined];
     }
 
-    const selectedArea = globals.state.areas[currentSelection.areaId];
+    const selectedArea = globals(this.globalsContext).state.areas[currentSelection.areaId];
     // Area is considered changed if:
     // 1. The new area is defined and the old area undefined.
     // 2. The new area is undefined and the old area defined (viceversa from 1).

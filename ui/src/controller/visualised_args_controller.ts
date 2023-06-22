@@ -18,14 +18,14 @@ import {Actions, AddTrackArgs} from '../common/actions';
 import {Engine} from '../common/engine';
 import {NUM} from '../common/query_result';
 import {InThreadTrackSortKey} from '../common/state';
-import {globals} from '../frontend/globals';
+import {globals, HasGlobalsContextAttrs} from '../frontend/globals';
 import {
   VISUALISED_ARGS_SLICE_TRACK_KIND,
 } from '../tracks/visualised_args/index';
 
 import {Controller} from './controller';
 
-export interface VisualisedArgControllerArgs {
+export interface VisualisedArgControllerArgs extends HasGlobalsContextAttrs {
   argName: string;
   engine: Engine;
 }
@@ -38,7 +38,7 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
   private addedTrackIds: string[];
 
   constructor(args: VisualisedArgControllerArgs) {
-    super('init');
+    super('init', args.globalsContext);
     this.argName = args.argName;
     this.engine = args.engine;
     this.escapedArgName = this.argName.replace(/[^a-zA-Z]/g, '_');
@@ -48,7 +48,7 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
 
   onDestroy() {
     this.engine.query(`drop table if exists ${this.tableName}`);
-    globals.dispatch(
+    globals(this.globals.context).dispatch(
         Actions.removeVisualisedArgTracks({trackIds: this.addedTrackIds}));
   }
 
@@ -90,8 +90,8 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
     const it = result.iter({'trackId': NUM, 'maxDepth': NUM});
     for (; it.valid(); it.next()) {
       const track =
-          globals.state
-              .tracks[globals.state.uiTrackIdByTraceTrackId[it.trackId]];
+          globals(this.globals.context).state
+              .tracks[globals(this.globals.context).state.uiTrackIdByTraceTrackId[it.trackId]];
       const utid = (track.trackSortKey as {utid?: number}).utid;
       const id = uuidv4();
       this.addedTrackIds.push(id);
@@ -113,8 +113,8 @@ export class VisualisedArgController extends Controller<'init'|'running'> {
         },
       });
     }
-    globals.dispatch(Actions.addTracks({tracks: tracksToAdd}));
-    globals.dispatch(Actions.sortThreadTracks({}));
+    globals(this.globals.context).dispatch(Actions.addTracks({tracks: tracksToAdd}));
+    globals(this.globals.context).dispatch(Actions.sortThreadTracks({}));
   }
 
   run() {

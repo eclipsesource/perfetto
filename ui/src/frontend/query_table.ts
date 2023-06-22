@@ -23,13 +23,13 @@ import {Row} from '../common/query_result';
 import {Anchor} from './anchor';
 import {copyToClipboard, queryResponseToClipboard} from './clipboard';
 import {downloadData} from './download_utils';
-import {globals} from './globals';
-import {Panel} from './panel';
+import {bindGlobals, HasGlobalsContextAttrs} from './globals';
+import {Panel, PanelAttrs} from './panel';
 import {Router} from './router';
 import {reveal} from './scroll_helper';
 import {Button} from './widgets/button';
 
-interface QueryTableRowAttrs {
+interface QueryTableRowAttrs extends HasGlobalsContextAttrs {
   row: Row;
   columns: string[];
 }
@@ -93,6 +93,12 @@ export function getSliceId(row: Row): number|undefined {
 }
 
 class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
+  private globals = bindGlobals();
+
+  oncreate({attrs}: m.VnodeDOM<QueryTableRowAttrs>) {
+    this.globals = bindGlobals(attrs.globalsContext);
+  }
+
   view(vnode: m.Vnode<QueryTableRowAttrs>) {
     const {row, columns} = vnode.attrs;
     const cells = columns.map((col) => this.renderCell(col, row[col]));
@@ -103,7 +109,7 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
       return m(
           'tr',
           {
-            onclick: () => this.highlightSlice(row, globals.state.currentTab),
+            onclick: () => this.highlightSlice(row, this.globals().state.currentTab),
             // TODO(altimin): Consider improving the logic here (e.g. delay?) to
             // account for cases when dblclick fires late.
             ondblclick: () => this.highlightSlice(row),
@@ -137,9 +143,9 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
     const sliceStart = BigInt(row.ts);
     // row.dur can be negative. Clamp to 1ns.
     const sliceDur = BigintMath.max(BigInt(row.dur), 1n);
-    const uiTrackId = globals.state.uiTrackIdByTraceTrackId[trackId];
+    const uiTrackId = this.globals().state.uiTrackIdByTraceTrackId[trackId];
     if (uiTrackId !== undefined) {
-      reveal(uiTrackId, sliceStart, sliceStart + sliceDur, true);
+      reveal(this.globals.context, uiTrackId, sliceStart, sliceStart + sliceDur, true);
       const sliceId = getSliceId(row);
       if (sliceId !== undefined) {
         this.selectSlice(sliceId, uiTrackId, nextTab);
@@ -153,11 +159,11 @@ class QueryTableRow implements m.ClassComponent<QueryTableRowAttrs> {
       trackId: uiTrackId,
       table: 'slice',
     });
-    globals.makeSelection(action, nextTab);
+    this.globals().makeSelection(action, nextTab);
   }
 }
 
-interface QueryTableContentAttrs {
+interface QueryTableContentAttrs extends HasGlobalsContextAttrs {
   resp: QueryResponse;
 }
 
@@ -169,7 +175,7 @@ class QueryTableContent implements m.ClassComponent<QueryTableContentAttrs> {
   }
 
   view(vnode: m.CVnode<QueryTableContentAttrs>) {
-    const resp = vnode.attrs.resp;
+    const {globalsContext, resp} = vnode.attrs;
     this.previousResponse = resp;
     const cols = [];
     for (const col of resp.columns) {
@@ -178,7 +184,7 @@ class QueryTableContent implements m.ClassComponent<QueryTableContentAttrs> {
     const tableHeader = m('tr', cols);
 
     const rows =
-        resp.rows.map((row) => m(QueryTableRow, {row, columns: resp.columns}));
+        resp.rows.map((row) => m(QueryTableRow, {globalsContext, row, columns: resp.columns}));
 
     if (resp.error) {
       return m('.query-error', `SQL error: ${resp.error}`);
@@ -190,7 +196,7 @@ class QueryTableContent implements m.ClassComponent<QueryTableContentAttrs> {
   }
 }
 
-interface QueryTableAttrs {
+interface QueryTableAttrs extends PanelAttrs {
   query: string;
   onClose: () => void;
   resp?: QueryResponse;
@@ -199,7 +205,7 @@ interface QueryTableAttrs {
 
 export class QueryTable extends Panel<QueryTableAttrs> {
   view(vnode: m.CVnode<QueryTableAttrs>) {
-    const resp = vnode.attrs.resp;
+    const {globalsContext, resp} = vnode.attrs;
 
     const header: m.Child[] = [
       m('span',
@@ -247,7 +253,7 @@ export class QueryTable extends Panel<QueryTableAttrs> {
                 `statement are displayed in the table below.`));
     }
 
-    return m('div', ...headers, m(QueryTableContent, {resp}));
+    return m('div', ...headers, m(QueryTableContent, {globalsContext, resp}));
   }
 
   renderCanvas() {}

@@ -26,7 +26,6 @@ import {
   OnSliceClickArgs,
   OnSliceOverArgs,
 } from './base_slice_track';
-import {globals} from './globals';
 import {NewTrackArgs} from './track';
 
 export const NAMED_SLICE_ROW = {
@@ -72,7 +71,7 @@ export abstract class NamedSliceTrack<
   }
 
   onSliceClick(args: OnSliceClickArgs<T['slice']>) {
-    globals.makeSelection(Actions.selectChromeSlice({
+    this.globals().makeSelection(Actions.selectChromeSlice({
       id: args.slice.id,
       trackId: this.trackId,
 

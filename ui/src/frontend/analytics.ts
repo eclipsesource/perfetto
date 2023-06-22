@@ -22,7 +22,7 @@ type TraceCategories = 'Trace Actions'|'Record Trace'|'User Actions';
 const ANALYTICS_ID = 'UA-137828855-1';
 const PAGE_TITLE = 'no-page-title';
 
-export function initAnalytics() {
+export function initAnalytics(globalsContext: string) {
   // Only initialize logging on the official site and on localhost (to catch
   // analytics bugs when testing locally).
   // Skip analytics is the fragment has "testing=1", this is used by UI tests.
@@ -30,8 +30,8 @@ export function initAnalytics() {
   // local storage.
   if ((window.location.origin.startsWith('http://localhost:') ||
        window.location.origin.endsWith('.perfetto.dev')) &&
-      !globals.testing && !globals.embeddedMode) {
-    return new AnalyticsImpl();
+      !globals(globalsContext).testing && !globals(globalsContext).embeddedMode) {
+    return new AnalyticsImpl(globalsContext);
   }
   return new NullAnalytics();
 }
@@ -62,7 +62,7 @@ export class NullAnalytics implements Analytics {
 class AnalyticsImpl implements Analytics {
   private initialized_ = false;
 
-  constructor() {
+  constructor(private globalsContext: string) {
     // The code below is taken from the official Google Analytics docs [1] and
     // adapted to TypeScript. We have it here rather than as an inline script
     // in index.html (as suggested by GA's docs) because inline scripts don't
@@ -93,7 +93,7 @@ class AnalyticsImpl implements Analytics {
     const route = Router.parseUrl(window.location.href).page || '/';
     console.log(
         `GA initialized. route=${route}`,
-        `isInternalUser=${globals.isInternalUser}`);
+        `isInternalUser=${globals(this.globalsContext).isInternalUser}`);
     // GA's reccomendation for SPAs is to disable automatic page views and
     // manually send page_view events. See:
     // https://developers.google.com/analytics/devguides/collection/gtagjs/pages#manual_pageviews
@@ -104,7 +104,7 @@ class AnalyticsImpl implements Analytics {
       referrer: document.referrer.split('?')[0],
       send_page_view: false,
       page_title: PAGE_TITLE,
-      dimension1: globals.isInternalUser ? '1' : '0',
+      dimension1: globals(this.globalsContext).isInternalUser ? '1' : '0',
       dimension2: VERSION,
       dimension3: getCurrentChannel(),
     });

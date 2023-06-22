@@ -27,10 +27,10 @@ import {
 
 import {AggregationController} from './aggregation_controller';
 
-export function getSelectedTrackIds(area: Area): number[] {
+export function getSelectedTrackIds(globalsContext: string, area: Area): number[] {
   const selectedTrackIds = [];
   for (const trackId of area.tracks) {
-    const track = globals.state.tracks[trackId];
+    const track = globals(globalsContext).state.tracks[trackId];
     // Track will be undefined for track groups.
     if (track !== undefined) {
       if (track.kind === SLICE_TRACK_KIND) {
@@ -51,7 +51,7 @@ export class SliceAggregationController extends AggregationController {
   async createAggregateView(engine: Engine, area: Area) {
     await engine.query(`drop view if exists ${this.kind};`);
 
-    const selectedTrackIds = getSelectedTrackIds(area);
+    const selectedTrackIds = getSelectedTrackIds(this.globals.context, area);
 
     if (selectedTrackIds.length === 0) return false;
 

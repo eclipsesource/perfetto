@@ -17,8 +17,8 @@ import {DragStrategy} from './drag_strategy';
 export class InnerDragStrategy extends DragStrategy {
   private dragStartPx = 0;
 
-  constructor(timeScale: TimeScale, private pixelBounds: [number, number]) {
-    super(timeScale);
+  constructor(globalsContext: string, timeScale: TimeScale, private pixelBounds: [number, number]) {
+    super(globalsContext, timeScale);
   }
 
   onDrag(x: number) {

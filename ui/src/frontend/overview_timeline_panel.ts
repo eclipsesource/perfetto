@@ -32,12 +32,12 @@ import {DragStrategy} from './drag/drag_strategy';
 import {InnerDragStrategy} from './drag/inner_drag_strategy';
 import {OuterDragStrategy} from './drag/outer_drag_strategy';
 import {DragGestureHandler} from './drag_gesture_handler';
-import {globals} from './globals';
+import {GlobalsFunction} from './globals';
 import {getMaxMajorTicks, TickGenerator, TickType} from './gridline_helper';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 import {PxSpan, TimeScale} from './time_scale';
 
-export class OverviewTimelinePanel extends Panel {
+export class OverviewTimelinePanel extends Panel<PanelAttrs> {
   private static HANDLE_SIZE_PX = 5;
 
   private width = 0;
@@ -49,13 +49,13 @@ export class OverviewTimelinePanel extends Panel {
 
   // Must explicitly type now; arguments types are no longer auto-inferred.
   // https://github.com/Microsoft/TypeScript/issues/1373
-  onupdate({dom}: m.CVnodeDOM) {
+  onupdate({dom}: m.CVnodeDOM<PanelAttrs>) {
     const newWidth = dom.getBoundingClientRect().width;
     if (newWidth > 0) { // It may be zero when temporarily not visible
       this.width = newWidth;
     }
-    this.traceTime = globals.stateTraceTimeTP();
-    const traceTime = globals.stateTraceTime();
+    this.traceTime = this.globals().stateTraceTimeTP();
+    const traceTime = this.globals().stateTraceTime();
     const pxSpan = new PxSpan(TRACK_SHELL_WIDTH, this.width);
     this.timeScale = TimeScale.fromHPTimeSpan(traceTime, pxSpan);
     if (this.gesture === undefined) {
@@ -67,13 +67,13 @@ export class OverviewTimelinePanel extends Panel {
     }
   }
 
-  oncreate(vnode: m.CVnodeDOM) {
+  oncreate(vnode: m.CVnodeDOM<PanelAttrs>) {
     this.onupdate(vnode);
     (vnode.dom as HTMLElement)
         .addEventListener('mousemove', this.boundOnMouseMove);
   }
 
-  onremove({dom}: m.CVnodeDOM) {
+  onremove({dom}: m.CVnodeDOM<PanelAttrs>) {
     (dom as HTMLElement)
         .removeEventListener('mousemove', this.boundOnMouseMove);
   }
@@ -92,7 +92,7 @@ export class OverviewTimelinePanel extends Panel {
     if (size.width > TRACK_SHELL_WIDTH && this.traceTime.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(this.width - TRACK_SHELL_WIDTH);
       const tickGen = new TickGenerator(
-          this.traceTime, maxMajorTicks, globals.state.traceTime.start);
+          this.traceTime, maxMajorTicks, this.globals().state.traceTime.start);
       ctx.fillStyle = getCssStr('--overview-background-color');
       ctx.fillRect(TRACK_SHELL_WIDTH, headerHeight, this.width, size.height - headerHeight);
       // Draw time labels on the top header.
@@ -104,7 +104,7 @@ export class OverviewTimelinePanel extends Panel {
         if (xPos > this.width) break;
         if (type === TickType.MAJOR) {
           ctx.fillRect(xPos - 1, 0, 1, headerHeight - 5);
-          const sec = tpTimeToSeconds(time - globals.state.traceTime.start);
+          const sec = tpTimeToSeconds(time - this.globals().state.traceTime.start);
           ctx.fillText(sec.toFixed(tickGen.digits) + ' s', xPos + 5, 18);
         } else if (type == TickType.MEDIUM) {
           ctx.fillRect(xPos - 1, 0, 1, 8);
@@ -115,12 +115,12 @@ export class OverviewTimelinePanel extends Panel {
     }
 
     // Draw mini-tracks with quanitzed density for each process.
-    if (globals.overviewStore.size > 0) {
-      const numTracks = globals.overviewStore.size;
+    if (this.globals().overviewStore.size > 0) {
+      const numTracks = this.globals().overviewStore.size;
       let y = 0;
       const trackHeight = (tracksHeight - 1) / numTracks;
-      for (const key of globals.overviewStore.keys()) {
-        const loads = globals.overviewStore.get(key)!;
+      for (const key of this.globals().overviewStore.keys()) {
+        const loads = this.globals().overviewStore.get(key)!;
         for (let i = 0; i < loads.length; i++) {
           const xStart = Math.floor(this.timeScale.tpTimeToPx(loads[i].start));
           const xEnd = Math.ceil(this.timeScale.tpTimeToPx(loads[i].end));
@@ -139,7 +139,7 @@ export class OverviewTimelinePanel extends Panel {
 
     // Draw semi-opaque rects that occlude the non-visible time range.
     const [vizStartPx, vizEndPx] =
-        OverviewTimelinePanel.extractBounds(this.timeScale);
+        OverviewTimelinePanel.extractBounds(this.globals, this.timeScale);
 
     ctx.fillStyle = OVERVIEW_TIMELINE_NON_VISIBLE_COLOR;
     ctx.fillRect(
@@ -179,8 +179,8 @@ export class OverviewTimelinePanel extends Panel {
   private chooseCursor(x: number) {
     if (this.timeScale === undefined) return 'default';
     const [vizStartPx, vizEndPx] =
-        OverviewTimelinePanel.extractBounds(this.timeScale);
-    const offset = globals.hideSidebar ? 0 : SIDEBAR_WIDTH;
+        OverviewTimelinePanel.extractBounds(this.globals, this.timeScale);
+    const offset = this.globals().hideSidebar ? 0 : SIDEBAR_WIDTH;
     const startBound = vizStartPx - 1 + offset;
     const endBound = vizEndPx + offset;
     if (OverviewTimelinePanel.inBorderRange(x, startBound) ||
@@ -202,14 +202,14 @@ export class OverviewTimelinePanel extends Panel {
 
   onDragStart(x: number) {
     if (this.timeScale === undefined) return;
-    const pixelBounds = OverviewTimelinePanel.extractBounds(this.timeScale);
+    const pixelBounds = OverviewTimelinePanel.extractBounds(this.globals, this.timeScale);
     if (OverviewTimelinePanel.inBorderRange(x, pixelBounds[0]) ||
         OverviewTimelinePanel.inBorderRange(x, pixelBounds[1])) {
-      this.dragStrategy = new BorderDragStrategy(this.timeScale, pixelBounds);
+      this.dragStrategy = new BorderDragStrategy(this.globals.context, this.timeScale, pixelBounds);
     } else if (x < pixelBounds[0] || pixelBounds[1] < x) {
-      this.dragStrategy = new OuterDragStrategy(this.timeScale);
+      this.dragStrategy = new OuterDragStrategy(this.globals.context, this.timeScale);
     } else {
-      this.dragStrategy = new InnerDragStrategy(this.timeScale, pixelBounds);
+      this.dragStrategy = new InnerDragStrategy(this.globals.context, this.timeScale, pixelBounds);
     }
     this.dragStrategy.onDragStart(x);
   }
@@ -218,8 +218,8 @@ export class OverviewTimelinePanel extends Panel {
     this.dragStrategy = undefined;
   }
 
-  private static extractBounds(timeScale: TimeScale): [number, number] {
-    const vizTime = globals.frontendLocalState.visibleWindowTime;
+  private static extractBounds(globals: GlobalsFunction, timeScale: TimeScale): [number, number] {
+    const vizTime = globals().frontendLocalState.visibleWindowTime;
     return [
       Math.floor(timeScale.hpTimeToPx(vizTime.start)),
       Math.ceil(timeScale.hpTimeToPx(vizTime.end)),

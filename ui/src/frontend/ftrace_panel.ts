@@ -13,15 +13,14 @@
 // limitations under the License.
 
 import m from 'mithril';
-import {StringListPatch} from 'src/common/state';
+import {StringListPatch} from '../common/state';
 
 import {assertExists} from '../base/logging';
 import {Actions} from '../common/actions';
 import {colorForString} from '../common/colorizer';
 import {formatTPTime, TPTime} from '../common/time';
 
-import {globals} from './globals';
-import {Panel} from './panel';
+import {Panel, PanelAttrs} from './panel';
 import {
   MultiSelect,
   MultiSelectDiff,
@@ -31,6 +30,10 @@ import {PopupPosition} from './widgets/popup';
 
 const ROW_H = 20;
 const PAGE_SIZE = 250;
+
+export interface FtracePanelAttrs extends PanelAttrs {
+  key: string;
+}
 
 // This class is quite a weird one. The state looks something like this:
 //
@@ -49,11 +52,11 @@ const PAGE_SIZE = 250;
 // Another call to view() can come at any time, as a reusult of the controller
 // giving us some data.
 //
-export class FtracePanel extends Panel<{}> {
+export class FtracePanel extends Panel<FtracePanelAttrs> {
   private page: number = 0;
   private pageCount: number = 0;
 
-  view(_: m.CVnode<{}>) {
+  view() {
     return m(
         '.ftrace-panel',
         m(
@@ -72,13 +75,13 @@ export class FtracePanel extends Panel<{}> {
     return assertExists(el);
   }
 
-  oncreate({dom}: m.CVnodeDOM) {
+  oncreate({dom}: m.CVnodeDOM<FtracePanelAttrs>) {
     const sc = this.scrollContainer(dom);
     sc.addEventListener('scroll', this.onScroll);
     this.recomputeVisibleRowsAndUpdate(sc);
   }
 
-  onupdate({dom}: m.CVnodeDOM) {
+  onupdate({dom}: m.CVnodeDOM<FtracePanelAttrs>) {
     const sc = this.scrollContainer(dom);
     this.recomputeVisibleRowsAndUpdate(sc);
   }
@@ -95,18 +98,18 @@ export class FtracePanel extends Panel<{}> {
     this.pageCount = Math.ceil(visibleRowCount / PAGE_SIZE) + 2;
 
     if (this.page !== prevPage || this.pageCount !== prevPageCount) {
-      globals.dispatch(Actions.updateFtracePagination({
+      this.globals().dispatch(Actions.updateFtracePagination({
         offset: Math.max(0, this.page) * PAGE_SIZE,
         count: this.pageCount * PAGE_SIZE,
       }));
     }
   }
 
-  onremove({dom}: m.CVnodeDOM) {
+  onremove({dom}: m.CVnodeDOM<FtracePanelAttrs>) {
     const sc = this.scrollContainer(dom);
     sc.removeEventListener('scroll', this.onScroll);
 
-    globals.dispatch(Actions.updateFtracePagination({
+    this.globals().dispatch(Actions.updateFtracePagination({
       offset: 0,
       count: 0,
     }));
@@ -118,16 +121,16 @@ export class FtracePanel extends Panel<{}> {
   };
 
   onRowOver(ts: TPTime) {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts}));
+    this.globals().dispatch(Actions.setHoverCursorTimestamp({ts}));
   }
 
   onRowOut() {
-    globals.dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
+    this.globals().dispatch(Actions.setHoverCursorTimestamp({ts: -1n}));
   }
 
   private renderRowsLabel() {
-    if (globals.ftracePanelData) {
-      const {numEvents} = globals.ftracePanelData;
+    if (this.globals().ftracePanelData) {
+      const {numEvents} = this.globals().ftracePanelData!;
       return m('.ftrace-rows-label', `Ftrace Events (${numEvents})`);
     } else {
       return m('.ftrace-rows-label', 'Ftrace Rows');
@@ -135,16 +138,16 @@ export class FtracePanel extends Panel<{}> {
   }
 
   private renderFilterPanel() {
-    if (!globals.ftraceCounters) {
+    if (!this.globals().ftraceCounters) {
       return null;
     }
 
     const options: MultiSelectOption[] =
-        globals.ftraceCounters.map(({name, count}) => {
+    this.globals().ftraceCounters!.map(({name, count}) => {
           return {
             id: name,
             name: `${name} (${count})`,
-            checked: !globals.state.ftraceFilter.excludedNames.some(
+            checked: !this.globals().state.ftraceFilter.excludedNames.some(
                 (excluded: string) => excluded === name),
           };
         });
@@ -152,6 +155,7 @@ export class FtracePanel extends Panel<{}> {
     return m(
         MultiSelect,
         {
+          globalsContext: this.globals.context,
           label: 'Filter by name',
           icon: 'filter_list_alt',
           popupPosition: PopupPosition.Top,
@@ -160,7 +164,7 @@ export class FtracePanel extends Panel<{}> {
             const excludedNames: StringListPatch[] = diffs.map(
                 ({id, checked}) => [checked ? 'remove' : 'add', id],
             );
-            globals.dispatchMultiple([
+            this.globals().dispatchMultiple([
               Actions.updateFtraceFilter({excludedNames}),
               Actions.requestTrackReload({}),
             ]);
@@ -171,7 +175,7 @@ export class FtracePanel extends Panel<{}> {
 
   // Render all the rows including the first title row
   private renderRows() {
-    const data = globals.ftracePanelData;
+    const data = this.globals().ftracePanelData;
     const rows: m.Children = [];
 
     rows.push(m(
@@ -188,7 +192,7 @@ export class FtracePanel extends Panel<{}> {
       for (let i = 0; i < events.length; i++) {
         const {ts, name, cpu, process, args} = events[i];
 
-        const timestamp = formatTPTime(ts - globals.state.traceTime.start);
+        const timestamp = formatTPTime(ts - this.globals().state.traceTime.start);
 
         const rank = i + offset;
 

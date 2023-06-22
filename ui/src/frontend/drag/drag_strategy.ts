@@ -19,7 +19,7 @@ import {globals} from '../globals';
 import {TimeScale} from '../time_scale';
 
 export abstract class DragStrategy {
-  constructor(protected map: TimeScale) {}
+  constructor(protected globalsContext: string, protected map: TimeScale) {}
 
   abstract onDrag(x: number): void;
 
@@ -27,7 +27,7 @@ export abstract class DragStrategy {
 
   protected updateGlobals(tStart: HighPrecisionTime, tEnd: HighPrecisionTime) {
     const vizTime = new HighPrecisionTimeSpan(tStart, tEnd);
-    globals.frontendLocalState.updateVisibleTime(vizTime);
-    globals.rafScheduler.scheduleRedraw();
+    globals(this.globalsContext).frontendLocalState.updateVisibleTime(vizTime);
+    globals(this.globalsContext).rafScheduler.scheduleRedraw();
   }
 }

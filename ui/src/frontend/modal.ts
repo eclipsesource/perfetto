@@ -56,9 +56,9 @@
 import m from 'mithril';
 import {defer} from '../base/deferred';
 import {assertExists, assertTrue} from '../base/logging';
-import {globals} from './globals';
+import {bindGlobals, globals, HasGlobalsContextAttrs} from './globals';
 
-export interface ModalDefinition {
+export interface ModalDefinition extends HasGlobalsContextAttrs {
   title: string;
   content: m.Children|(() => m.Children);
   vAlign?: 'MIDDLE' /* default */ | 'TOP';
@@ -84,12 +84,17 @@ export interface Button {
 // trigger this.
 export class Modal implements m.ClassComponent<ModalDefinition> {
   private requestClose = false;
+  private globals = bindGlobals();
+
+  oninit(vnode: m.Vnode<ModalDefinition>) {
+      this.globals = bindGlobals(vnode.attrs.globalsContext);
+  }
 
   close() {
     // The next view pass will kick-off the modalFadeOut CSS animation by
     // appending the .modal-hidden CSS class.
     this.requestClose = true;
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   view(vnode: m.Vnode<ModalDefinition>) {
@@ -109,8 +114,13 @@ interface ModalImplAttrs extends ModalDefinition {
 // position: absolute, so the modal dialog will be relative to the surrounding
 // DOM.
 class ModalImpl implements m.ClassComponent<ModalImplAttrs> {
-  private parent ?: Modal;
+  private globals = bindGlobals();
+  private parent?: Modal;
   private onClose?: () => void;
+
+  oninit(vnode: m.Vnode<ModalImplAttrs, this>) {
+    this.globals = bindGlobals(vnode.attrs.globalsContext);
+  }
 
   view({attrs}: m.Vnode<ModalImplAttrs>) {
     this.onClose = attrs.onClose;
@@ -196,7 +206,7 @@ class ModalImpl implements m.ClassComponent<ModalImplAttrs> {
   onremove() {
     if (this.onClose !== undefined) {
       this.onClose();
-      globals.rafScheduler.scheduleFullRedraw();
+      this.globals().rafScheduler.scheduleFullRedraw();
     }
   }
 
@@ -221,7 +231,7 @@ class ModalImpl implements m.ClassComponent<ModalImplAttrs> {
 
 // This is deliberately NOT a Mithril component. We want to manage the lifetime
 // independently (outside of Mithril), so we can render from outside the current
-// vdom sub-tree. ModalContainer instances should be singletons / globals.
+// vdom sub-tree. ModalContainer instances should be singletons / globals().
 export class ModalContainer {
   private attrs?: ModalDefinition;
   private generation = 1; // Start with a generation > `closeGeneration`.
@@ -248,7 +258,7 @@ export class ModalContainer {
               thiz.closeGeneration = thiz.generation;
               if (thiz.attrs?.onClose !== undefined) {
                 thiz.attrs.onClose();
-                globals.rafScheduler.scheduleFullRedraw();
+                globals(attrs.globalsContext).rafScheduler.scheduleFullRedraw();
               }
             },
             close: thiz.closeGeneration === thiz.generation ? true :
@@ -276,7 +286,9 @@ export class ModalContainer {
 
   close() {
     this.closeGeneration = this.generation;
-    globals.rafScheduler.scheduleFullRedraw();
+    if (this.attrs) {
+      globals(this.attrs.globalsContext).rafScheduler.scheduleFullRedraw();
+    }
   }
 }
 
@@ -295,6 +307,6 @@ export async function showModal(attrs: ModalDefinition): Promise<void> {
     ...attrs,
     onClose: () => promise.resolve(),
   });
-  globals.rafScheduler.scheduleFullRedraw();
+  globals(attrs.globalsContext).rafScheduler.scheduleFullRedraw();
   return promise;
 }

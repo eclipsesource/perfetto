@@ -58,26 +58,26 @@ interface ErrorArgs {
 function handleOnMessage(msg: MessageEvent): void {
   const args: Args = msg.data;
   if (args.kind === 'updateStatus') {
-    globals.dispatch(Actions.updateStatus({
+    globals().dispatch(Actions.updateStatus({
       msg: args.status,
       timestamp: Date.now() / 1000,
     }));
   } else if (args.kind === 'updateJobStatus') {
-    globals.setConversionJobStatus(args.name, args.status);
+    globals().setConversionJobStatus(args.name, args.status);
   } else if (args.kind === 'downloadFile') {
     download(new File([new Blob([args.buffer])], args.name));
   } else if (args.kind === 'openTraceInLegacy') {
     const str = (new TextDecoder('utf-8')).decode(args.buffer);
     openBufferWithLegacyTraceViewer('trace.json', str, 0);
   } else if (args.kind === 'error') {
-    maybeShowErrorDialog(args.error);
+    maybeShowErrorDialog('', args.error);
   } else {
     throw new Error(`Unhandled message ${JSON.stringify(args)}`);
   }
 }
 
 function makeWorkerAndPost(msg: unknown) {
-  const worker = new Worker(globals.root + 'traceconv_bundle.js');
+  const worker = new Worker(globals().root + 'traceconv_bundle.js');
   worker.onmessage = handleOnMessage;
   worker.postMessage(msg);
 }

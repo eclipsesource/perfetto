@@ -19,9 +19,9 @@ let lastReloadDialogTime = 0;
 const kMinTimeBetweenDialogsMs = 10000;
 const changedPaths = new Set<string>();
 
-export function initLiveReloadIfLocalhost() {
+export function initLiveReloadIfLocalhost(globalsContext: string) {
   if (!location.origin.startsWith('http://localhost:')) return;
-  if (globals.embeddedMode) return;
+  if (globals(globalsContext).embeddedMode) return;
 
   const monitor = new EventSource('/live_reload');
   monitor.onmessage = (msg) => {

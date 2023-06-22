@@ -23,7 +23,6 @@ import {TrackData} from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
-import {globals} from '../../frontend/globals';
 import {cachedHsluvToHex} from '../../frontend/hsluv_cache';
 import {TimeScale} from '../../frontend/time_scale';
 import {NewTrackArgs, Track} from '../../frontend/track';
@@ -106,14 +105,14 @@ class CpuProfileTrack extends Track<Config, Data> {
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;
 
     for (let i = 0; i < data.tsStarts.length; i++) {
       const centerX = data.tsStarts[i];
-      const selection = globals.state.currentSelection;
+      const selection = this.globals().state.currentSelection;
       const isHovered = this.hoveredTs === centerX;
       const isSelected = selection !== null &&
           selection.kind === 'CPU_PROFILE_SAMPLE' && selection.ts === centerX;
@@ -181,7 +180,7 @@ class CpuProfileTrack extends Track<Config, Data> {
     if (data === undefined) return;
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
     const time = timeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
     const index = this.findTimestampIndex(left, timeScale, data, x, y, right);
@@ -197,7 +196,7 @@ class CpuProfileTrack extends Track<Config, Data> {
     if (data === undefined) return false;
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
 
     const time = timeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
@@ -208,7 +207,7 @@ class CpuProfileTrack extends Track<Config, Data> {
       const id = data.ids[index];
       const ts = data.tsStarts[index];
 
-      globals.makeSelection(
+      this.globals().makeSelection(
           Actions.selectCpuProfileSample({id, utid: this.config.utid, ts}));
       return true;
     }

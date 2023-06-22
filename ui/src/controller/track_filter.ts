@@ -153,7 +153,7 @@ function compose<FILTER extends Filter, ARGS>(a: FILTER, b: FILTER): FILTER {
  * @returns whether the track should be created according to registered filters
  */
 export function shouldCreateTrack(trackArgs: AddTrackArgs, defaultInclude?: (trackArgs: AddTrackArgs) => boolean): boolean {
-  if (!globals.trackFilteringEnabled) {
+  if (!globals().trackFilteringEnabled) {
     return true;
   }
 
@@ -179,7 +179,7 @@ export function shouldCreateTrack(trackArgs: AddTrackArgs, defaultInclude?: (tra
  * @returns whether the track group should be created according to registered filters
  */
 export function shouldCreateTrackGroup(trackGroupArgs: AddTrackGroupArgs): boolean {
-  if (!globals.trackFilteringEnabled) {
+  if (!globals().trackFilteringEnabled) {
     return true;
   }
 

@@ -13,8 +13,9 @@
 // limitations under the License.
 
 import {DataSource} from '../../common/recordingV2/recording_interfaces_v2';
+import {HasGlobalsContextAttrs} from '../globals';
 
-export interface RecordingSectionAttrs {
+export interface RecordingSectionAttrs extends HasGlobalsContextAttrs {
   dataSources: DataSource[];
   cssClass: string;
 }

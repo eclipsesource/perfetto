@@ -23,7 +23,6 @@ import {
   TrackState,
 } from '../common/state';
 
-import {globals} from './globals';
 import {drawGridLines} from './gridline_helper';
 import {
   BLANK_CHECKBOX,
@@ -32,7 +31,7 @@ import {
   EXPAND_UP,
   INDETERMINATE_CHECKBOX,
 } from './icons';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 import {Track} from './track';
 import {TrackContent} from './track_panel';
 import {trackRegistry} from './track_registry';
@@ -40,7 +39,7 @@ import {
   drawVerticalLineAtTime,
 } from './vertical_line_helper';
 
-interface Attrs {
+interface Attrs extends PanelAttrs {
   trackGroupId: string;
   selectable: boolean;
 }
@@ -51,24 +50,25 @@ export class TrackGroupPanel extends Panel<Attrs> {
   private backgroundColor = '#ffffff';  // Updated from CSS later.
   private summaryTrack: Track|undefined;
 
-  constructor({attrs}: m.CVnode<Attrs>) {
-    super();
+  constructor(vnode: m.CVnode<Attrs>) {
+    super(vnode);
+    const {attrs} = vnode;
     this.trackGroupId = attrs.trackGroupId;
     const trackCreator = trackRegistry.get(this.summaryTrackState.kind);
     const engineId = this.summaryTrackState.engineId;
-    const engine = globals.engines.get(engineId);
+    const engine = this.globals().engines.get(engineId);
     if (engine !== undefined) {
       this.summaryTrack =
-          trackCreator.create({trackId: this.summaryTrackState.id, engine});
+          trackCreator.create({globalsContext: attrs.globalsContext, trackId: this.summaryTrackState.id, engine});
     }
   }
 
   get trackGroupState(): TrackGroupState {
-    return assertExists(globals.state.trackGroups[this.trackGroupId]);
+    return assertExists(this.globals().state.trackGroups[this.trackGroupId]);
   }
 
   get summaryTrackState(): TrackState {
-    return assertExists(globals.state.tracks[this.trackGroupState.tracks[0]]);
+    return assertExists(this.globals().state.tracks[this.trackGroupState.tracks[0]]);
   }
 
   view({attrs}: m.CVnode<Attrs>) {
@@ -81,21 +81,21 @@ export class TrackGroupPanel extends Panel<Attrs> {
     // The shell should be highlighted if the current search result is inside
     // this track group.
     let highlightClass = '';
-    const searchIndex = globals.state.searchIndex;
+    const searchIndex = this.globals().state.searchIndex;
     if (searchIndex !== -1) {
-      const trackId = globals.currentSearchResults.trackIds[searchIndex];
-      const parentTrackId = getContainingTrackId(globals.state, trackId);
+      const trackId = this.globals().currentSearchResults.trackIds[searchIndex];
+      const parentTrackId = getContainingTrackId(this.globals().state, trackId);
       if (parentTrackId === attrs.trackGroupId) {
         highlightClass = 'flash';
       }
     }
 
-    const selection = globals.state.currentSelection;
+    const selection = this.globals().state.currentSelection;
 
-    const trackGroup = globals.state.trackGroups[attrs.trackGroupId];
+    const trackGroup = this.globals().state.trackGroups[attrs.trackGroupId];
     let checkBox = BLANK_CHECKBOX;
     if (selection !== null && selection.kind === 'AREA') {
-      const selectedArea = globals.state.areas[selection.areaId];
+      const selectedArea = this.globals().state.areas[selection.areaId];
       if (selectedArea.tracks.includes(attrs.trackGroupId) &&
           trackGroup.tracks.every((id) => selectedArea.tracks.includes(id))) {
         checkBox = CHECKBOX;
@@ -118,7 +118,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
         m(`.shell`,
           {
             onclick: (e: MouseEvent) => {
-              globals.dispatch(Actions.toggleTrackGroupCollapsed({
+              this.globals().dispatch(Actions.toggleTrackGroupCollapsed({
                 trackGroupId: attrs.trackGroupId,
               })),
                   e.stopPropagation();
@@ -142,7 +142,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
               m('i.material-icons.track-button',
                 {
                   onclick: (e: MouseEvent) => {
-                    globals.dispatch(Actions.toggleTrackSelection(
+                    this.globals().dispatch(Actions.toggleTrackSelection(
                         {id: attrs.trackGroupId, isTrackGroup: true}));
                     e.stopPropagation();
                   },
@@ -153,7 +153,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
         this.summaryTrack ?
             m(TrackContent,
-              {track: this.summaryTrack},
+              {globalsContext: this.globals.context, track: this.summaryTrack},
               (!this.trackGroupState.collapsed && child !== null) ?
                   m('span', child) :
                   null) :
@@ -188,7 +188,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
       result.push(m('i.material-icons.track-button.action',
         {
           onclick: (e: MouseEvent) => {
-            globals.dispatchMultiple([
+            this.globals().dispatchMultiple([
               ...this.trackGroupState.tracks.map(trackId => Actions.removeTrack({ trackId })),
               Actions.removeTrackGroup({
                   id: this.trackGroupState.id,
@@ -204,10 +204,10 @@ export class TrackGroupPanel extends Panel<Attrs> {
   }
 
   highlightIfTrackSelected(ctx: CanvasRenderingContext2D, size: PanelSize) {
-    const {visibleTimeScale} = globals.frontendLocalState;
-    const selection = globals.state.currentSelection;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
+    const selection = this.globals().state.currentSelection;
     if (!selection || selection.kind !== 'AREA') return;
-    const selectedArea = globals.state.areas[selection.areaId];
+    const selectedArea = this.globals().state.areas[selection.areaId];
     const selectedAreaDuration = selectedArea.end - selectedArea.start;
     if (selectedArea.tracks.includes(this.trackGroupId)) {
       ctx.fillStyle = 'rgba(131, 152, 230, 0.3)';
@@ -230,6 +230,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     this.highlightIfTrackSelected(ctx, size);
 
     drawGridLines(
+        this.globals.context,
         ctx,
         size.width,
         size.height);
@@ -243,53 +244,53 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
     this.highlightIfTrackSelected(ctx, size);
 
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     // Draw vertical line when hovering on the notes panel.
-    if (globals.state.hoveredNoteTimestamp !== -1n) {
+    if (this.globals().state.hoveredNoteTimestamp !== -1n) {
       drawVerticalLineAtTime(
           ctx,
           visibleTimeScale,
-          globals.state.hoveredNoteTimestamp,
+          this.globals().state.hoveredNoteTimestamp,
           size.height,
           `#aaa`);
     }
-    if (globals.state.hoverCursorTimestamp !== -1n) {
+    if (this.globals().state.hoverCursorTimestamp !== -1n) {
       drawVerticalLineAtTime(
           ctx,
           visibleTimeScale,
-          globals.state.hoverCursorTimestamp,
+          this.globals().state.hoverCursorTimestamp,
           size.height,
           `#344596`);
     }
 
-    if (globals.state.currentSelection !== null) {
-      if (globals.state.currentSelection.kind === 'SLICE' &&
-          globals.sliceDetails.wakeupTs !== undefined) {
-        drawVerticalLineAtTime(
+    if (this.globals().state.currentSelection !== null) {
+      if (this.globals().state.currentSelection!.kind === 'SLICE' &&
+      this.globals().sliceDetails.wakeupTs !== undefined) {
+          drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.sliceDetails.wakeupTs,
+            this.globals().sliceDetails.wakeupTs!,
             size.height,
             `black`);
       }
     }
     // All marked areas should have semi-transparent vertical lines
     // marking the start and end.
-    for (const note of Object.values(globals.state.notes)) {
+    for (const note of Object.values(this.globals().state.notes)) {
       if (note.noteType === 'AREA') {
         const transparentNoteColor =
             'rgba(' + hex.rgb(note.color.substr(1)).toString() + ', 0.65)';
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.state.areas[note.areaId].start,
+            this.globals().state.areas[note.areaId].start,
             size.height,
             transparentNoteColor,
             1);
         drawVerticalLineAtTime(
             ctx,
             visibleTimeScale,
-            globals.state.areas[note.areaId].end,
+            this.globals().state.areas[note.areaId].end,
             size.height,
             transparentNoteColor,
             1);

@@ -24,8 +24,9 @@ import {AndroidTarget} from './android_target';
 export class AndroidWebusbTarget extends AndroidTarget {
   constructor(
       private device: USBDevice, keyManager: AdbKeyManager,
+      globalsContext: string,
       onTargetChange: OnTargetChangeCallback) {
-    super(new AdbConnectionOverWebusb(device, keyManager), onTargetChange);
+    super(new AdbConnectionOverWebusb(globalsContext, device, keyManager), onTargetChange);
   }
 
   getInfo(): TargetInfo {

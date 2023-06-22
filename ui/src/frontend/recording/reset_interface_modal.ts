@@ -21,6 +21,7 @@ export function couldNotClaimInterface(
     onReset: () => Promise<void>, onCancel: () => void) {
   let hasPressedAButton = false;
   showModal({
+    globalsContext: '',
     title: 'Could not claim the USB interface',
     content: m(
         'div',

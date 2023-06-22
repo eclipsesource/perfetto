@@ -21,6 +21,7 @@ import {Select} from '../../frontend/widgets/select';
 import {TextInput} from '../../frontend/widgets/text_input';
 
 import {addDebugTrack, SliceColumns} from './slice_track';
+import { HasGlobalsContextAttrs } from '../../frontend/globals';
 
 export const ARG_PREFIX = 'arg_';
 
@@ -28,7 +29,7 @@ export function uuidToViewName(uuid: string): string {
   return `view_${uuid.split('-').join('_')}`;
 }
 
-interface AddDebugTrackMenuAttrs {
+interface AddDebugTrackMenuAttrs extends HasGlobalsContextAttrs {
   sqlViewName: string;
   columns: string[];
   engine: EngineProxy;
@@ -113,6 +114,7 @@ export class AddDebugTrackMenu implements
               onclick: (e: Event) => {
                 e.preventDefault();
                 addDebugTrack(
+                    vnode.attrs.globalsContext,
                     vnode.attrs.engine,
                     vnode.attrs.sqlViewName,
                     this.name,

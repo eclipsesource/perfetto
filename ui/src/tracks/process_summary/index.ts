@@ -22,7 +22,6 @@ import {TrackData} from '../../common/track_data';
 import {LIMIT} from '../../common/track_data';
 import {TrackController} from '../../controller/track_controller';
 import {checkerboardExcept} from '../../frontend/checkerboard';
-import {globals} from '../../frontend/globals';
 import {NewTrackArgs, Track} from '../../frontend/track';
 
 export const PROCESS_SUMMARY_TRACK = 'ProcessSummaryTrack';
@@ -166,7 +165,7 @@ class ProcessSummaryTrack extends Track<Config, Data> {
     const {
       visibleTimeScale,
       windowSpan,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
     const data = this.data();
     if (data === undefined) return;  // Can't possibly draw anything.
 
@@ -183,7 +182,7 @@ class ProcessSummaryTrack extends Track<Config, Data> {
 
   // TODO(dproy): Dedup with CPU slices.
   renderSummary(ctx: CanvasRenderingContext2D, data: Data): void {
-    const {visibleTimeScale, windowSpan} = globals.frontendLocalState;
+    const {visibleTimeScale, windowSpan} = this.globals().frontendLocalState;
     const startPx = windowSpan.start;
     const bottomY = TRACK_HEIGHT;
 

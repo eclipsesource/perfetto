@@ -20,13 +20,13 @@ import {
 import {LONG, NUM, STR, STR_NULL} from '../common/query_result';
 import {FtraceFilterState, Pagination} from '../common/state';
 import {Span} from '../common/time';
-import {FtraceEvent, globals} from '../frontend/globals';
+import {FtraceEvent, HasGlobalsContextAttrs} from '../frontend/globals';
 import {publishFtracePanelData} from '../frontend/publish';
 import {ratelimit} from '../frontend/rate_limiters';
 
 import {Controller} from './controller';
 
-export interface FtraceControllerArgs {
+export interface FtraceControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 
@@ -42,45 +42,45 @@ export class FtraceController extends Controller<'main'> {
   private oldFtraceFilter?: FtraceFilterState;
   private oldPagination?: Pagination;
 
-  constructor({engine}: FtraceControllerArgs) {
-    super('main');
+  constructor({engine, globalsContext}: FtraceControllerArgs) {
+    super('main', globalsContext);
     this.engine = engine;
   }
 
   run() {
     if (this.shouldUpdate()) {
-      this.oldSpan = globals.frontendLocalState.visibleWindowTime;
-      this.oldFtraceFilter = globals.state.ftraceFilter;
-      this.oldPagination = globals.state.ftracePagination;
-      if (globals.state.ftracePagination.count > 0) {
+      this.oldSpan = this.globals().frontendLocalState.visibleWindowTime;
+      this.oldFtraceFilter = this.globals().state.ftraceFilter;
+      this.oldPagination = this.globals().state.ftracePagination;
+      if (this.globals().state.ftracePagination.count > 0) {
         this.lookupFtraceEventsRateLimited();
       }
     }
   }
 
   private lookupFtraceEventsRateLimited = ratelimit(() => {
-    const {offset, count} = globals.state.ftracePagination;
+    const {offset, count} = this.globals().state.ftracePagination;
     // The formatter doesn't like formatted chained methods :(
     const promise = this.lookupFtraceEvents(offset, count);
     promise.then(({events, offset, numEvents}: RetVal) => {
-      publishFtracePanelData({events, offset, numEvents});
+      publishFtracePanelData(this.globals.context, {events, offset, numEvents});
     });
   }, 250);
 
   private shouldUpdate(): boolean {
     // Has the visible window moved?
-    const visibleWindow = globals.frontendLocalState.visibleWindowTime;
+    const visibleWindow = this.globals().frontendLocalState.visibleWindowTime;
     if (!this.oldSpan.equals(visibleWindow)) {
       return true;
     }
 
     // Has the pagination changed?
-    if (this.oldPagination !== globals.state.ftracePagination) {
+    if (this.oldPagination !== this.globals().state.ftracePagination) {
       return true;
     }
 
     // Has the filter changed?
-    if (this.oldFtraceFilter !== globals.state.ftraceFilter) {
+    if (this.oldFtraceFilter !== this.globals().state.ftraceFilter) {
       return true;
     }
 
@@ -88,8 +88,8 @@ export class FtraceController extends Controller<'main'> {
   }
 
   async lookupFtraceEvents(offset: number, count: number): Promise<RetVal> {
-    const appState = globals.state;
-    const {start, end} = globals.stateVisibleTime();
+    const appState = this.globals().state;
+    const {start, end} = this.globals().stateVisibleTime();
 
     const excludeList = appState.ftraceFilter.excludedNames;
     const excludeListSql = excludeList.map((s) => `'${s}'`).join(',');

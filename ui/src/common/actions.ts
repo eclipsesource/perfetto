@@ -125,7 +125,7 @@ function clearTraceState(state: StateDraft) {
   const chromeCategories = state.chromeCategories;
   const newEngineMode = state.newEngineMode;
 
-  Object.assign(state, createEmptyState());
+  Object.assign(state, createEmptyState(state.globalsContext));
   state.nextId = nextId;
   state.recordConfig = recordConfig;
   state.recordingTarget = recordingTarget;
@@ -174,8 +174,8 @@ function wasFiltered<T extends TrackState|TrackGroupState>(item: T): item is T &
   return 'wasFiltered' in item && item.wasFiltered === true;
 }
 
-function isFilteredTrack(track: Partial<AddTrackArgs>): boolean {
-  return globals.trackFilteringEnabled && globals.filteredTracks
+function isFilteredTrack(globalsContext: string, track: Partial<AddTrackArgs>): boolean {
+  return globals(globalsContext).trackFilteringEnabled && globals(globalsContext).filteredTracks
       .some(filtered => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
@@ -188,35 +188,35 @@ function isSameTrack(track: AddTrackArgs, other: Partial<AddTrackArgs>): boolean
       && track.name == other.name;
 }
 
-function isFilteredTrackGroup(trackGroup: Partial<AddTrackGroupArgs>): boolean {
-  return globals.trackFilteringEnabled && globals.filteredTracks
+function isFilteredTrackGroup(globalsContext: string, trackGroup: Partial<AddTrackGroupArgs>): boolean {
+  return globals(globalsContext).trackFilteringEnabled && globals(globalsContext).filteredTracks
     .some(filtered => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
 }
 
-function unfilterTracklike(predicate: (tracklike: AddTrackLikeArgs) => boolean) {
-  const index = globals.filteredTracks.findIndex(predicate);
+function unfilterTracklike(globalsContext: string, predicate: (tracklike: AddTrackLikeArgs) => boolean) {
+  const index = globals(globalsContext).filteredTracks.findIndex(predicate);
   if (index >= 0) {
-    globals.filteredTracks.splice(index, 1);
+    globals(globalsContext).filteredTracks.splice(index, 1);
   }
 }
 
-function unfilterTrack(track: TrackState) {
+function unfilterTrack(globalsContext: string, track: TrackState) {
   track.isRemovable = true;
   (track as any).wasFiltered = true;
-  unfilterTracklike(filtered => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
+  unfilterTracklike(globalsContext, filtered => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
-function unfilterTrackGroup(trackGroup: TrackGroupState) {
+function unfilterTrackGroup(globalsContext: string, trackGroup: TrackGroupState) {
   trackGroup.isRemovable = true;
   (trackGroup as any).wasFiltered = true;
-  unfilterTracklike(filtered => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+  unfilterTracklike(globalsContext, filtered => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
 }
 
 // A helper to delete the private tables and views created by a track.
 // TODO: These should recorded by each track that creates them and cleaned up
 //       by an explicit disposable-track protocol.
-async function dropTables(engineId: string, trackId: string) {
-  const engine = assertExists(globals.engines.get(engineId));
+async function dropTables(globalsContext: string, engineId: string, trackId: string) {
+  const engine = assertExists(globals(globalsContext).engines.get(engineId));
   const suffix = trackId.split('-').join('_');
   const result = await engine.query(`
       select name, type from sqlite_schema
@@ -383,8 +383,8 @@ export const StateActions = {
     // or if it is currently filtered out of view
     if (hasRemovable(args)) {
       state.tracks[id].isRemovable = args.isRemovable;
-    } else if (isFilteredTrack(args)) {
-      unfilterTrack(state.tracks[id]);
+    } else if (isFilteredTrack(state.globalsContext, args)) {
+      unfilterTrack(state.globalsContext, state.tracks[id]);
     }
 
     this.fillUiTrackIdByTraceTrackId(state, state.tracks[id], id);
@@ -415,8 +415,8 @@ export const StateActions = {
     // or if it is currently filtered out of view
     if (hasRemovable(args)) {
       state.trackGroups[args.id].isRemovable = args.isRemovable;
-    } else if (isFilteredTrackGroup(args)) {
-      unfilterTrackGroup(state.trackGroups[args.id]);
+    } else if (isFilteredTrackGroup(state.globalsContext, args)) {
+      unfilterTrackGroup(state.globalsContext, state.trackGroups[args.id]);
     }
   },
 
@@ -475,7 +475,7 @@ export const StateActions = {
           ? { id: track.id }
           : {};
       
-      globals.filteredTracks.push({
+      globals(state.globalsContext).filteredTracks.push({
         ...id,
         kind: track.kind,
         engineId: track.engineId,
@@ -487,7 +487,7 @@ export const StateActions = {
       });
     }
     
-    dropTables(track.engineId, track.id);
+    dropTables(state.globalsContext, track.engineId, track.id);
   },
 
   // Remove a track group if it is removable as indicated by the
@@ -500,7 +500,7 @@ export const StateActions = {
 
     if (wasFiltered(trackGroup)) {
       delete trackGroup.wasFiltered;
-      globals.filteredTracks.push({
+      globals(state.globalsContext).filteredTracks.push({
         id: trackGroup.id,
         engineId: trackGroup.engineId,
         name: trackGroup.name,
@@ -1271,10 +1271,10 @@ export const StateActions = {
     }
   },
 
-  togglePivotTable(state: StateDraft, args: {areaId: string|null}) {
+  togglePivotTable(state: StateDraft, args: {globalsContext: string, areaId: string|null}) {
     state.nonSerializableState.pivotTable.selectionArea = args.areaId === null ?
         undefined :
-        {areaId: args.areaId, tracks: globals.state.areas[args.areaId].tracks};
+        {areaId: args.areaId, tracks: globals(args.globalsContext).state.areas[args.areaId].tracks};
     if (args.areaId !==
         state.nonSerializableState.pivotTable.selectionArea?.areaId) {
       state.nonSerializableState.pivotTable.queryResult = null;

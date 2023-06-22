@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import {RECORDING_V2_FLAG} from '../common/feature_flags';
-import {globals} from '../frontend/globals';
 
 import {Child, Controller, ControllerInitializerAny} from './controller';
 import {PermalinkController} from './permalink_controller';
@@ -29,8 +28,8 @@ export class AppController extends Controller<'main'> {
   // on a worker, and isn't able to directly send messages to the extension.
   private extensionPort: MessagePort;
 
-  constructor(extensionPort: MessagePort) {
-    super('main');
+  constructor(extensionPort: MessagePort, globalsContext = '') {
+    super('main', globalsContext);
     this.extensionPort = extensionPort;
   }
 
@@ -41,14 +40,14 @@ export class AppController extends Controller<'main'> {
   //   re-triggering the controllers.
   run() {
     const childControllers: ControllerInitializerAny[] =
-        [Child('permalink', PermalinkController, {})];
+        [Child('permalink', PermalinkController, {globalsContext: this.globals.context})];
     if (!RECORDING_V2_FLAG.get()) {
       childControllers.push(Child(
-          'record', RecordController, {extensionPort: this.extensionPort}));
+          'record', RecordController, {extensionPort: this.extensionPort, globalsContext: this.globals.context}));
     }
-    if (globals.state.engine !== undefined) {
-      const engineCfg = globals.state.engine;
-      childControllers.push(Child(engineCfg.id, TraceController, engineCfg.id));
+    if (this.globals().state.engine !== undefined) {
+      const engineCfg = this.globals().state.engine!;
+      childControllers.push(Child(engineCfg.id, TraceController, {engineId: engineCfg.id, globalsContext: this.globals.context}));
     }
     return childControllers;
   }

@@ -30,7 +30,7 @@ function generateMockConsumer(): Consumer {
 }
 const mainCallback = generateMockConsumer();
 const adbMock = new MockAdb();
-const adbController = new AdbConsumerPort(adbMock, mainCallback);
+const adbController = new AdbConsumerPort('', adbMock, mainCallback);
 const mockIntArray = new Uint8Array();
 
 const enableTracingRequest = new perfetto.protos.EnableTracingRequest();
@@ -63,7 +63,7 @@ test('handleCommand', async () => {
 test('enableTracing', async () => {
   const mainCallback = generateMockConsumer();
   const adbMock = new MockAdb();
-  const adbController = new AdbConsumerPort(adbMock, mainCallback);
+  const adbController = new AdbConsumerPort('', adbMock, mainCallback);
 
   adbController.sendErrorMessage =
       jest.fn().mockImplementation((s) => console.error(s));

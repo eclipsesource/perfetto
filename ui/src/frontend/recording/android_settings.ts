@@ -15,7 +15,7 @@
 import m from 'mithril';
 
 import {DataSourceDescriptor} from '../../common/protos';
-import {globals} from '../globals';
+import {HasGlobalsContextAttrs, globals} from '../globals';
 import {
   Dropdown,
   DropdownAttrs,
@@ -78,13 +78,14 @@ function isDataSourceDescriptor(descriptor: unknown):
   return false;
 }
 
-class AtraceAppsList implements m.ClassComponent {
-  view() {
-    if (globals.state.recordConfig.allAtraceApps) {
+class AtraceAppsList implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view({attrs}: m.Vnode<HasGlobalsContextAttrs>) {
+    if (globals(attrs.globalsContext).state.recordConfig.allAtraceApps) {
       return m('div');
     }
 
     return m(Textarea, {
+      globalsContext: attrs.globalsContext,
       placeholder: 'Apps to profile, one per line, e.g.:\n' +
           'com.android.phone\n' +
           'lmkd\n' +
@@ -99,6 +100,7 @@ class AtraceAppsList implements m.ClassComponent {
 export class AndroidSettings implements
     m.ClassComponent<RecordingSectionAttrs> {
   view({attrs}: m.CVnode<RecordingSectionAttrs>) {
+    const globalsContext = attrs.globalsContext;
     let atraceCategories = DEFAULT_ATRACE_CATEGORIES;
     for (const dataSource of attrs.dataSources) {
       if (dataSource.name !== 'linux.ftrace' ||
@@ -122,6 +124,7 @@ export class AndroidSettings implements
         `.record-section${attrs.cssClass}`,
         m(Probe,
           {
+            globalsContext,
             title: 'Atrace userspace annotations',
             img: 'rec_atrace.png',
             descr: `Enables C++ / Java codebase annotations (ATRACE_BEGIN() /
@@ -130,6 +133,7 @@ export class AndroidSettings implements
             isEnabled: (cfg) => cfg.atrace,
           } as ProbeAttrs,
           m(Dropdown, {
+            globalsContext,
             title: 'Categories',
             cssClass: '.multicolumn.atrace-categories',
             options: atraceCategories,
@@ -137,6 +141,7 @@ export class AndroidSettings implements
             get: (cfg) => cfg.atraceCats,
           } as DropdownAttrs),
           m(Toggle, {
+            globalsContext,
             title: 'Record events from all Android apps and services',
             descr: '',
             setEnabled: (cfg, val) => cfg.allAtraceApps = val,
@@ -145,6 +150,7 @@ export class AndroidSettings implements
           m(AtraceAppsList)),
         m(Probe,
           {
+            globalsContext,
             title: 'Event log (logcat)',
             img: 'rec_logcat.png',
             descr: `Streams the event log into the trace. If no buffer filter is
@@ -153,6 +159,7 @@ export class AndroidSettings implements
             isEnabled: (cfg) => cfg.androidLogs,
           } as ProbeAttrs,
           m(Dropdown, {
+            globalsContext,
             title: 'Buffers',
             cssClass: '.multicolumn',
             options: LOG_BUFFERS,
@@ -160,6 +167,7 @@ export class AndroidSettings implements
             get: (cfg) => cfg.androidLogBuffers,
           } as DropdownAttrs)),
         m(Probe, {
+          globalsContext,
           title: 'Frame timeline',
           img: 'rec_frame_timeline.png',
           descr: `Records expected/actual frame timings from surface_flinger.
@@ -168,6 +176,7 @@ export class AndroidSettings implements
           isEnabled: (cfg) => cfg.androidFrameTimeline,
         } as ProbeAttrs),
         m(Probe, {
+          globalsContext,
           title: 'Game intervention list',
           img: '',
           descr: `List game modes and interventions.
@@ -177,6 +186,7 @@ export class AndroidSettings implements
         } as ProbeAttrs),
         m(Probe,
           {
+            globalsContext,
             title: 'Network Tracing',
             img: '',
             descr: `Records detailed information on network packets.
@@ -185,6 +195,7 @@ export class AndroidSettings implements
             isEnabled: (cfg) => cfg.androidNetworkTracing,
           } as ProbeAttrs,
           m(Slider, {
+            globalsContext,
             title: 'Poll interval',
             cssClass: '.thin',
             values: [100, 250, 500, 1000, 2500],

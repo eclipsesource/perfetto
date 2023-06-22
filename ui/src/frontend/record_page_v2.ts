@@ -56,7 +56,6 @@ import {CpuSettings} from './recording/cpu_settings';
 import {GpuSettings} from './recording/gpu_settings';
 import {MemorySettings} from './recording/memory_settings';
 import {PowerSettings} from './recording/power_settings';
-import {RecordingSectionAttrs} from './recording/recording_sections';
 import {RecordingSettings} from './recording/recording_settings';
 import {
   FORCE_RESET_MESSAGE,
@@ -65,7 +64,8 @@ import {addNewTarget} from './recording/reset_target_modal';
 
 const START_RECORDING_MESSAGE = 'Start Recording';
 
-const controller = new RecordingPageController();
+const globalsContext = '';
+const controller = new RecordingPageController(globalsContext);
 const recordConfigUtils = new RecordingConfigUtils();
 // Whether the target selection modal is displayed.
 let shouldDisplayTargetModal: boolean = false;
@@ -84,8 +84,8 @@ function isChromeTargetInfo(targetInfo: TargetInfo):
   return ['CHROME', 'CHROME_OS'].includes(targetInfo.targetType);
 }
 
-function RecordHeader() {
-  const platformSelection = RecordingPlatformSelection();
+function RecordHeader(globalsContext: string) {
+  const platformSelection = RecordingPlatformSelection(globalsContext);
   const statusLabel = RecordingStatusLabel();
   const buttons = RecordingButton();
   const notes = RecordingNotes();
@@ -101,7 +101,7 @@ function RecordHeader() {
       notes);
 }
 
-function RecordingPlatformSelection() {
+function RecordingPlatformSelection(globalsContext: string) {
   // Don't show the platform selector while we are recording a trace.
   if (controller.getState() >= RecordingState.RECORDING) return undefined;
 
@@ -111,8 +111,8 @@ function RecordingPlatformSelection() {
         {
           onclick: () => {
             shouldDisplayTargetModal = true;
-            fullscreenModalContainer.createNew(addNewTargetModal());
-            globals.rafScheduler.scheduleFullRedraw();
+            fullscreenModalContainer.createNew(addNewTargetModal(globalsContext));
+            globals(globalsContext).rafScheduler.scheduleFullRedraw();
           },
         },
         m('button', 'Add new recording target'),
@@ -120,9 +120,9 @@ function RecordingPlatformSelection() {
       targetSelection());
 }
 
-function addNewTargetModal() {
+function addNewTargetModal(globalsContext: string) {
   return {
-    ...addNewTarget(controller),
+    ...addNewTarget(globalsContext, controller),
     onClose: () => shouldDisplayTargetModal = false,
   };
 }
@@ -177,7 +177,7 @@ export function targetSelection(): m.Vnode|undefined {
 // user action, such as: "Recording in progress for X seconds" in the recording
 // page header.
 function RecordingStatusLabel() {
-  const recordingStatus = globals.state.recordingStatus;
+  const recordingStatus = globals(globalsContext).state.recordingStatus;
   if (!recordingStatus) return undefined;
   return m('label', recordingStatus);
 }
@@ -196,7 +196,7 @@ function Instructions(cssClass: string) {
           m('button.permalinkconfig',
             {
               onclick: () => {
-                globals.dispatch(
+                globals(globalsContext).dispatch(
                     Actions.createPermalink({isRecordingConfig: true}));
               },
             },
@@ -263,7 +263,7 @@ function RecordingNotes() {
         `collect the trace using ADB.`));
 
   if (!recordConfigUtils
-           .fetchLatestRecordCommand(globals.state.recordConfig, targetInfo)
+           .fetchLatestRecordCommand(globals(globalsContext).state.recordConfig, targetInfo)
            .hasDataSources) {
     notes.push(
         m('.note',
@@ -299,7 +299,7 @@ function RecordingNotes() {
     default:
   }
 
-  if (globals.state.recordConfig.mode === 'LONG_TRACE') {
+  if (globals(globalsContext).state.recordConfig.mode === 'LONG_TRACE') {
     notes.unshift(msgLongTraces);
   }
 
@@ -324,7 +324,7 @@ function RecordingSnippet(targetInfo: TargetInfo) {
 
 function getRecordCommand(targetInfo: TargetInfo): string {
   const recordCommand = recordConfigUtils.fetchLatestRecordCommand(
-      globals.state.recordConfig, targetInfo);
+      globals(globalsContext).state.recordConfig, targetInfo);
 
   const pbBase64 = recordCommand ? recordCommand.configProtoBase64 : '';
   const pbtx = recordCommand ? recordCommand.configProtoText : '';
@@ -356,7 +356,7 @@ function RecordingButton() {
   const targetInfo = assertExists(controller.getTargetInfo());
   const hasDataSources =
       recordConfigUtils
-          .fetchLatestRecordCommand(globals.state.recordConfig, targetInfo)
+          .fetchLatestRecordCommand(globals(globalsContext).state.recordConfig, targetInfo)
           .hasDataSources;
   if (!hasDataSources) {
     return undefined;
@@ -455,7 +455,7 @@ function recordMenu(routePage: string) {
         class: controller.getState() > RecordingState.TARGET_INFO_DISPLAYED ?
             'disabled' :
             '',
-        onclick: () => globals.rafScheduler.scheduleFullRedraw(),
+        onclick: () => globals(globalsContext).rafScheduler.scheduleFullRedraw(),
       },
       m('header', 'Trace config'),
       m('ul',
@@ -485,8 +485,8 @@ function recordMenu(routePage: string) {
       m('ul', probes));
 }
 
-function getRecordContainer(subpage?: string): m.Vnode<any, any> {
-  const components: m.Children[] = [RecordHeader()];
+function getRecordContainer(globalsContext: string, subpage?: string): m.Vnode<any, any> {
+  const components: m.Children[] = [RecordHeader(globalsContext)];
   if (controller.getState() === RecordingState.NO_TARGET) {
     components.push(m('.full-centered', 'Please connect a valid target.'));
     return m('.record-container', components);
@@ -517,11 +517,12 @@ function getRecordContainer(subpage?: string): m.Vnode<any, any> {
   pages.push(recordMenu(routePage));
 
   pages.push(m(RecordingSettings, {
+    globalsContext,
     dataSources: [],
     cssClass: maybeGetActiveCss(routePage, 'buffers'),
-  } as RecordingSectionAttrs));
+  }));
   pages.push(Instructions(maybeGetActiveCss(routePage, 'instructions')));
-  pages.push(Configurations(maybeGetActiveCss(routePage, 'config')));
+  pages.push(Configurations(globalsContext, maybeGetActiveCss(routePage, 'config')));
 
   const settingsSections = new Map([
     ['cpu', CpuSettings],
@@ -534,9 +535,10 @@ function getRecordContainer(subpage?: string): m.Vnode<any, any> {
   ]);
   for (const [section, component] of settingsSections.entries()) {
     pages.push(m(component, {
+      globalsContext,
       dataSources: controller.getTargetInfo()?.dataSources || [],
       cssClass: maybeGetActiveCss(routePage, section),
-    } as RecordingSectionAttrs));
+    }));
   }
 
   components.push(m('.record-container-content', pages));
@@ -552,7 +554,7 @@ export const RecordPageV2 = createPage({
   view({attrs}: m.Vnode<PageAttrs>): void |
       m.Children {
         if (shouldDisplayTargetModal) {
-          fullscreenModalContainer.updateVdom(addNewTargetModal());
+          fullscreenModalContainer.updateVdom(addNewTargetModal(attrs.globalsContext));
         }
 
         return m(
@@ -560,6 +562,6 @@ export const RecordPageV2 = createPage({
             controller.getState() > RecordingState.TARGET_INFO_DISPLAYED ?
                 m('.hider') :
                 [],
-            getRecordContainer(attrs.subpage));
+            getRecordContainer(attrs.globalsContext, attrs.subpage));
       },
 });

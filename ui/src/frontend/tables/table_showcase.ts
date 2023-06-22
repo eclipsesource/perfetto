@@ -59,10 +59,11 @@ const columns: ColumnDescriptor<ProgrammingLanguage>[] = [
 ];
 
 export class TableShowcase implements m.ClassComponent {
-  data = new TableData(languagesList);
+  data = new TableData('', languagesList);
 
   view(): m.Child {
     return m(Table, {
+      globalsContext: '',
       data: this.data,
       columns,
     });

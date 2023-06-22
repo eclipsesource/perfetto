@@ -69,6 +69,8 @@ export class TimeWindow {
   private _start: HighPrecisionTime = new HighPrecisionTime();
   private _durationNanos: number = 10e9;
 
+  constructor(private readonly globalsContext: string) {}
+
   private get _end(): HighPrecisionTime {
     return this._start.addNanos(this._durationNanos);
   }
@@ -89,7 +91,7 @@ export class TimeWindow {
   // Offset represents the center of the zoom as a normalized value between 0
   // and 1 where 0 is the start of the time window and 1 is the end
   zoom(ratio: number, offset: number) {
-    const traceDuration = globals.stateTraceTime().duration;
+    const traceDuration = globals(this.globalsContext).stateTraceTime().duration;
     const minDuration = Math.min(this.MIN_DURATION_NS, traceDuration.nanos);
     const newDurationNanos = Math.max(this._durationNanos * ratio, minDuration);
     // Delta between new and old duration
@@ -128,7 +130,7 @@ export class TimeWindow {
 
   // Limit the zoom and pan
   private preventClip() {
-    const traceTimeSpan = globals.stateTraceTime();
+    const traceTimeSpan = globals(this.globalsContext).stateTraceTime();
     const traceDurationNanos = traceTimeSpan.duration.nanos;
 
     if (this._durationNanos > traceDurationNanos) {
@@ -152,7 +154,7 @@ export class TimeWindow {
  * controller. This state is updated at 60fps.
  */
 export class FrontendLocalState {
-  visibleWindow = new TimeWindow();
+  visibleWindow;
   startPx: number = 0;
   endPx: number = 0;
   showPanningHint = false;
@@ -178,6 +180,10 @@ export class FrontendLocalState {
 
   private _selectedArea?: Area;
 
+  constructor(readonly globalsContext: string) {
+    this.visibleWindow = new TimeWindow(globalsContext);
+  }
+
   // TODO: there is some redundancy in the fact that both |visibleWindowTime|
   // and a |timeScale| have a notion of time range. That should live in one
   // place only.
@@ -191,7 +197,7 @@ export class FrontendLocalState {
 
   setHttpRpcState(httpRpcState: HttpRpcState) {
     this.httpRpcState = httpRpcState;
-    globals.rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   addVisibleTrack(trackId: string) {
@@ -208,7 +214,7 @@ export class FrontendLocalState {
     if (this.prevVisibleTracks.size !== this.visibleTracks.size ||
         ![...this.prevVisibleTracks].every(
             (value) => this.visibleTracks.has(value))) {
-      globals.dispatch(
+      globals(this.globalsContext).dispatch(
           Actions.setVisibleTracks({tracks: Array.from(this.visibleTracks)}));
       this.prevVisibleTracks = new Set(this.visibleTracks);
     }
@@ -252,12 +258,12 @@ export class FrontendLocalState {
         `Impossible select area: start [${start}] >= end [${end}]`);
     this.showPanningHint = true;
     this._selectedArea = {start, end, tracks},
-    globals.rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   deselectArea() {
     this._selectedArea = undefined;
-    globals.rafScheduler.scheduleRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleRedraw();
   }
 
   get selectedArea(): Area|undefined {
@@ -265,11 +271,11 @@ export class FrontendLocalState {
   }
 
   private ratelimitedUpdateVisible = ratelimit(() => {
-    globals.dispatch(Actions.setVisibleTraceTime(this._visibleState));
+    globals(this.globalsContext).dispatch(Actions.setVisibleTraceTime(this._visibleState));
   }, 50);
 
   private updateLocalTime(ts: Span<HighPrecisionTime>) {
-    const traceBounds = globals.stateTraceTime();
+    const traceBounds = globals(this.globalsContext).stateTraceTime();
     const start = ts.start.clamp(traceBounds.start, traceBounds.end);
     const end = ts.end.clamp(traceBounds.start, traceBounds.end);
     this.visibleWindow.update(new HighPrecisionTimeSpan(start, end));
@@ -278,7 +284,7 @@ export class FrontendLocalState {
 
   private updateResolution() {
     this._visibleState.lastUpdate = Date.now() / 1000;
-    this._visibleState.resolution = globals.getCurResolution();
+    this._visibleState.resolution = globals(this.globalsContext).getCurResolution();
     this.ratelimitedUpdateVisible();
   }
 
@@ -286,7 +292,7 @@ export class FrontendLocalState {
     this._visibleState.lastUpdate = Date.now() / 1000;
     this._visibleState.start = this.visibleWindowTime.start.toTPTime();
     this._visibleState.end = this.visibleWindowTime.end.toTPTime();
-    this._visibleState.resolution = globals.getCurResolution();
+    this._visibleState.resolution = globals(this.globalsContext).getCurResolution();
     this.ratelimitedUpdateVisible();
   }
 

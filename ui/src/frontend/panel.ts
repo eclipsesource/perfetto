@@ -13,13 +13,22 @@
 // limitations under the License.
 
 import m from 'mithril';
+import { GlobalsFunction, bindGlobals , HasGlobalsContextAttrs } from './globals';
 
 export interface PanelSize {
   width: number;
   height: number;
 }
 
-export abstract class Panel<Attrs = {}> implements m.ClassComponent<Attrs> {
+export interface PanelAttrs extends HasGlobalsContextAttrs {}
+
+export abstract class Panel<Attrs extends PanelAttrs = PanelAttrs> implements m.ClassComponent<Attrs> {
+  protected readonly globals: GlobalsFunction;
+
+  constructor({attrs}: m.CVnode<Attrs>) {
+    this.globals = bindGlobals(attrs.globalsContext);
+  }
+  
   abstract renderCanvas(
       ctx: CanvasRenderingContext2D, size: PanelSize,
       vnode: PanelVNode<Attrs>): void;
@@ -27,9 +36,9 @@ export abstract class Panel<Attrs = {}> implements m.ClassComponent<Attrs> {
 }
 
 
-export type PanelVNode<Attrs = {}> = m.Vnode<Attrs, Panel<Attrs>>;
+export type PanelVNode<Attrs extends PanelAttrs = PanelAttrs> = m.Vnode<Attrs, Panel<Attrs>>;
 
-export function isPanelVNode(vnode: m.Vnode): vnode is PanelVNode<{}> {
+export function isPanelVNode(vnode: m.Vnode<any, any>): vnode is PanelVNode<PanelAttrs> {
   const tag = vnode.tag as {};
   return (
       typeof tag === 'function' && 'prototype' in tag &&

@@ -40,171 +40,172 @@ import {
 import {findCurrentSelection} from './keyboard_event_handler';
 
 export function publishOverviewData(
+    globalsContext: string,
     data: {[key: string]: QuantizedLoad|QuantizedLoad[]}) {
   for (const [key, value] of Object.entries(data)) {
-    if (!globals.overviewStore.has(key)) {
-      globals.overviewStore.set(key, []);
+    if (!globals(globalsContext).overviewStore.has(key)) {
+      globals(globalsContext).overviewStore.set(key, []);
     }
     if (value instanceof Array) {
-      globals.overviewStore.get(key)!.push(...value);
+      globals(globalsContext).overviewStore.get(key)!.push(...value);
     } else {
-      globals.overviewStore.get(key)!.push(value);
+      globals(globalsContext).overviewStore.get(key)!.push(value);
     }
   }
-  globals.rafScheduler.scheduleRedraw();
+  globals(globalsContext).rafScheduler.scheduleRedraw();
 }
 
-export function clearOverviewData() {
-  globals.overviewStore.clear();
-  globals.rafScheduler.scheduleRedraw();
+export function clearOverviewData(globalsContext: string) {
+  globals(globalsContext).overviewStore.clear();
+  globals(globalsContext).rafScheduler.scheduleRedraw();
 }
 
-export function publishTrackData(args: {id: string, data: {}}) {
-  globals.setTrackData(args.id, args.data);
+export function publishTrackData(globalsContext: string, args: {id: string, data: {}}) {
+  globals(globalsContext).setTrackData(args.id, args.data);
   if ([LogExistsKey, LogBoundsKey, LogEntriesKey].includes(args.id)) {
-    const data = globals.trackDataStore.get(LogExistsKey) as LogExists;
-    if (data && data.exists) globals.rafScheduler.scheduleFullRedraw();
+    const data = globals(globalsContext).trackDataStore.get(LogExistsKey) as LogExists;
+    if (data && data.exists) globals(globalsContext).rafScheduler.scheduleFullRedraw();
   } else {
-    globals.rafScheduler.scheduleRedraw();
+    globals(globalsContext).rafScheduler.scheduleRedraw();
   }
 }
 
-export function publishMetricResult(metricResult: MetricResult) {
-  globals.setMetricResult(metricResult);
-  globals.publishRedraw();
+export function publishMetricResult(globalsContext: string, metricResult: MetricResult) {
+  globals(globalsContext).setMetricResult(metricResult);
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishSelectedFlows(selectedFlows: Flow[]) {
-  globals.selectedFlows = selectedFlows;
-  globals.publishRedraw();
+export function publishSelectedFlows(globalsContext: string, selectedFlows: Flow[]) {
+  globals(globalsContext).selectedFlows = selectedFlows;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishCounterDetails(click: CounterDetails) {
-  globals.counterDetails = click;
-  globals.publishRedraw();
+export function publishCounterDetails(globalsContext: string, click: CounterDetails) {
+  globals(globalsContext).counterDetails = click;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishFlamegraphDetails(click: FlamegraphDetails) {
-  globals.flamegraphDetails = click;
-  globals.publishRedraw();
+export function publishFlamegraphDetails(globalsContext: string, click: FlamegraphDetails) {
+  globals(globalsContext).flamegraphDetails = click;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishCpuProfileDetails(details: CpuProfileDetails) {
-  globals.cpuProfileDetails = details;
-  globals.publishRedraw();
+export function publishCpuProfileDetails(globalsContext: string, details: CpuProfileDetails) {
+  globals(globalsContext).cpuProfileDetails = details;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishFtraceCounters(counters: FtraceStat[]) {
-  globals.ftraceCounters = counters;
-  globals.publishRedraw();
+export function publishFtraceCounters(globalsContext: string, counters: FtraceStat[]) {
+  globals(globalsContext).ftraceCounters = counters;
+  globals(globalsContext).publishRedraw();
 }
 
 export function publishConversionJobStatusUpdate(
-    job: ConversionJobStatusUpdate) {
-  globals.setConversionJobStatus(job.jobName, job.jobStatus);
-  globals.publishRedraw();
+    globalsContext: string, job: ConversionJobStatusUpdate) {
+  globals(globalsContext).setConversionJobStatus(job.jobName, job.jobStatus);
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishLoading(numQueuedQueries: number) {
-  globals.numQueuedQueries = numQueuedQueries;
+export function publishLoading(globalsContext: string, numQueuedQueries: number) {
+  globals(globalsContext).numQueuedQueries = numQueuedQueries;
   // TODO(hjd): Clean up loadingAnimation given that this now causes a full
   // redraw anyways. Also this should probably just go via the global state.
-  globals.rafScheduler.scheduleFullRedraw();
+  globals(globalsContext).rafScheduler.scheduleFullRedraw();
 }
 
-export function publishBufferUsage(args: {percentage: number}) {
-  globals.setBufferUsage(args.percentage);
-  globals.publishRedraw();
+export function publishBufferUsage(globalsContext: string, args: {percentage: number}) {
+  globals(globalsContext).setBufferUsage(args.percentage);
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishSearch(args: SearchSummary) {
-  globals.searchSummary = args;
-  globals.publishRedraw();
+export function publishSearch(globalsContext: string, args: SearchSummary) {
+  globals(globalsContext).searchSummary = args;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishSearchResult(args: CurrentSearchResults) {
-  globals.currentSearchResults = args;
-  globals.publishRedraw();
+export function publishSearchResult(globalsContext: string, args: CurrentSearchResults) {
+  globals(globalsContext).currentSearchResults = args;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishRecordingLog(args: {logs: string}) {
-  globals.setRecordingLog(args.logs);
-  globals.publishRedraw();
+export function publishRecordingLog(globalsContext: string, args: {logs: string}) {
+  globals(globalsContext).setRecordingLog(args.logs);
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishTraceErrors(numErrors: number) {
-  globals.setTraceErrors(numErrors);
-  globals.publishRedraw();
+export function publishTraceErrors(globalsContext: string, numErrors: number) {
+  globals(globalsContext).setTraceErrors(numErrors);
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishMetricError(error: string) {
-  globals.setMetricError(error);
-  globals.logging.logError(error, false);
-  globals.publishRedraw();
+export function publishMetricError(globalsContext: string, error: string) {
+  globals(globalsContext).setMetricError(error);
+  globals(globalsContext).logging.logError(error, false);
+  globals(globalsContext).publishRedraw();
 }
 
 export function publishAggregateData(
-    args: {data: AggregateData, kind: string}) {
-  globals.setAggregateData(args.kind, args.data);
+    globalsContext: string, args: {data: AggregateData, kind: string}) {
+  globals(globalsContext).setAggregateData(args.kind, args.data);
   if (!isEmptyData(args.data)) {
-    globals.dispatch(Actions.setCurrentTab({tab: args.data.tabName}));
+    globals(globalsContext).dispatch(Actions.setCurrentTab({tab: args.data.tabName}));
   }
-  globals.publishRedraw();
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishQueryResult(args: {id: string, data?: {}}) {
-  globals.queryResults.set(args.id, args.data);
-  globals.dispatch(Actions.setCurrentTab({tab: `query_result_${args.id}`}));
-  globals.publishRedraw();
+export function publishQueryResult(globalsContext: string, args: {id: string, data?: {}}) {
+  globals(globalsContext).queryResults.set(args.id, args.data);
+  globals(globalsContext).dispatch(Actions.setCurrentTab({tab: `query_result_${args.id}`}));
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishThreads(data: ThreadDesc[]) {
-  globals.threads.clear();
+export function publishThreads(globalsContext: string, data: ThreadDesc[]) {
+  globals(globalsContext).threads.clear();
   data.forEach((thread) => {
-    globals.threads.set(thread.utid, thread);
+    globals(globalsContext).threads.set(thread.utid, thread);
   });
-  globals.publishRedraw();
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishSliceDetails(click: SliceDetails) {
-  globals.sliceDetails = click;
+export function publishSliceDetails(globalsContext: string, click: SliceDetails) {
+  globals(globalsContext).sliceDetails = click;
   const id = click.id;
-  if (id !== undefined && id === globals.state.pendingScrollId) {
-    findCurrentSelection();
-    globals.dispatch(Actions.setCurrentTab({tab: 'slice'}));
-    globals.dispatch(Actions.clearPendingScrollId({id: undefined}));
+  if (id !== undefined && id === globals(globalsContext).state.pendingScrollId) {
+    findCurrentSelection(globalsContext);
+    globals(globalsContext).dispatch(Actions.setCurrentTab({tab: 'slice'}));
+    globals(globalsContext).dispatch(Actions.clearPendingScrollId({id: undefined}));
   }
-  globals.publishRedraw();
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishThreadStateDetails(click: ThreadStateDetails) {
-  globals.threadStateDetails = click;
-  globals.publishRedraw();
+export function publishThreadStateDetails(globalsContext: string, click: ThreadStateDetails) {
+  globals(globalsContext).threadStateDetails = click;
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishConnectedFlows(connectedFlows: Flow[]) {
-  globals.connectedFlows = connectedFlows;
+export function publishConnectedFlows(globalsContext: string, connectedFlows: Flow[]) {
+  globals(globalsContext).connectedFlows = connectedFlows;
   // If a chrome slice is selected and we have any flows in connectedFlows
   // we will find the flows on the right and left of that slice to set a default
   // focus. In all other cases the focusedFlowId(Left|Right) will be set to -1.
-  globals.dispatch(Actions.setHighlightedFlowLeftId({flowId: -1}));
-  globals.dispatch(Actions.setHighlightedFlowRightId({flowId: -1}));
-  if (globals.state.currentSelection?.kind === 'CHROME_SLICE') {
-    const sliceId = globals.state.currentSelection.id;
-    for (const flow of globals.connectedFlows) {
+  globals(globalsContext).dispatch(Actions.setHighlightedFlowLeftId({flowId: -1}));
+  globals(globalsContext).dispatch(Actions.setHighlightedFlowRightId({flowId: -1}));
+  if (globals(globalsContext).state.currentSelection?.kind === 'CHROME_SLICE') {
+    const sliceId = (globals(globalsContext).state.currentSelection! as any).id;
+    for (const flow of globals(globalsContext).connectedFlows) {
       if (flow.begin.sliceId === sliceId) {
-        globals.dispatch(Actions.setHighlightedFlowRightId({flowId: flow.id}));
+        globals(globalsContext).dispatch(Actions.setHighlightedFlowRightId({flowId: flow.id}));
       }
       if (flow.end.sliceId === sliceId) {
-        globals.dispatch(Actions.setHighlightedFlowLeftId({flowId: flow.id}));
+        globals(globalsContext).dispatch(Actions.setHighlightedFlowLeftId({flowId: flow.id}));
       }
     }
   }
 
-  globals.publishRedraw();
+  globals(globalsContext).publishRedraw();
 }
 
-export function publishFtracePanelData(data: FtracePanelData) {
-  globals.ftracePanelData = data;
-  globals.publishRedraw();
+export function publishFtracePanelData(globalsContext: string, data: FtracePanelData) {
+  globals(globalsContext).ftracePanelData = data;
+  globals(globalsContext).publishRedraw();
 }

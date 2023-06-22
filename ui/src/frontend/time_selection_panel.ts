@@ -25,14 +25,13 @@ import {
   getCssStr,
   TRACK_SHELL_WIDTH,
 } from './css_constants';
-import {globals} from './globals';
 import {
   getMaxMajorTicks,
   TickGenerator,
   TickType,
   timeScaleForVisibleWindow,
 } from './gridline_helper';
-import {Panel, PanelSize} from './panel';
+import {Panel, PanelAttrs, PanelSize} from './panel';
 
 export interface BBox {
   x: number;
@@ -126,7 +125,7 @@ function drawIBar(
   ctx.fillText(label, xPosLabel, yMid);
 }
 
-export class TimeSelectionPanel extends Panel {
+export class TimeSelectionPanel extends Panel<PanelAttrs> {
   view() {
     return m('.time-selection-panel');
   }
@@ -140,41 +139,41 @@ export class TimeSelectionPanel extends Panel {
     ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
     ctx.clip();
 
-    const span = globals.frontendLocalState.visibleWindow.timestampSpan;
+    const span = this.globals().frontendLocalState.visibleWindow.timestampSpan;
     if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
       const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
-      const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+      const map = timeScaleForVisibleWindow(this.globals.context, TRACK_SHELL_WIDTH, size.width);
       for (const {type, time} of new TickGenerator(
-               span, maxMajorTicks, globals.state.traceTime.start)) {
+               span, maxMajorTicks, this.globals().state.traceTime.start)) {
         const px = Math.floor(map.tpTimeToPx(time));
         if (type === TickType.MAJOR) {
           ctx.fillRect(px, 0, 1, size.height);
         }
       }
     }
-    
-    const localArea = globals.frontendLocalState.selectedArea;
-    const selection = globals.state.currentSelection;
+
+    const localArea = this.globals().frontendLocalState.selectedArea;
+    const selection = this.globals().state.currentSelection;
     if (localArea !== undefined) {
       const start = BigintMath.min(localArea.start, localArea.end);
       const end = BigintMath.max(localArea.start, localArea.end);
       this.renderSpan(ctx, size, new TPTimeSpan(start, end));
     } else if (selection !== null && selection.kind === 'AREA') {
-      const selectedArea = globals.state.areas[selection.areaId];
+      const selectedArea = this.globals().state.areas[selection.areaId];
       const start = BigintMath.min(selectedArea.start, selectedArea.end);
       const end = BigintMath.max(selectedArea.start, selectedArea.end);
       this.renderSpan(ctx, size, new TPTimeSpan(start, end));
     }
-    
-    if (globals.state.hoverCursorTimestamp !== -1n) {
-      this.renderHover(ctx, size, globals.state.hoverCursorTimestamp);
+
+    if (this.globals().state.hoverCursorTimestamp !== -1n) {
+      this.renderHover(ctx, size, this.globals().state.hoverCursorTimestamp);
     }
-    
-    for (const note of Object.values(globals.state.notes)) {
+
+    for (const note of Object.values(this.globals().state.notes)) {
       const noteIsSelected = selection !== null && selection.kind === 'AREA' &&
           selection.noteId === note.id;
       if (note.noteType === 'AREA' && !noteIsSelected) {
-        const selectedArea = globals.state.areas[note.areaId];
+        const selectedArea = this.globals().state.areas[note.areaId];
         this.renderSpan(
             ctx, size, new TPTimeSpan(selectedArea.start, selectedArea.end));
       }
@@ -184,10 +183,10 @@ export class TimeSelectionPanel extends Panel {
   }
 
   renderHover(ctx: CanvasRenderingContext2D, size: PanelSize, ts: TPTime) {
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     const xPos =
         TRACK_SHELL_WIDTH + Math.floor(visibleTimeScale.tpTimeToPx(ts));
-    const offsetTime = tpTimeToString(ts - globals.state.traceTime.start);
+    const offsetTime = tpTimeToString(ts - this.globals().state.traceTime.start);
     const timeFromStart = tpTimeToString(ts);
     const label = `${offsetTime} (${timeFromStart})`;
     drawIBar(ctx, xPos, this.bounds(size), label);
@@ -195,7 +194,7 @@ export class TimeSelectionPanel extends Panel {
 
   renderSpan(
       ctx: CanvasRenderingContext2D, size: PanelSize, span: Span<TPTime>) {
-    const {visibleTimeScale} = globals.frontendLocalState;
+    const {visibleTimeScale} = this.globals().frontendLocalState;
     const xLeft = visibleTimeScale.tpTimeToPx(span.start);
     const xRight = visibleTimeScale.tpTimeToPx(span.end);
     const label = tpTimeToString(span.duration);

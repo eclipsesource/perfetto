@@ -18,30 +18,31 @@ import {Actions} from '../common/actions';
 
 import {onClickCopy} from './clipboard';
 import {CookieConsent} from './cookie_consent';
-import {globals} from './globals';
+import {HasGlobalsContextAttrs, globals} from './globals';
 import {fullscreenModalContainer} from './modal';
 import {Sidebar} from './sidebar';
 import {Topbar} from './topbar';
 
-function renderPermalink(): m.Children {
-  const permalink = globals.state.permalink;
+function renderPermalink(globalsContext: string): m.Children {
+  const permalink = globals(globalsContext).state.permalink;
   if (!permalink.requestId || !permalink.hash) return null;
   const url = `${self.location.origin}/#!/?s=${permalink.hash}`;
-  const linkProps = {title: 'Click to copy the URL', onclick: onClickCopy(url)};
+  const linkProps = {title: 'Click to copy the URL', onclick: onClickCopy(globalsContext, url)};
 
   return m('.alert-permalink', [
     m('div', 'Permalink: ', m(`a[href=${url}]`, linkProps, url)),
     m('button',
       {
-        onclick: () => globals.dispatch(Actions.clearPermalink({})),
+        onclick: () => globals(globalsContext).dispatch(Actions.clearPermalink({})),
       },
       m('i.material-icons.disallow-selection', 'close')),
   ]);
 }
 
-class Alerts implements m.ClassComponent {
-  view() {
-    return m('.alerts', renderPermalink());
+class Alerts implements m.ClassComponent<HasGlobalsContextAttrs> {
+  view(vnode: m.Vnode<HasGlobalsContextAttrs>): void | m.Children {
+    const globalsContext = vnode.attrs.globalsContext;
+    return m('.alerts', renderPermalink(globalsContext));
   }
 }
 
@@ -50,15 +51,16 @@ export function createPage(component: m.Component<PageAttrs>):
     m.Component<PageAttrs> {
   const pageComponent = {
     view({attrs}: m.Vnode<PageAttrs>) {
+      const globalsContext = attrs.globalsContext;
       const children = [
-        m(Sidebar),
-        m(Topbar),
-        m(Alerts),
+        m(Sidebar, attrs),
+        m(Topbar, attrs),
+        m(Alerts, attrs),
         m(component, attrs),
-        m(CookieConsent),
+        m(CookieConsent, attrs),
         m(fullscreenModalContainer.mithrilComponent),
       ];
-      if (globals.state.perfDebug) {
+      if (globals(globalsContext).state.perfDebug) {
         children.push(m('.perf-stats'));
       }
       return m('div.perfetto',children);
@@ -68,6 +70,6 @@ export function createPage(component: m.Component<PageAttrs>):
   return pageComponent;
 }
 
-export interface PageAttrs {
+export interface PageAttrs extends HasGlobalsContextAttrs {
   subpage?: string;
 }

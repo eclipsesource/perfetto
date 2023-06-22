@@ -18,11 +18,12 @@ import {v4 as uuidv4} from 'uuid';
 import {Actions} from '../common/actions';
 import {EngineProxy} from '../common/engine';
 import {Registry} from '../common/registry';
-import {globals} from './globals';
+import {GlobalsFunction, bindGlobals, globals} from './globals';
 
-import {Panel, PanelSize, PanelVNode} from './panel';
+import {Panel, PanelAttrs, PanelSize, PanelVNode} from './panel';
 
 export interface NewBottomTabArgs {
+  globalsContext: string;
   engine: EngineProxy;
   tag?: string;
   uuid: string;
@@ -62,6 +63,8 @@ const NEW_LOADING_TAB_DELAY_MS = 50;
 // for tabs corresponding to details of the selected objects on a track, a new
 // BottomTab should be created for each new selection.
 export abstract class BottomTabBase<Config = {}> {
+  // Trace globals
+  protected readonly globals: GlobalsFunction;
   // Config for this details panel. Should be serializable.
   protected readonly config: Config;
   // Engine for running queries and fetching additional data.
@@ -76,6 +79,7 @@ export abstract class BottomTabBase<Config = {}> {
   readonly uuid: string;
 
   constructor(args: NewBottomTabArgs) {
+    this.globals = bindGlobals(args.globalsContext);
     this.config = args.config as Config;
     this.engine = args.engine;
     this.tag = args.tag;
@@ -121,11 +125,11 @@ export abstract class BottomTab<Config = {}> extends BottomTabBase<Config> {
   createPanelVnode(): m.Vnode<any, any> {
     return m(
         BottomTabAdapter,
-        {key: this.uuid, panel: this} as BottomTabAdapterAttrs);
+        {globalsContext: this.globals.context, key: this.uuid, panel: this} as BottomTabAdapterAttrs);
   }
 }
 
-interface BottomTabAdapterAttrs {
+interface BottomTabAdapterAttrs extends PanelAttrs {
   panel: BottomTab;
 }
 
@@ -154,29 +158,29 @@ export type AddTabResult =
       uuid: string;
     }
 
-// Shorthand for globals.bottomTabList.addTab(...) & redraw.
+// Shorthand for globals(globalsContext).bottomTabList.addTab(...) & redraw.
 // Ignored when bottomTabList does not exist (e.g. no trace is open in the UI).
 export function
-addTab(args: AddTabArgs) {
-  const tabList = globals.bottomTabList;
+addTab(globalsContext: string, args: AddTabArgs) {
+  const tabList = globals(globalsContext).bottomTabList;
   if (!tabList) {
     return;
   }
   tabList.addTab(args);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals(globalsContext).rafScheduler.scheduleFullRedraw();
 }
 
 
-// Shorthand for globals.bottomTabList.closeTabById(...) & redraw.
+// Shorthand for globals(globalsContext).bottomTabList.closeTabById(...) & redraw.
 // Ignored when bottomTabList does not exist (e.g. no trace is open in the UI).
 export function
-closeTab(uuid: string) {
-  const tabList = globals.bottomTabList;
+closeTab(globalsContext: string, uuid: string) {
+  const tabList = globals(globalsContext).bottomTabList;
   if (!tabList) {
     return;
   }
   tabList.closeTabById(uuid);
-  globals.rafScheduler.scheduleFullRedraw();
+  globals(globalsContext).rafScheduler.scheduleFullRedraw();
 }
 
 interface PendingTab {
@@ -188,12 +192,14 @@ function tabSelectionKey(tab: BottomTabBase) {
 }
 
 export class BottomTabList {
+  private readonly globals: GlobalsFunction;
   private tabs: BottomTabBase[] = [];
   private pendingTabs: PendingTab[] = [];
   private engine: EngineProxy;
   private scheduledFlushSetTimeoutId?: number;
 
-  constructor(engine: EngineProxy) {
+  constructor(globalsContext: string, engine: EngineProxy) {
+    this.globals = bindGlobals(globalsContext);
     this.engine = engine;
   }
 
@@ -208,6 +214,7 @@ export class BottomTabList {
   addTab(args: AddTabArgs): AddTabResult {
     const uuid = uuidv4();
     const newPanel = bottomTabRegistry.get(args.kind).create({
+      globalsContext: this.globals.context,
       engine: this.engine,
       uuid,
       config: args.config,
@@ -252,12 +259,12 @@ export class BottomTabList {
     // If the current tab was closed, select the tab to the right of it.
     // If the closed tab was current and last in the tab list, select the tab
     // that became last.
-    if (tab.uuid === globals.state.currentTab && this.tabs.length > 0) {
+    if (tab.uuid === this.globals().state.currentTab && this.tabs.length > 0) {
       const newActiveIndex = index === this.tabs.length ? index - 1 : index;
-      globals.dispatch(Actions.setCurrentTab(
+      this.globals().dispatch(Actions.setCurrentTab(
           {tab: tabSelectionKey(this.tabs[newActiveIndex])}));
     }
-    globals.rafScheduler.scheduleFullRedraw();
+    this.globals().rafScheduler.scheduleFullRedraw();
   }
 
   // Check the list of the pending tabs and add the ones that are ready
@@ -274,7 +281,7 @@ export class BottomTabList {
       // "current selection" panels are implemented by BottomTabs and some by
       // details_panel.ts computing vnodes dynamically. Naive implementation
       // will: a) stop showing the old panel (because
-      // globals.state.currentSelection changes). b) not showing the new
+      // this.globals().state.currentSelection changes). b) not showing the new
       // 'current_selection' tab yet. This will result in temporary shifting
       // focus to another tab (as no tab with 'current_selection' tag will
       // exist).
@@ -308,7 +315,7 @@ export class BottomTabList {
       }
 
       if (args.select === undefined || args.select === true) {
-        globals.dispatch(Actions.setCurrentTab({tab: tabSelectionKey(tab)}));
+        this.globals().dispatch(Actions.setCurrentTab({tab: tabSelectionKey(tab)}));
       }
     }
   }

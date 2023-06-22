@@ -30,10 +30,10 @@ import {
 } from '../common/time';
 import {
   CounterDetails,
+  HasGlobalsContextAttrs,
   SliceDetails,
   ThreadStateDetails,
 } from '../frontend/globals';
-import {globals} from '../frontend/globals';
 import {
   publishCounterDetails,
   publishSliceDetails,
@@ -44,7 +44,7 @@ import {SLICE_TRACK_KIND} from '../tracks/chrome_slices';
 import {parseArgs} from './args_parser';
 import {Controller} from './controller';
 
-export interface SelectionControllerArgs {
+export interface SelectionControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 
@@ -67,11 +67,11 @@ export class SelectionController extends Controller<'main'> {
   private lastSelectedId?: number|string;
   private lastSelectedKind?: string;
   constructor(private args: SelectionControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
   }
 
   run() {
-    const selection = globals.state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (!selection || selection.kind === 'AREA') return;
 
     const selectWithId =
@@ -95,7 +95,7 @@ export class SelectionController extends Controller<'main'> {
             if (results !== undefined && selection &&
                 selection.kind === selectedKind &&
                 selection.id === selectedId) {
-              publishCounterDetails(results);
+              publishCounterDetails(this.globals.context, results);
             }
           });
     } else if (selection.kind === 'SLICE') {
@@ -267,8 +267,8 @@ export class SelectionController extends Controller<'main'> {
     }
 
     // Check selection is still the same on completion of query.
-    if (selection === globals.state.currentSelection) {
-      publishSliceDetails(selected);
+    if (selection === this.globals().state.currentSelection) {
+      publishSliceDetails(this.globals.context, selected);
     }
   }
 
@@ -309,7 +309,7 @@ export class SelectionController extends Controller<'main'> {
     // TODO(hjd): If we had a consistent mapping from TP track_id
     // UI track id for slice tracks this would be unnecessary.
     let trackId = '';
-    for (const track of Object.values(globals.state.tracks)) {
+    for (const track of Object.values(this.globals().state.tracks)) {
       if (track.kind === SLICE_TRACK_KIND &&
           (track.config as {trackId: number}).trackId === Number(trackIdTp)) {
         trackId = track.id;
@@ -332,7 +332,7 @@ export class SelectionController extends Controller<'main'> {
     `;
     const result = await this.args.engine.query(query);
 
-    const selection = globals.state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (result.numRows() > 0 && selection) {
       const row = result.firstRow({
         ts: LONG,
@@ -342,7 +342,7 @@ export class SelectionController extends Controller<'main'> {
         ts: row.ts,
         dur: row.dur,
       };
-      publishThreadStateDetails(selected);
+      publishThreadStateDetails(this.globals.context, selected);
     }
   }
 
@@ -359,7 +359,7 @@ export class SelectionController extends Controller<'main'> {
     WHERE sched.id = ${id}`;
     const result = await this.args.engine.query(sqlQuery);
     // Check selection is still the same on completion of query.
-    const selection = globals.state.currentSelection;
+    const selection = this.globals().state.currentSelection;
     if (result.numRows() > 0 && selection) {
       const row = result.firstRow({
         ts: LONG,
@@ -394,7 +394,7 @@ export class SelectionController extends Controller<'main'> {
             Object.assign(selected, wakeResult);
           })
           .finally(() => {
-            publishSliceDetails(selected);
+            publishSliceDetails(this.globals.context, selected);
           });
     }
   }
@@ -416,11 +416,11 @@ export class SelectionController extends Controller<'main'> {
           IFNULL(value, 0) as value
         FROM counter WHERE ts < ${ts} and track_id = ${trackId}`);
     const previousValue = previous.firstRow({value: NUM}).value;
-    const endTs = rightTs !== -1n ? rightTs : globals.state.traceTime.end;
+    const endTs = rightTs !== -1n ? rightTs : this.globals().state.traceTime.end;
     const delta = value - previousValue;
     const duration = endTs - ts;
-    const uiTrackId = globals.state.uiTrackIdByTraceTrackId[trackId];
-    const name = uiTrackId ? globals.state.tracks[uiTrackId].name : undefined;
+    const uiTrackId = this.globals().state.uiTrackIdByTraceTrackId[trackId];
+    const name = uiTrackId ? this.globals().state.tracks[uiTrackId].name : undefined;
     return {startTime: ts, value, delta, duration, name};
   }
 

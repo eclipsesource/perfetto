@@ -1,7 +1,7 @@
 import m from 'mithril';
 
 import {classNames} from '../classnames';
-import {globals} from '../globals';
+import {HasGlobalsContextAttrs, globals} from '../globals';
 
 import {Button} from './button';
 import {Spinner} from './spinner';
@@ -50,7 +50,7 @@ export class Tree implements m.ClassComponent<TreeAttrs> {
   }
 }
 
-interface TreeNodeAttrs {
+interface TreeNodeAttrs extends HasGlobalsContextAttrs {
   // Content to display in the left hand column.
   // If omitted, this side will be blank.
   left?: m.Children;
@@ -124,7 +124,7 @@ export class TreeNode implements m.ClassComponent<TreeNodeAttrs> {
       onclick: () => {
         this.collapsed = !this.isCollapsed(vnode);
         onCollapseChanged(this.collapsed, attrs);
-        globals.rafScheduler.scheduleFullRedraw();
+        globals(attrs.globalsContext).rafScheduler.scheduleFullRedraw();
       },
     });
   }
@@ -139,10 +139,11 @@ export class TreeNode implements m.ClassComponent<TreeNodeAttrs> {
   }
 }
 
-export function dictToTree(dict: {[key: string]: m.Child}): m.Children {
+export function dictToTree(globalsContext: string, dict: {[key: string]: m.Child}): m.Children {
   const children: m.Child[] = [];
   for (const key of Object.keys(dict)) {
     children.push(m(TreeNode, {
+      globalsContext,
       left: key,
       right: dict[key],
     }));
@@ -150,7 +151,7 @@ export function dictToTree(dict: {[key: string]: m.Child}): m.Children {
   return m(Tree, children);
 }
 
-interface LazyTreeNodeAttrs {
+interface LazyTreeNodeAttrs extends HasGlobalsContextAttrs {
   // Same as TreeNode (see above).
   left?: m.Children;
   // Same as TreeNode (see above).
@@ -176,12 +177,13 @@ export class LazyTreeNode implements m.ClassComponent<LazyTreeNodeAttrs> {
   private collapsed: boolean = true;
   private renderChildren = this.renderSpinner;
 
-  private renderSpinner(): m.Children {
-    return m(TreeNode, {left: m(Spinner)});
+  private renderSpinner(globalsContext: string): m.Children {
+    return m(TreeNode, {globalsContext, left: m(Spinner)});
   }
 
   view({attrs}: m.CVnode<LazyTreeNodeAttrs>): m.Children {
     const {
+      globalsContext,
       left,
       right,
       summary,
@@ -192,6 +194,7 @@ export class LazyTreeNode implements m.ClassComponent<LazyTreeNodeAttrs> {
     return m(
         TreeNode,
         {
+          globalsContext,
           left,
           right,
           summary,
@@ -205,14 +208,14 @@ export class LazyTreeNode implements m.ClassComponent<LazyTreeNodeAttrs> {
               fetchData().then((result) => {
                 if (!this.collapsed) {
                   this.renderChildren = result;
-                  globals.rafScheduler.scheduleFullRedraw();
+                  globals(globalsContext).rafScheduler.scheduleFullRedraw();
                 }
               });
             }
             this.collapsed = collapsed;
-            globals.rafScheduler.scheduleFullRedraw();
+            globals(globalsContext).rafScheduler.scheduleFullRedraw();
           },
         },
-        this.renderChildren());
+        this.renderChildren(globalsContext));
   }
 }

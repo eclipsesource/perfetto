@@ -79,10 +79,11 @@ export function createEmptyNonSerializableState(): NonSerializableState {
   };
 }
 
-export function createEmptyState(): State {
+export function createEmptyState(globalsContext = ''): State {
   return {
     version: STATE_VERSION,
     nextId: '-1',
+    globalsContext,
     newEngineMode: 'USE_HTTP_RPC_IF_AVAILABLE',
     traceTime: {...defaultTraceTime},
     tracks: {},

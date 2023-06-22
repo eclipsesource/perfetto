@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {ProfileType} from 'src/common/state';
+import {ProfileType} from '../../common/state';
 
 import {searchSegment} from '../../base/binary_search';
 import {Actions} from '../../common/actions';
@@ -23,7 +23,6 @@ import {TrackData} from '../../common/track_data';
 import {profileType} from '../../controller/flamegraph_controller';
 import {TrackController} from '../../controller/track_controller';
 import {FLAMEGRAPH_HOVERED_COLOR} from '../../frontend/flamegraph';
-import {globals} from '../../frontend/globals';
 import {TimeScale} from '../../frontend/time_scale';
 import {NewTrackArgs, Track} from '../../frontend/track';
 
@@ -110,14 +109,14 @@ class HeapProfileTrack extends Track<Config, Data> {
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
     const data = this.data();
 
     if (data === undefined) return;
 
     for (let i = 0; i < data.tsStarts.length; i++) {
       const centerX = data.tsStarts[i];
-      const selection = globals.state.currentSelection;
+      const selection = this.globals().state.currentSelection;
       const isHovered = this.hoveredTs === centerX;
       const isSelected = selection !== null &&
           selection.kind === 'HEAP_PROFILE' && selection.ts === centerX;
@@ -155,7 +154,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     if (data === undefined) return;
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
     const time = timeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
     const index = this.findTimestampIndex(left, timeScale, data, x, y, right);
@@ -171,7 +170,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     if (data === undefined) return false;
     const {
       visibleTimeScale: timeScale,
-    } = globals.frontendLocalState;
+    } = this.globals().frontendLocalState;
 
     const time = timeScale.pxToHpTime(x);
     const [left, right] = searchSegment(data.tsStarts, time.toTPTime());
@@ -181,7 +180,7 @@ class HeapProfileTrack extends Track<Config, Data> {
     if (index !== -1) {
       const ts = data.tsStarts[index];
       const type = data.types[index];
-      globals.makeSelection(Actions.selectHeapProfile(
+      this.globals().makeSelection(Actions.selectHeapProfile(
           {id: index, upid: this.config.upid, ts, type}));
       return true;
     }

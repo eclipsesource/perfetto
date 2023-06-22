@@ -20,6 +20,7 @@ import {AnyAttrsVnode} from '../panel_container';
 import {ArgumentPopup} from '../pivot_table_argument_popup';
 
 export class AttributeModalHolder {
+  globalsContext = '';
   showModal = false;
   typedArgument = '';
 
@@ -29,19 +30,22 @@ export class AttributeModalHolder {
     this.callback = callback;
   }
 
-  start() {
+  start(globalsContext: string) {
+    this.globalsContext = globalsContext;
     this.showModal = true;
     fullscreenModalContainer.createNew(this.renderModal());
-    globals.rafScheduler.scheduleFullRedraw();
+    globals(this.globalsContext).rafScheduler.scheduleFullRedraw();
   }
 
   private renderModal(): ModalDefinition {
     return {
+      globalsContext: this.globalsContext,
       title: 'Enter argument name',
       content:
           m(ArgumentPopup, {
+            globalsContext: this.globalsContext,
             knownArguments:
-                globals.state.nonSerializableState.pivotTable.argumentNames,
+                globals(this.globalsContext).state.nonSerializableState.pivotTable.argumentNames,
             onArgumentChange: (arg) => {
               this.typedArgument = arg;
             },

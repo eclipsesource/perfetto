@@ -24,12 +24,12 @@ import {
   TPTime,
   TPTimeSpan,
 } from '../common/time';
-import {globals} from '../frontend/globals';
+import {HasGlobalsContextAttrs} from '../frontend/globals';
 import {publishSearch, publishSearchResult} from '../frontend/publish';
 
 import {Controller} from './controller';
 
-export interface SearchControllerArgs {
+export interface SearchControllerArgs extends HasGlobalsContextAttrs {
   engine: Engine;
 }
 
@@ -42,7 +42,7 @@ export class SearchController extends Controller<'main'> {
   private setupInProgress: boolean;
 
   constructor(args: SearchControllerArgs) {
-    super('main');
+    super('main', args.globalsContext);
     this.engine = args.engine;
     this.previousSpan = new TPTimeSpan(0n, 1n);
     this.previousSearch = '';
@@ -69,13 +69,13 @@ export class SearchController extends Controller<'main'> {
       return;
     }
 
-    const visibleState = globals.state.frontendLocalState.visibleState;
-    const omniboxState = globals.state.omniboxState;
+    const visibleState = this.globals().state.frontendLocalState.visibleState;
+    const omniboxState = this.globals().state.omniboxState;
     if (visibleState === undefined || omniboxState === undefined ||
         omniboxState.mode === 'COMMAND') {
       return;
     }
-    const newSpan = globals.stateVisibleTime();
+    const newSpan = this.globals().stateVisibleTime();
     const newSearch = omniboxState.omnibox;
     const newResolution = visibleState.resolution;
     if (this.previousSpan.contains(newSpan) &&
@@ -93,12 +93,12 @@ export class SearchController extends Controller<'main'> {
     this.previousResolution = newResolution;
     this.previousSearch = newSearch;
     if (newSearch === '' || newSearch.length < 4) {
-      publishSearch({
+      publishSearch(this.globals.context, {
         tsStarts: new BigInt64Array(0),
         tsEnds: new BigInt64Array(0),
         count: new Uint8Array(0),
       });
-      publishSearchResult({
+      publishSearchResult(this.globals.context, {
         sliceIds: new Float64Array(0),
         tsStarts: new BigInt64Array(0),
         utids: new Float64Array(0),
@@ -113,12 +113,12 @@ export class SearchController extends Controller<'main'> {
     const computeSummary =
         this.update(newSearch, newSpan.start, newSpan.end, newResolution)
             .then((summary) => {
-              publishSearch(summary);
+              publishSearch(this.globals.context, summary);
             });
 
     const computeResults =
         this.specificSearch(newSearch).then((searchResults) => {
-          publishSearchResult(searchResults);
+          publishSearchResult(this.globals.context, searchResults);
         });
 
     Promise.all([computeSummary, computeResults])
@@ -197,7 +197,7 @@ export class SearchController extends Controller<'main'> {
     // TODO(hjd): we should avoid recomputing this every time. This will be
     // easier once the track table has entries for all the tracks.
     const cpuToTrackId = new Map();
-    for (const track of Object.values(globals.state.tracks)) {
+    for (const track of Object.values(this.globals().state.tracks)) {
       if (track.kind === 'CpuSliceTrack') {
         cpuToTrackId.set((track.config as {cpu: number}).cpu, track.id);
         continue;
@@ -273,9 +273,9 @@ export class SearchController extends Controller<'main'> {
       if (it.source === 'cpu') {
         trackId = cpuToTrackId.get(it.sourceId);
       } else if (it.source === 'track') {
-        trackId = globals.state.uiTrackIdByTraceTrackId[it.sourceId];
+        trackId = this.globals().state.uiTrackIdByTraceTrackId[it.sourceId];
       } else if (it.source === 'log') {
-        const logTracks = Object.values(globals.state.tracks)
+        const logTracks = Object.values(this.globals().state.tracks)
                               .filter((t) => t.kind === 'AndroidLogTrack');
         if (logTracks.length > 0) {
           trackId = logTracks[0].id;

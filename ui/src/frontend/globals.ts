@@ -220,6 +220,7 @@ class Globals {
 
   bottomTabList?: BottomTabList = undefined;
 
+  private readonly _context;
   private _testing = false;
   private _dispatch?: Dispatch = undefined;
   private _state?: State = undefined;
@@ -272,7 +273,8 @@ class Globals {
   private _promptToLoadFromTraceProcessorShell = true;
   private _trackFilteringEnabled = false;
   private _filteredTracks: AddTrackLikeArgs[] = [];
-
+  private _httpRpcEnginePort = 9001;
+  
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
 
@@ -292,16 +294,20 @@ class Globals {
 
   engines = new Map<string, Engine>();
 
+  constructor(context = '') {
+    this._context = context;
+  }
+
   initialize(dispatch: Dispatch, router: Router) {
     this._dispatch = dispatch;
     this._router = router;
-    this._state = createEmptyState();
-    this._frontendLocalState = new FrontendLocalState();
-    this._rafScheduler = new RafScheduler();
-    this._serviceWorkerController = new ServiceWorkerController();
+    this._state = createEmptyState(this._context);
+    this._frontendLocalState = new FrontendLocalState(this.context);
+    this._rafScheduler = new RafScheduler(this.context);
+    this._serviceWorkerController = new ServiceWorkerController(this.context);
     this._testing =
         self.location && self.location.search.indexOf('testing=1') >= 0;
-    this._logging = initAnalytics();
+    this._logging = initAnalytics(this.context);
 
     // TODO(hjd): Unify trackDataStore, queryResults, overviewStore, threads.
     this._trackDataStore = new Map<string, {}>();
@@ -318,6 +324,10 @@ class Globals {
     this._flamegraphDetails = {};
     this._cpuProfileDetails = {};
     this.engines.clear();
+  }
+
+  get context(): string {
+    return this._context;
   }
 
   get router(): Router {
@@ -691,12 +701,20 @@ class Globals {
     this._filteredTracks = [...filteredTracks];
   }
 
+  get httpRpcEnginePort(): number {
+    return this._httpRpcEnginePort;
+  }
+
+  set httpRpcEnginePort(httpRpcEnginePort: number) {
+    this._httpRpcEnginePort = httpRpcEnginePort;
+  }
+
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
     // A new selection should cancel the current search selection.
-    globals.dispatch(Actions.setSearchIndex({index: -1}));
+    this.dispatch(Actions.setSearchIndex({index: -1}));
     const tab = action.type === 'deselect' ? undefined : tabToOpen;
-    globals.dispatch(Actions.setCurrentTab({tab}));
-    globals.dispatch(action);
+    this.dispatch(Actions.setCurrentTab({tab}));
+    this.dispatch(action);
   }
 
   resetForTesting() {
@@ -795,4 +813,39 @@ class Globals {
   }
 }
 
-export const globals = new Globals();
+const allGlobals = new Map<string, Globals>();
+allGlobals.set('', new Globals());
+
+export function globals(context = ''): Globals {
+  const globals_ = allGlobals.get(context);
+  if (globals_ === undefined) {
+    throw Error('No Globals found for given context key');
+  }
+  return globals_;
+}
+
+export function registerNewGlobals(context: string, globals: Globals) {
+  if (allGlobals.has(context)) {
+    throw new Error('A Globals object with this context key is present already')
+  }
+  // The usual mechanism for creating a new globals is via deep copy,
+  // which includes the original context which we must overwrite
+  Object.assign(globals, { _context: context });
+  allGlobals.set(context, globals);
+}
+
+export type GlobalsFunction = (() => Globals) & { context: string };
+
+export function bindGlobals(context = ''): GlobalsFunction {
+  const result = () => globals(context);
+  result.context = context;
+  return result;
+}
+
+/**
+ * Mix-in interface for the attributes of a Mithril component
+ * that needs to know the context for the globals.
+ */
+export interface HasGlobalsContextAttrs {
+  globalsContext: string; // The globals() function context
+}

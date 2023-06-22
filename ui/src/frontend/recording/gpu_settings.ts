@@ -14,21 +14,24 @@
 
 import m from 'mithril';
 
-import {Probe, ProbeAttrs} from '../record_widgets';
+import {Probe} from '../record_widgets';
 import {RecordingSectionAttrs} from './recording_sections';
 
 export class GpuSettings implements m.ClassComponent<RecordingSectionAttrs> {
   view({attrs}: m.CVnode<RecordingSectionAttrs>) {
+    const globalsContext = attrs.globalsContext;
     return m(
         `.record-section${attrs.cssClass}`,
         m(Probe, {
+          globalsContext,
           title: 'GPU frequency',
           img: 'rec_cpu_freq.png',
           descr: 'Records gpu frequency via ftrace',
           setEnabled: (cfg, val) => cfg.gpuFreq = val,
           isEnabled: (cfg) => cfg.gpuFreq,
-        } as ProbeAttrs),
+        }),
         m(Probe, {
+          globalsContext,
           title: 'GPU memory',
           img: 'rec_gpu_mem_total.png',
           descr:
@@ -36,6 +39,6 @@ export class GpuSettings implements m.ClassComponent<RecordingSectionAttrs> {
                 (Available on recent Android 12+ kernels)`,
           setEnabled: (cfg, val) => cfg.gpuMemTotal = val,
           isEnabled: (cfg) => cfg.gpuMemTotal,
-        } as ProbeAttrs));
+        }));
   }
 }

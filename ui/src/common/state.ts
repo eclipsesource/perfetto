@@ -209,7 +209,7 @@ export interface TraceArrayBufferSource {
   // |uuid| is set only when loading via ?local_cache_key=1234. When set,
   // this matches global.state.traceUuid, with the exception of the following
   // time window: When a trace T1 is loaded and the user loads another trace T2,
-  // this |uuid| will be == T2, but the globals.state.traceUuid will be
+  // this |uuid| will be == T2, but the globals().state.traceUuid will be
   // temporarily == T1 until T2 has been loaded (consistently to what happens
   // with all other state fields).
   uuid?: string;
@@ -537,6 +537,7 @@ export interface State {
   /**
    * Open traces.
    */
+  globalsContext: string;
   newEngineMode: NewEngineMode;
   engine?: EngineConfig;
   traceTime: TraceTime;

@@ -14,8 +14,8 @@
 
 import {TPDuration, TPTime, tpTimeToCode} from '../common/time';
 
-import {globals, SliceDetails} from './globals';
-import {Panel} from './panel';
+import {SliceDetails} from './globals';
+import {Panel, PanelAttrs} from './panel';
 
 // To display process or thread, we want to concatenate their name with ID, but
 // either can be undefined and all the cases need to be considered carefully to
@@ -33,9 +33,12 @@ function getDisplayName(name: string|undefined, id: number|undefined): string|
   }
 }
 
-export abstract class SlicePanel extends Panel {
+export interface SlicePanelAttrs extends PanelAttrs {}
+
+export abstract class SlicePanel extends Panel<SlicePanelAttrs> {
+
   protected computeDuration(ts: TPTime, dur: TPDuration): string {
-    return dur === -1n ? `${globals.state.traceTime.end - ts} (Did not end)` :
+    return dur === -1n ? `${this.globals().state.traceTime.end - ts} (Did not end)` :
                          tpTimeToCode(dur);
   }
 

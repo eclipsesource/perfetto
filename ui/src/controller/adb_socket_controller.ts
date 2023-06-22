@@ -78,8 +78,8 @@ export class AdbSocketConsumerPort extends AdbBaseConsumerPort {
 
   private socketCommandQueue: Command[] = [];
 
-  constructor(adb: Adb, consumer: Consumer) {
-    super(adb, consumer);
+  constructor(globalsContext: string, adb: Adb, consumer: Consumer) {
+    super(globalsContext, adb, consumer);
   }
 
   async invoke(method: string, params: Uint8Array) {
