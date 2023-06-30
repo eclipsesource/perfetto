@@ -262,6 +262,8 @@ class Globals {
   private _disableHashBasedRouting?: boolean = undefined;
   private _cachePrefix: string = '';
 
+  private _httpRpcEnginePort = 9001;
+
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
 
@@ -622,6 +624,14 @@ class Globals {
 
   set ftracePanelData(data: FtracePanelData|undefined) {
     this._ftracePanelData = data;
+  }
+
+  get httpRpcEnginePort(): number {
+    return this._httpRpcEnginePort;
+  }
+
+  set httpRpcEnginePort(httpRpcEnginePort: number) {
+    this._httpRpcEnginePort = httpRpcEnginePort;
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
