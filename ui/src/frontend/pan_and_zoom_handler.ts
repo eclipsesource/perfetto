@@ -95,8 +95,6 @@ export class PanAndZoomHandler {
   private boundOnWheel = this.onWheel.bind(this);
   private boundOnKeyDown = this.onKeyDown.bind(this);
   private boundOnKeyUp = this.onKeyUp.bind(this);
-  private boundOnMouseEnterPage = this.onMouseEnterPage.bind(this);
-  private boundOnMouseLeavePage = this.onMouseLeavePage.bind(this);
   private shiftDown = false;
   private panning: Pan = Pan.None;
   private panOffsetPx = 0;
@@ -106,7 +104,6 @@ export class PanAndZoomHandler {
   private targetZoomRatio = 0;
   private panAnimation = new Animation(this.onPanAnimationStep.bind(this));
   private zoomAnimation = new Animation(this.onZoomAnimationStep.bind(this));
-  private active: boolean;
 
   private element: HTMLElement;
   private page?: HTMLElement;
@@ -147,17 +144,16 @@ export class PanAndZoomHandler {
     this.editSelection = editSelection;
     this.onSelection = onSelection;
     this.endSelection = endSelection;
+    
     this.page = page;
-   
+    // Make it focusable and also tabbable for keyboard accessibility
+    page?.setAttribute('tabindex', '0');
+
     document.body.addEventListener('keydown', this.boundOnKeyDown);
     document.body.addEventListener('keyup', this.boundOnKeyUp);
     this.element.addEventListener('mousemove', this.boundOnMouseMove);
     this.element.addEventListener('wheel', this.boundOnWheel, {passive: true});
 
-    this.page?.addEventListener('mouseenter', this.boundOnMouseEnterPage);
-    this.page?.addEventListener('mouseleave', this.boundOnMouseLeavePage);
-    this.active = !this.page;
- 
     let prevX = -1;
     let dragStartX = -1;
     let dragStartY = -1;
@@ -200,8 +196,6 @@ export class PanAndZoomHandler {
     document.body.removeEventListener('keyup', this.boundOnKeyUp);
     this.element.removeEventListener('mousemove', this.boundOnMouseMove);
     this.element.removeEventListener('wheel', this.boundOnWheel);
-    this.page?.removeEventListener('mouseenter', this.boundOnMouseEnterPage);
-    this.page?.removeEventListener('mouseleave', this.boundOnMouseLeavePage);
   }
 
   private onPanAnimationStep(msSinceStartOfAnimation: number) {
@@ -332,27 +326,8 @@ export class PanAndZoomHandler {
     }
   }
 
-  protected shouldHandlekey(e: KeyboardEvent) {
-    if (!this.active) {
-      // User attention seems not to be in my scope
-      return false;
-    }
-
-    const activeElement = document.activeElement;
-    if (activeElement === document.documentElement || activeElement === document.body) {
-      // No element has focus
-      return true;
-    }
-
-    // OK to handle the key if somehow it didn't come from the focus element
-    return e.target !== activeElement;
-  }
-
-  private onMouseEnterPage(_e: MouseEvent) {
-    this.active = true;
-  }
-
-  private onMouseLeavePage(_e: MouseEvent) {
-    this.active = false;
+  protected shouldHandlekey(_e: KeyboardEvent) {
+    // If no page, then scope is document-wide by default
+    return !this.page || this.page.contains(document.activeElement);
   }
 }
