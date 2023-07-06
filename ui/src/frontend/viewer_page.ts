@@ -82,17 +82,22 @@ export class TrackGroup implements m.ClassComponent<TrackGroupAttrs> {
   }
 }
 
+export interface TraceViewerAttrs {
+  /** If true, scope the handling of pan/zoom/help etc. keys to the page content only. */
+  scopedKeyHandling?: boolean;
+}
+
 /**
  * Top-most level component for the viewer page. Holds tracks, brush timeline,
  * panels, and everything else that's part of the main trace viewer page.
  */
-class TraceViewer implements m.ClassComponent {
+class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
   private onResize: () => void = () => {};
   private zoomContent?: PanAndZoomHandler;
   // Used to prevent global deselection if a pan/drag select occurred.
   private keepCurrentSelection = false;
 
-  oncreate(vnode: m.CVnodeDOM) {
+  oncreate(vnode: m.CVnodeDOM<TraceViewerAttrs>) {
     const frontendLocalState = globals.frontendLocalState;
     const updateDimensions = () => {
       const rect = vnode.dom.getBoundingClientRect();
@@ -115,9 +120,11 @@ class TraceViewer implements m.ClassComponent {
 
     const panZoomEl =
         vnode.dom.querySelector('.pan-and-zoom-content') as HTMLElement;
+    const page = vnode.attrs.scopedKeyHandling ? vnode.dom as HTMLElement : undefined;
 
     this.zoomContent = new PanAndZoomHandler({
       element: panZoomEl,
+      page,
       contentOffsetX: SIDEBAR_WIDTH,
       onPanned: (pannedPx: number) => {
         const {
@@ -314,3 +321,11 @@ export const ViewerPage = createPage({
     return m(TraceViewer);
   },
 });
+
+export function createViewerPage(attrs: TraceViewerAttrs) {
+  return createPage({
+    view() {
+      return m(TraceViewer, attrs);
+    }
+  });
+}
