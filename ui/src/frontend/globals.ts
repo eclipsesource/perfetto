@@ -46,7 +46,6 @@ import { Router } from './router';
 import {ServiceWorkerController} from './service_worker_controller';
 import {PxSpan, TimeScale} from './time_scale';
 import { maybeShowErrorDialog } from './error_dialog';
-import { onEngineReady } from '../common/engine_ready_observer';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
@@ -274,6 +273,8 @@ class Globals {
   private _promptToLoadFromTraceProcessorShell = true;
   private _trackFilteringEnabled = false;
   private _filteredTracks: AddTrackLikeArgs[] = [];
+  private _engineReadyObservers: ((engine: EngineConfig) => void)[] = [];
+
 
   // Init from session storage since correct value may be required very early on
   private _relaxContentSecurity: boolean = window.sessionStorage.getItem(RELAX_CONTENT_SECURITY) === 'true';
@@ -340,10 +341,10 @@ class Globals {
 
   set state(state: State) {
     state = assertExists(state);
-    let readyStateSet = state.engine?.ready && !this._state?.engine?.ready;
+    const readyStateSet = state.engine?.ready && !this._state?.engine?.ready;
     this._state = assertExists(state);
     if (readyStateSet) {
-      onEngineReady();
+      this.onEngineReady(state.engine!);
     }
   }
 
@@ -704,6 +705,16 @@ class Globals {
 
   set filteredTracks(filteredTracks: AddTrackLikeArgs[]) {
     this._filteredTracks = [...filteredTracks];
+  }
+
+  private onEngineReady(engine: EngineConfig) {
+    for (const observer of this._engineReadyObservers) {
+      observer(engine);
+    }
+  }
+
+  addEngineReadyObserver(observer: (engine: EngineConfig) => void): void {
+      this._engineReadyObservers.push(observer);
   }
 
   makeSelection(action: DeferredAction<{}>, tabToOpen = 'current_selection') {
