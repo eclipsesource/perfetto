@@ -64,7 +64,7 @@ import {
   VisibleState,
 } from './state';
 import {TPDuration, TPTime} from './time';
-import { STR } from './query_result';
+import {STR} from './query_result';
 
 export const DEBUG_SLICE_TRACK_KIND = 'DebugSliceTrack';
 
@@ -176,21 +176,21 @@ function wasFiltered<T extends TrackState|TrackGroupState>(item: T): item is T &
 
 function isFilteredTrack(track: Partial<AddTrackArgs>): boolean {
   return globals.trackFilteringEnabled && globals.filteredTracks
-      .some(filtered => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
+      .some((filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
 // Query whether an |other| track matches enough details of a |track| as
 // to represent the same track
 function isSameTrack(track: AddTrackArgs, other: Partial<AddTrackArgs>): boolean {
-  return track.kind === other.kind
-      && track.trackGroup == other.trackGroup
+  return track.kind === other.kind &&
+      track.trackGroup == other.trackGroup &&
       // TODO: This may not be reliable. May need to deep-compare the config object
-      && track.name == other.name;
+      track.name == other.name;
 }
 
 function isFilteredTrackGroup(trackGroup: Partial<AddTrackGroupArgs>): boolean {
   return globals.trackFilteringEnabled && globals.filteredTracks
-    .some(filtered => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+    .some((filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
 }
 
 function unfilterTracklike(predicate: (tracklike: AddTrackLikeArgs) => boolean) {
@@ -203,13 +203,13 @@ function unfilterTracklike(predicate: (tracklike: AddTrackLikeArgs) => boolean) 
 function unfilterTrack(track: TrackState) {
   track.isRemovable = true;
   (track as any).wasFiltered = true;
-  unfilterTracklike(filtered => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
+  unfilterTracklike((filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
 function unfilterTrackGroup(trackGroup: TrackGroupState) {
   trackGroup.isRemovable = true;
   (trackGroup as any).wasFiltered = true;
-  unfilterTracklike(filtered => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+  unfilterTracklike((filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
 }
 
 // A helper to delete the private tables and views created by a track.
@@ -458,7 +458,7 @@ export const StateActions = {
   // |isRemovable| property of its state.
   removeTrack(state: StateDraft, args: {trackId: string}): void {
     const track = state.tracks[args.trackId];
-    if(!track){
+    if (!track) {
       return;
     }
     assertTrue(track.isRemovable ?? false);
@@ -473,23 +473,27 @@ export const StateActions = {
       // it's a group summary track that has a fixed explicit ID.
       // Note that (some, at least) summary tracks don't reference
       // their group
-      const id = track.trackGroup !== SCROLLING_TRACK_GROUP
-              && Object.values(state.trackGroups).some(group => group.tracks.length && group.tracks[0] === track.id)
-          ? { id: track.id }
-          : {};
-      
+      const id = track.trackGroup !== SCROLLING_TRACK_GROUP &&
+              Object.values(state.trackGroups).some((group) => group.tracks.length && group.tracks[0] === track.id) ?
+          {id: track.id} :
+          {};
+
+      // sortKey from the passed state was not resolved so I used global's
+      // The error was saying something about getting Proxy
+      // Which I noticed sortKey was set to
+      const sortKey = globals.state.tracks[args.trackId].trackSortKey;
       globals.filteredTracks.push({
         ...id,
         kind: track.kind,
         engineId: track.engineId,
         name: track.name,
-        trackSortKey: track.trackSortKey,
+        trackSortKey: sortKey,
         trackGroup: track.trackGroup,
         labels: track.labels,
-        config: current(track.config)
+        config: current(track.config),
       });
     }
-    
+
     dropTables(track.engineId, track.id);
   },
 
@@ -497,7 +501,7 @@ export const StateActions = {
   // |isRemovable| property of its state.
   removeTrackGroup(state: StateDraft, args: {id: string, summaryTrackId: string}): void {
     const trackGroup = state.trackGroups[args.id];
-    if(!trackGroup){
+    if (!trackGroup) {
       return;
     }
     assertTrue(trackGroup.isRemovable ?? false);
@@ -511,7 +515,7 @@ export const StateActions = {
         engineId: trackGroup.engineId,
         name: trackGroup.name,
         collapsed: trackGroup.collapsed,
-        summaryTrackId: args.summaryTrackId
+        summaryTrackId: args.summaryTrackId,
       });
     }
   },
