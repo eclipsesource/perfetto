@@ -15,22 +15,22 @@
 import {BigintMath} from '../base/bigint_math';
 import {HttpRcpEngineCustomizer} from '../common/http_rpc_engine';
 import {ErrorHandler, assertExists} from '../base/logging';
-import {Actions, AddTrackLikeArgs, DeferredAction} from '../common/actions';
+import {Actions, DeferredAction} from '../common/actions';
 import {AggregateData} from '../common/aggregation_data';
 import {Args, ArgsTree} from '../common/arg_types';
 import {
   ConversionJobName,
   ConversionJobStatus,
 } from '../common/conversion_jobs';
-import { createEmptyState } from '../common/empty_state';
-import { Engine } from '../common/engine';
+import {createEmptyState} from '../common/empty_state';
+import {Engine} from '../common/engine';
 import {
   HighPrecisionTime,
   HighPrecisionTimeSpan,
 } from '../common/high_precision_time';
-import { MetricResult } from '../common/metric_data';
-import { CurrentSearchResults, SearchSummary } from '../common/search_data';
-import { CallsiteInfo, EngineConfig, ProfileType, State } from '../common/state';
+import {MetricResult} from '../common/metric_data';
+import {CurrentSearchResults, SearchSummary} from '../common/search_data';
+import {CallsiteInfo, EngineConfig, ProfileType, State} from '../common/state';
 import {Span, tpTimeFromSeconds} from '../common/time';
 import {
   TPDuration,
@@ -38,14 +38,14 @@ import {
   TPTimeSpan,
 } from '../common/time';
 
-import { Analytics, initAnalytics } from './analytics';
-import { BottomTabList } from './bottom_tab';
-import { FrontendLocalState } from './frontend_local_state';
-import { RafScheduler } from './raf_scheduler';
-import { Router } from './router';
+import {Analytics, initAnalytics} from './analytics';
+import {BottomTabList} from './bottom_tab';
+import {FrontendLocalState} from './frontend_local_state';
+import {RafScheduler} from './raf_scheduler';
+import {Router} from './router';
 import {ServiceWorkerController} from './service_worker_controller';
 import {PxSpan, TimeScale} from './time_scale';
-import { maybeShowErrorDialog } from './error_dialog';
+import {maybeShowErrorDialog} from './error_dialog';
 
 type Dispatch = (action: DeferredAction) => void;
 type TrackDataStore = Map<string, {}>;
@@ -272,7 +272,6 @@ class Globals {
   private _httpRpcEnginePort = 9001;
   private _promptToLoadFromTraceProcessorShell = true;
   private _trackFilteringEnabled = false;
-  private _filteredTracks: AddTrackLikeArgs[] = [];
   private _engineReadyObservers: ((engine: EngineConfig) => void)[] = [];
 
 
@@ -344,7 +343,7 @@ class Globals {
     const readyStateSet = state.engine?.ready && !this._state?.engine?.ready;
     this._state = assertExists(state);
     if (readyStateSet) {
-      this.onEngineReady(state.engine!);
+      this.fireEngineReady(state.engine!);
     }
   }
 
@@ -545,7 +544,7 @@ class Globals {
   }
 
   get relaxContentSecurity(): boolean {
-    return !!this._relaxContentSecurity
+    return !!this._relaxContentSecurity;
   }
 
   get cachePrefix(): string {
@@ -699,15 +698,7 @@ class Globals {
     this._trackFilteringEnabled = trackFilteringEnabled;
   }
 
-  get filteredTracks(): AddTrackLikeArgs[] {
-    return this._filteredTracks;
-  }
-
-  set filteredTracks(filteredTracks: AddTrackLikeArgs[]) {
-    this._filteredTracks = [...filteredTracks];
-  }
-
-  private onEngineReady(engine: EngineConfig) {
+  private fireEngineReady(engine: EngineConfig) {
     for (const observer of this._engineReadyObservers) {
       observer(engine);
     }
