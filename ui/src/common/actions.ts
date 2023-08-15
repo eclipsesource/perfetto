@@ -166,50 +166,66 @@ function removeTrackGroup(state: StateDraft, groupId: string) {
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== groupId);
 }
 
-function hasRemovable<T extends AddTrackLikeArgs>(item: T): item is T & {isRemovable: boolean} {
+function hasRemovable<T extends AddTrackLikeArgs>(
+    item: T): item is T & {isRemovable: boolean} {
   return 'isRemovable' in item && typeof item.isRemovable === 'boolean';
 }
 
-function wasFiltered<T extends TrackState|TrackGroupState>(item: T): item is T & {wasFiltered?: true} {
+function wasFiltered<T extends TrackState|TrackGroupState>(
+    item: T): item is T & {wasFiltered?: true} {
   return 'wasFiltered' in item && item.wasFiltered === true;
 }
 
-function isFilteredTrack(track: Partial<AddTrackArgs>): boolean {
-  return globals.trackFilteringEnabled && globals.filteredTracks
+function isFilteredTrack(
+    state: StateDraft,
+    track: Partial<AddTrackArgs>): boolean {
+  return globals.trackFilteringEnabled && state.filteredTracks
       .some((filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
 // Query whether an |other| track matches enough details of a |track| as
 // to represent the same track
-function isSameTrack(track: AddTrackArgs, other: Partial<AddTrackArgs>): boolean {
+function isSameTrack(
+    track: AddTrackArgs,
+    other: Partial<AddTrackArgs>): boolean {
   return track.kind === other.kind &&
       track.trackGroup == other.trackGroup &&
       // TODO: This may not be reliable. May need to deep-compare the config object
       track.name == other.name;
 }
 
-function isFilteredTrackGroup(trackGroup: Partial<AddTrackGroupArgs>): boolean {
-  return globals.trackFilteringEnabled && globals.filteredTracks
-    .some((filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+function isFilteredTrackGroup(
+    state: StateDraft,
+    trackGroupId: string): boolean {
+  return globals.trackFilteringEnabled && state.filteredTracks
+    .some((filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroupId);
 }
 
-function unfilterTracklike(predicate: (tracklike: AddTrackLikeArgs) => boolean) {
-  const index = globals.filteredTracks.findIndex(predicate);
+function unfilterTracklike(
+    state: StateDraft,
+    predicate: (tracklike: AddTrackLikeArgs) => boolean) {
+  const index = state.filteredTracks.findIndex(predicate);
   if (index >= 0) {
-    globals.filteredTracks.splice(index, 1);
+    state.filteredTracks.splice(index, 1);
   }
 }
 
-function unfilterTrack(track: TrackState) {
+function unfilterTrack(state: StateDraft, trackId: string) {
+  const track = state.tracks[trackId];
   track.isRemovable = true;
   (track as any).wasFiltered = true;
-  unfilterTracklike((filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
+  unfilterTracklike(
+    state,
+    (filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
-function unfilterTrackGroup(trackGroup: TrackGroupState) {
+function unfilterTrackGroup(state: StateDraft, trackGroupId: string) {
+  const trackGroup = state.trackGroups[trackGroupId];
   trackGroup.isRemovable = true;
   (trackGroup as any).wasFiltered = true;
-  unfilterTracklike((filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+  unfilterTracklike(
+    state,
+    (filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
 }
 
 // A helper to delete the private tables and views created by a track.
@@ -383,8 +399,8 @@ export const StateActions = {
     // or if it is currently filtered out of view
     if (hasRemovable(args)) {
       state.tracks[id].isRemovable = args.isRemovable;
-    } else if (isFilteredTrack(args)) {
-      unfilterTrack(state.tracks[id]);
+    } else if (isFilteredTrack(state, args)) {
+      unfilterTrack(state, id);
     }
 
     this.fillUiTrackIdByTraceTrackId(state, state.tracks[id], id);
@@ -415,8 +431,8 @@ export const StateActions = {
     // or if it is currently filtered out of view
     if (hasRemovable(args)) {
       state.trackGroups[args.id].isRemovable = args.isRemovable;
-    } else if (isFilteredTrackGroup(args)) {
-      unfilterTrackGroup(state.trackGroups[args.id]);
+    } else if (isFilteredTrackGroup(state, args.id)) {
+      unfilterTrackGroup(state, args.id);
     }
   },
 
@@ -478,16 +494,12 @@ export const StateActions = {
           {id: track.id} :
           {};
 
-      // sortKey from the passed state was not resolved so I used global's
-      // The error was saying something about getting Proxy
-      // Which I noticed sortKey was set to
-      const sortKey = globals.state.tracks[args.trackId].trackSortKey;
-      globals.filteredTracks.push({
+      state.filteredTracks.push({
         ...id,
         kind: track.kind,
         engineId: track.engineId,
         name: track.name,
-        trackSortKey: sortKey,
+        trackSortKey: track.trackSortKey,
         trackGroup: track.trackGroup,
         labels: track.labels,
         config: current(track.config),
@@ -510,7 +522,7 @@ export const StateActions = {
 
     if (wasFiltered(trackGroup)) {
       delete trackGroup.wasFiltered;
-      globals.filteredTracks.push({
+      state.filteredTracks.push({
         id: trackGroup.id,
         engineId: trackGroup.engineId,
         name: trackGroup.name,
@@ -1407,6 +1419,12 @@ export const StateActions = {
   toggleCollapseByTextEntry(state: StateDraft, _: {}) {
     state.logFilteringCriteria.hideNonMatching =
         !state.logFilteringCriteria.hideNonMatching;
+  },
+
+  setFilteredTracks(
+      state: StateDraft,
+      args: {filteredTracks: AddTrackLikeArgs[]}) {
+    state.filteredTracks = [...args.filteredTracks];
   },
 };
 
