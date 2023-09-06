@@ -363,6 +363,13 @@ $bottom-tab-padding: 10px;
   }
 }
 
+.track-buttons {
+  grid-area: buttons;
+  display: flex;
+  height: 100%;
+  align-items: center;
+}
+
 .track {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -422,12 +429,6 @@ $bottom-tab-padding: 10px;
       grid-area: title;
       color: var(--main-foreground-color);
       @include track_shell_title();
-    }
-    .track-buttons {
-      grid-area: buttons;
-      display: flex;
-      height: 100%;
-      align-items: center;
     }
     .track-button {
       @include transition();
@@ -719,8 +720,8 @@ button.query-ctrl {
   .shell {
     padding: 4px 4px;
     display: grid;
-    grid-template-areas: "fold-button title check";
-    grid-template-columns: 28px 1fr 20px;
+    grid-template-areas: "fold-button title buttons";
+    grid-template-columns: 28px 1fr auto;
     align-items: center;
     line-height: 1;
     width: var(--track-shell-width);

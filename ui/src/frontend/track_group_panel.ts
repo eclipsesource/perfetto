@@ -157,7 +157,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
             (this.trackGroupState.collapsed && child !== null) ?
                 m('h2.track-subtitle', child) :
                 null),
-          selection && selection.kind === 'AREA' ?
+              m('.track-buttons', ...this.getTrackGroupActionButtons(),
+              selection && selection.kind === 'AREA' ?
               m('i.material-icons.track-button',
                 {
                   onclick: (e: MouseEvent) => {
@@ -167,8 +168,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
                   },
                 },
                 checkBox) :
-              '',
-          ...this.getTrackGroupActionButtons()),
+              ''),
+          ),
 
         this.summaryTrack ?
             m(TrackContent,
