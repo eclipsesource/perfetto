@@ -297,11 +297,11 @@ export class NotesPanel extends Panel {
 
 
   private onClick(x: number, _: number) {
-    if (x < 0) return;
+    if (x < 0 || !this.hoveredX) return;
     const {visibleTimeScale} = globals.frontendLocalState;
     const timestamp = visibleTimeScale.pxToHpTime(x).toTPTime();
     for (const note of Object.values(globals.state.notes)) {
-      if (this.hoveredX && this.mouseOverNote(this.hoveredX, note)) {
+      if (this.mouseOverNote(this.hoveredX, note)) {
         if (note.noteType === 'AREA') {
           globals.makeSelection(
               Actions.reSelectArea({areaId: note.areaId, noteId: note.id}));
@@ -316,12 +316,10 @@ export class NotesPanel extends Panel {
   }
 
   private onRightClick(x: number, _: number) {
-    if (x < 0) return;
+    if (x < 0 || !this.hoveredX) return;
     for (const note of Object.values(globals.state.notes)) {
-      if (this.hoveredX && this.mouseOverNote(this.hoveredX, note)) {
-        if (note.noteType !== 'AREA') {
-          globals.dispatch(Actions.removeNote(note));
-        }
+      if (this.mouseOverNote(this.hoveredX, note) && note.noteType !== 'AREA') {
+        globals.dispatch(Actions.removeNote(note));
         return;
       }
     }
