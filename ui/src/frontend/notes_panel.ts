@@ -318,7 +318,7 @@ export class NotesPanel extends Panel {
   private onRightClick(x: number, _: number) {
     if (x < 0 || !this.hoveredX) return;
     for (const note of Object.values(globals.state.notes)) {
-      if (this.mouseOverNote(this.hoveredX, note) && note.noteType !== 'AREA') {
+      if (note.noteType !== 'AREA' && this.mouseOverNote(this.hoveredX, note)) {
         globals.dispatch(Actions.removeNote(note));
         return;
       }
