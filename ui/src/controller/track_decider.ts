@@ -72,6 +72,7 @@ import {addLatenciesTrack} from '../tracks/scroll_jank/event_latency_track';
 import {addTopLevelScrollTrack} from '../tracks/scroll_jank/scroll_track';
 import {THREAD_STATE_TRACK_KIND} from '../tracks/thread_state';
 import {shouldCreateTrack, shouldCreateTrackGroup} from './track_filter';
+import {TrackInfo} from '../common/plugin_api';
 
 const TRACKS_V2_FLAG = featureFlags.register({
   id: 'tracksV2.1',
@@ -246,15 +247,15 @@ class TrackDecider {
 
     if (hasTrackName) {
       switch (trackName.toLowerCase()) {
-        case 'mem.rss': return 'Memory - Resident Set Size';
-        case 'mem.rss.anon': return 'Memory - Resident Anonymous';
-        case 'mem.rss.file': return 'Memory - Resident File-backed';
-        case 'mem.rss.shmem': return 'Memory - Resident Shared';
-        case 'mem.rss.watermark': return 'Memory - Resident High Water Mark';
-        case 'mem.locked': return 'Memory - Locked';
-        case 'mem.swap': return 'Memory - Swapped Out';
-        case 'mem.virt': return 'Memory - Virtual Memory Size';
-        case 'oom_score_adj': return 'Memory - Out-of-memory Badness Adjustment';
+        case 'mem.rss': return 'Resident Set Size';
+        case 'mem.rss.anon': return 'Resident Anonymous';
+        case 'mem.rss.file': return 'Resident File-backed';
+        case 'mem.rss.shmem': return 'Resident Shared';
+        case 'mem.rss.watermark': return 'Resident High Water Mark';
+        case 'mem.locked': return 'Locked';
+        case 'mem.swap': return 'Swapped Out';
+        case 'mem.virt': return 'Virtual Memory Size';
+        case 'oom_score_adj': return 'Out-of-memory Badness Adjustment';
         default: return trackName;
       }
     }
@@ -316,6 +317,7 @@ class TrackDecider {
   async addCpuSchedulingTracks(): Promise<void> {
     const cpus = await this.engine.getCpus();
     const cpuToSize = await this.guessCpuSizes();
+    const groupId = this.lazyPureTrackGroup('CPU Usage', {collapsed: false});
 
     for (const cpu of cpus) {
       const size = cpuToSize.get(cpu);
@@ -325,7 +327,7 @@ class TrackDecider {
         kind: CPU_SLICE_TRACK_KIND,
         trackSortKey: PrimaryTrackSortKey.ORDINARY_TRACK,
         name,
-        trackGroup: SCROLLING_TRACK_GROUP,
+        trackGroup: groupId(),
         config: {
           cpu,
         },
@@ -362,6 +364,7 @@ class TrackDecider {
     where name = 'cpufreq';
   `);
     const maxCpuFreq = maxCpuFreqResult.firstRow({freq: NUM}).freq;
+    const groupId = this.lazyPureTrackGroup('CPU Frequencies');
 
     for (const cpu of cpus) {
       // Only add a cpu freq track if we have
@@ -400,7 +403,7 @@ class TrackDecider {
           trackSortKey: PrimaryTrackSortKey.ORDINARY_TRACK,
           name: `Cpu ${cpu} Frequency`,
           description,
-          trackGroup: SCROLLING_TRACK_GROUP,
+          trackGroup: groupId(),
           config: {
             cpu,
             maximumValue: maxCpuFreq,
@@ -536,6 +539,7 @@ class TrackDecider {
   `);
     const maximumValue =
         maxGpuFreqResult.firstRow({maximumValue: NUM}).maximumValue;
+    const groupId = this.lazyPureTrackGroup('GPU Frequencies');
 
     for (let gpu = 0; gpu < numGpus; gpu++) {
       // Only add a gpu freq track if we have
@@ -555,7 +559,7 @@ class TrackDecider {
           name: `Gpu ${gpu} Frequency`,
           description: description ?? 'Values of the gpufreq counter.',
           trackSortKey: PrimaryTrackSortKey.COUNTER_TRACK,
-          trackGroup: SCROLLING_TRACK_GROUP,
+          trackGroup: groupId(),
           config: {
             trackId,
             maximumValue,
@@ -1457,6 +1461,19 @@ class TrackDecider {
       startTs: LONG_NULL,
       endTs: LONG_NULL,
     });
+
+    const subgroupsByProcess: Record<string, Record<string, string>> = {};
+    const createSubgroup = (kind: string, name: string,
+        parentGroup: string) => {
+      const subgroupId = `${parentGroup}-${kind}`;
+      const byProcess = subgroupsByProcess[kind] ?? {};
+      subgroupsByProcess[kind] = byProcess;
+      byProcess[parentGroup] = subgroupId;
+
+      this.createPureTrackGroup(subgroupId, name, {parentGroup});
+      return subgroupId;
+    };
+
     for (let i = 0; it.valid(); ++i, it.next()) {
       const pid = it.pid;
       const upid = it.upid;
@@ -1470,6 +1487,15 @@ class TrackDecider {
       const kind = COUNTER_TRACK_KIND;
       const name = TrackDecider.getTrackName(
           {name: trackName, upid, pid, kind, processName});
+
+      // Lazily initialize the "Memory Usage" and Process Counters" subgroups
+      // for this process
+
+      const trackGroup = trackName?.startsWith('mem.') || trackName=== 'oom_score_adj' ?
+        subgroupsByProcess['memUsage']?.[uuid] ??
+          createSubgroup('memUsage', 'Memory Usage', uuid) :
+        subgroupsByProcess['procCounters']?.[uuid] ??
+          createSubgroup('procCounters', 'Process Counters', uuid);
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -1479,7 +1505,7 @@ class TrackDecider {
           {processName, upid}),
         trackSortKey: await this.resolveTrackSortKeyForProcessCounterTrack(
             upid, trackName || undefined),
-        trackGroup: uuid,
+        trackGroup,
         config: {
           name,
           trackId,
@@ -1755,6 +1781,10 @@ class TrackDecider {
       hasHeapProfiles: NUM_NULL,
       chromeProcessLabels: STR,
     });
+
+    const processesGroupId = this.lazyPureTrackGroup('Processes',
+      {description: 'Track groups for each active process.'});
+
     for (; it.valid(); it.next()) {
       const utid = it.utid;
       const tid = it.tid;
@@ -1801,6 +1831,7 @@ class TrackDecider {
           // many expanded process tracks for some perf traces, leading to
           // jankyness.
           collapsed: !hasHeapProfiles,
+          parentGroup: processesGroupId(),
         };
         this.trackGroupsToAdd.push(trackGroup);
         processTrackGroups.set(pUuid, trackGroup);
@@ -1902,6 +1933,21 @@ class TrackDecider {
   async addPluginTracks(): Promise<void> {
     const promises = pluginManager.findPotentialTracks(this.engine);
     const groups = await Promise.all(promises);
+
+    const groupIds: Record<string, string> = {};
+    const grouperator = (track: TrackInfo): string => {
+      if (track.group) {
+        let groupId = groupIds[track.group];
+        if (!groupId) {
+          groupId = uuidv4();
+          groupIds[track.group] = groupId;
+          this.createPureTrackGroup(groupId, track.group);
+        }
+        return groupId;
+      }
+      return SCROLLING_TRACK_GROUP;
+    };
+
     for (const infos of groups) {
       for (const info of infos) {
         this.tracksToAdd.push({
@@ -1912,7 +1958,7 @@ class TrackDecider {
           // TODO(hjd): Fix how sorting works. Plugins should expose
           // 'sort keys' which the user can use to choose a sort order.
           trackSortKey: PrimaryTrackSortKey.COUNTER_TRACK,
-          trackGroup: SCROLLING_TRACK_GROUP,
+          trackGroup: grouperator(info),
           config: info.config,
         });
       }
@@ -2130,5 +2176,43 @@ class TrackDecider {
       default:
         return PrimaryTrackSortKey.ORDINARY_THREAD;
     }
+  }
+
+  lazyPureTrackGroup(name: string,
+      details?: Partial<AddTrackGroupArgs>): (() => string) {
+    let group: AddTrackGroupArgs | undefined;
+    return (): string => {
+      if (!group) {
+        group = this.createPureTrackGroup(uuidv4(), name, details);
+      }
+      return group.id;
+    };
+  }
+
+  createPureTrackGroup(id: string, name: string,
+      details: Partial<AddTrackGroupArgs> = {}): AddTrackGroupArgs {
+    const result: AddTrackGroupArgs = {
+      id,
+      engineId: this.engineId,
+      name,
+      summaryTrackId: id, // Group needs a summary track, even if it's blank
+      collapsed: true,
+      ...details,
+    };
+    this.trackGroupsToAdd.push(result);
+    this.tracksToAdd.push(this.blankSummaryTrack(id));
+    return result;
+  }
+
+  blankSummaryTrack(id: string): AddTrackArgs {
+    return {
+      engineId: this.engineId,
+      id: id,
+      kind: NULL_TRACK_KIND,
+      name: '',
+      trackSortKey: PrimaryTrackSortKey.NULL_TRACK,
+      trackGroup: undefined,
+      config: {},
+    };
   }
 }

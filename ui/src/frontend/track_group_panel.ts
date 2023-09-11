@@ -18,7 +18,7 @@ import m from 'mithril';
 import {assertExists} from '../base/logging';
 import {Actions} from '../common/actions';
 import {
-  getContainingTrackId,
+  getContainingTrackIds,
   TrackGroupState,
   TrackState,
 } from '../common/state';
@@ -103,8 +103,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const searchIndex = globals.state.searchIndex;
     if (searchIndex !== -1) {
       const trackId = globals.currentSearchResults.trackIds[searchIndex];
-      const parentTrackId = getContainingTrackId(globals.state, trackId);
-      if (parentTrackId === attrs.trackGroupId) {
+      const parentTrackIds = getContainingTrackIds(globals.state, trackId);
+      if (parentTrackIds && parentTrackIds.includes(attrs.trackGroupId)) {
         highlightClass = 'flash';
       }
     }
@@ -131,6 +131,13 @@ export class TrackGroupPanel extends Panel<Attrs> {
       child = this.summaryTrackState.labels.join(', ');
     }
 
+    const depth: (group?: TrackGroupState) => number = (group?: TrackGroupState) =>
+      group?.parentGroup ? depth(globals.state.trackGroups[group.parentGroup]) + 1 : 0;
+    const indent = (depth: number) => depth <= 0 ?
+      {} :
+      {style: {marginLeft: `${depth}em`}}
+
+    const attributes = indent(depth(trackGroup));
     return m(
         `.track-group-panel[collapsed=${collapsed}]`,
         {id: 'track_' + this.trackGroupId},
@@ -146,9 +153,11 @@ export class TrackGroupPanel extends Panel<Attrs> {
           },
 
           m('.fold-button',
+            {...attributes},
             m('i.material-icons',
               this.trackGroupState.collapsed ? EXPAND_DOWN : EXPAND_UP)),
           m('.title-wrapper',
+            {...attributes},
             m('h1.track-title',
               {title: trackGroup.description},
               name,
@@ -209,7 +218,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
         m(TrackButton, {
           action: (e: MouseEvent) => {
             globals.dispatchMultiple([
-              ...this.trackGroupState.tracks.map((trackId) => Actions.removeTrack({trackId})),
+              ...this.trackGroupState.tracks.map(
+                (trackId) => Actions.removeTrack({trackId})),
               Actions.removeTrackGroup({
                   id: this.trackGroupState.id,
                   summaryTrackId: this.trackGroupState.tracks[0],
