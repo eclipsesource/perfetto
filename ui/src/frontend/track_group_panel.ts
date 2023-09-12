@@ -155,20 +155,20 @@ export class TrackGroupPanel extends Panel<Attrs> {
               ('namespace' in this.summaryTrackState.config) &&
                   m('span.chip', 'metric')),
             (this.trackGroupState.collapsed && child !== null) ?
-                m('h2.track-subtitle', child) :
+              m('h2.track-subtitle', child) :
                 null),
-              m('.track-buttons', ...this.getTrackGroupActionButtons(),
+            m('.track-buttons', ...this.getTrackGroupActionButtons(),
               selection && selection.kind === 'AREA' ?
-              m('i.material-icons.track-button',
-                {
-                  onclick: (e: MouseEvent) => {
-                    globals.dispatch(Actions.toggleTrackSelection(
-                        {id: attrs.trackGroupId, isTrackGroup: true}));
-                    e.stopPropagation();
+                m('i.material-icons.track-button',
+                  {
+                    onclick: (e: MouseEvent) => {
+                      globals.dispatch(Actions.toggleTrackSelection(
+                          {id: attrs.trackGroupId, isTrackGroup: true}));
+                      e.stopPropagation();
+                    },
                   },
-                },
                 checkBox) :
-              ''),
+            ''),
           ),
 
         this.summaryTrack ?
