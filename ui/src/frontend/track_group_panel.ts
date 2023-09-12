@@ -34,7 +34,7 @@ import {
 } from './icons';
 import {Panel, PanelSize} from './panel';
 import {Track} from './track';
-import {TrackContent} from './track_panel';
+import {TrackButton, TrackContent} from './track_panel';
 import {trackRegistry} from './track_registry';
 import {
   drawVerticalLineAtTime,
@@ -204,24 +204,25 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
   getTrackGroupActionButtons(): m.Vnode<any>[] {
     const result: m.Vnode<any>[] = [];
-    const action = (e: MouseEvent) => {
-        globals.dispatchMultiple([
-          ...this.trackGroupState.tracks.map(
-            (trackId) => Actions.removeTrack({trackId})),
-          Actions.removeTrackGroup({
-              id: this.trackGroupState.id,
-              summaryTrackId: this.trackGroupState.tracks[0],
-            }),
-          ]);
-        e.stopPropagation();
-      };
-    const disabled = !this.canDeleteTrackGroup(this.trackGroupState);
-    result.push(m('i.material-icons.track-button.action',
-      {
-        class: disabled ? 'disabled' : '',
-        onclick: disabled ? null : action,
-      },
-      'delete'));
+  const disabled = !this.canDeleteTrackGroup(this.trackGroupState);
+      result.push(
+        m(TrackButton, {
+          action: (e: MouseEvent) => {
+            globals.dispatchMultiple([
+              ...this.trackGroupState.tracks.map((trackId) => Actions.removeTrack({trackId})),
+              Actions.removeTrackGroup({
+                  id: this.trackGroupState.id,
+                  summaryTrackId: this.trackGroupState.tracks[0],
+                }),
+              ]);
+            e.stopPropagation();
+          },
+          i: 'delete',
+          disabled,
+          tooltip: 'Remove track',
+          showButton: false, // Only show on roll-over
+          fullHeight: true,
+        }));
     return result;
   }
 
