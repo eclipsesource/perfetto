@@ -131,13 +131,16 @@ export class TrackGroupPanel extends Panel<Attrs> {
       child = this.summaryTrackState.labels.join(', ');
     }
 
-    const depth: (group?: TrackGroupState) => number = (group?: TrackGroupState) =>
-      group?.parentGroup ? depth(globals.state.trackGroups[group.parentGroup]) + 1 : 0;
+    const depth: (group?: TrackGroupState) => number =
+      (group?: TrackGroupState) =>
+        group?.parentGroup ?
+          depth(globals.state.trackGroups[group.parentGroup]) + 1 :
+          0;
     const indent = (depth: number) => depth <= 0 ?
       {} :
-      {style: {marginLeft: `${depth}em`}}
+      {style: {marginLeft: `${depth/2}rem`}};
 
-    const attributes = indent(depth(trackGroup));
+    const titleStyling = indent(depth(trackGroup));
     return m(
         `.track-group-panel[collapsed=${collapsed}]`,
         {id: 'track_' + this.trackGroupId},
@@ -153,11 +156,11 @@ export class TrackGroupPanel extends Panel<Attrs> {
           },
 
           m('.fold-button',
-            {...attributes},
+            {...titleStyling},
             m('i.material-icons',
               this.trackGroupState.collapsed ? EXPAND_DOWN : EXPAND_UP)),
           m('.title-wrapper',
-            {...attributes},
+            {...titleStyling},
             m('h1.track-title',
               {title: trackGroup.description},
               name,

@@ -100,6 +100,10 @@ const NETWORK_TRACK_REGEX = new RegExp('^.* (Received|Transmitted)( KB)?$');
 const NETWORK_TRACK_GROUP = 'Networking';
 const ENTITY_RESIDENCY_REGEX = new RegExp('^Entity residency:');
 const ENTITY_RESIDENCY_GROUP = 'Entity residency';
+const BATTERY_TRACK_REGEX = new RegExp('^batt\\..*$');
+const BATTERY_TRACK_GROUP = 'Battery';
+const GPU_QUEUES_REGEX = new RegExp('^(Universal|Timer|DMA|Compute)( IB)?$');
+const GPU_QUEUES_GROUP = 'GPU Queues';
 
 // Sets the default 'scale' for counter tracks. If the regex matches
 // then the paired mode is used. Entries are in priority order so the
@@ -130,6 +134,10 @@ export async function decideTracks(
   return (new TrackDecider(engineId, engine)).decideTracks(filterTracks);
 }
 
+type LazyTrackGroupArgs = Partial<AddTrackGroupArgs & {
+  lazyParentGroup: () => string;
+}>;
+
 class TrackDecider {
   private engineId: string;
   private engine: Engine;
@@ -137,6 +145,7 @@ class TrackDecider {
   private utidToUuid = new Map<number, string>();
   private tracksToAdd: AddTrackArgs[] = [];
   private trackGroupsToAdd: AddTrackGroupArgs[] = [];
+  private lazyTrackGroupIds = new Map<string, () => string>;
 
   constructor(engineId: string, engine: Engine) {
     this.engineId = engineId;
@@ -317,7 +326,8 @@ class TrackDecider {
   async addCpuSchedulingTracks(): Promise<void> {
     const cpus = await this.engine.getCpus();
     const cpuToSize = await this.guessCpuSizes();
-    const groupId = this.lazyPureTrackGroup('CPU Usage', {collapsed: false});
+    const groupId = this.lazyTrackGroup('CPU Usage',
+      {collapsed: false, lazyParentGroup: this.lazyTrackGroup('CPU', {collapsed: false})});
 
     for (const cpu of cpus) {
       const size = cpuToSize.get(cpu);
@@ -364,7 +374,8 @@ class TrackDecider {
     where name = 'cpufreq';
   `);
     const maxCpuFreq = maxCpuFreqResult.firstRow({freq: NUM}).freq;
-    const groupId = this.lazyPureTrackGroup('CPU Frequencies');
+    const groupId = this.lazyTrackGroup('CPU Frequencies',
+      {lazyParentGroup: this.lazyTrackGroup('CPU', {collapsed: false})});
 
     for (const cpu of cpus) {
       // Only add a cpu freq track if we have
@@ -539,7 +550,8 @@ class TrackDecider {
   `);
     const maximumValue =
         maxGpuFreqResult.firstRow({maximumValue: NUM}).maximumValue;
-    const groupId = this.lazyPureTrackGroup('GPU Frequencies');
+    const groupId = this.lazyTrackGroup('GPU Frequencies',
+      {lazyParentGroup: this.lazyTrackGroup('GPU', {collapsed: false})});
 
     for (let gpu = 0; gpu < numGpus; gpu++) {
       // Only add a gpu freq track if we have
@@ -1782,7 +1794,7 @@ class TrackDecider {
       chromeProcessLabels: STR,
     });
 
-    const processesGroupId = this.lazyPureTrackGroup('Processes',
+    const processesGroupId = this.lazyTrackGroup('Processes',
       {description: 'Track groups for each active process.'});
 
     for (; it.valid(); it.next()) {
@@ -1880,6 +1892,150 @@ class TrackDecider {
     }
   }
 
+  async addSurfaceFlingerTrackGroups(engine: EngineProxy): Promise<void> {
+    const result = await engine.query(`
+    select distinct gpu_track.id as trackId, gpu_track.name as trackName, frame_slice.layer_name as layerName
+    from frame_slice, gpu_track
+    where frame_slice.track_id = gpu_track.id
+      and gpu_track.name is not null
+      and frame_slice.layer_name is not null
+    `);
+
+    const it = result.iter({
+      trackId: NUM,
+      // trackName: STR,
+      layerName: STR,
+    });
+
+    const layersByTrack = new Map<number, string>();
+    for (; it.valid(); it.next()) {
+      const trackId = it.trackId;
+      // const trackName = it.trackName;
+      const layerName = it.layerName;
+      layersByTrack.set(trackId, layerName);
+    }
+
+    const getTrackId = (track: AddTrackArgs): number|undefined => {
+      return ('trackIds' in track.config && Array.isArray(track.config.trackIds)) ?
+        track.config.trackIds[0] :
+        undefined;
+    };
+    const layerGroup = (layerName: string) => this.lazyTrackGroup(
+      `Layer - ${layerName}`, {lazyParentGroup: this.lazyTrackGroup('SurfaceFlinger Events')});
+    const layerSubgroups = new Map<string, Map<string, string>>();
+    const layerSubgroup = (layerName: string, subgroup: string) => {
+      let subgroups = layerSubgroups.get(layerName);
+      if (subgroups === undefined) {
+        subgroups = new Map<string, string>();
+        layerSubgroups.set(layerName, subgroups);
+      }
+      let result = subgroups.get(subgroup);
+      if (result === undefined) {
+        result = this.createPureTrackGroup(uuidv4(), subgroup,
+          {lazyParentGroup: layerGroup(layerName)}).id;
+        subgroups.set(subgroup, result);
+      }
+      return result;
+    };
+
+    for (const track of this.tracksToAdd) {
+      if (track.trackGroup === SCROLLING_TRACK_GROUP) {
+        const trackId = getTrackId(track);
+        const layerName = trackId !== undefined ?
+          layersByTrack.get(trackId) :
+          undefined;
+        if (layerName) {
+          const subgroupName = track.name.startsWith('Buffer:') ? 'Buffers' : undefined;
+          if (subgroupName) {
+            // Group the track
+            track.trackGroup = layerSubgroup(layerName, subgroupName);
+            // And rename it
+            const bufferMatch = /^Buffer: (\d+)?/.exec(track.name);
+            if (bufferMatch) {
+              track.description = track.description ?? track.name;
+              track.name = `Buffer ${bufferMatch[1]}`;
+            }
+          } else {
+            track.trackGroup = layerGroup(layerName)();
+
+            // Rename the track, if applicable
+            const bufferMatch = /^(SF|APP|GPU|Display)_(\d+)?/
+              .exec(track.name);
+            if (bufferMatch) {
+              switch (bufferMatch[1]) {
+                case 'APP':
+                  track.name = `Application - Buffer ${bufferMatch[2]}`;
+                  track.description = track.description ?? 'The time from when the buffer was dequeued by the app to when it was enqueued back.';
+                  break;
+                case 'GPU':
+                  track.name = `Wait for GPU - Buffer ${bufferMatch[2]}`;
+                  track.description = track.description ?? 'The duration the buffer was owned by the GPU. This is the time from when the buffer was sent to the GPU to when the GPU finished its work on the buffer. This does not indicate that the GPU was working only on this buffer during this time.';
+                  break;
+                case 'SF':
+                  track.name = `Composition - Buffer ${bufferMatch[2]}`;
+                  track.description = track.description ?? 'The time from when SurfaceFlinger latched on to the buffer and sent for composition to when it was sent to the display.';
+                  break;
+                case 'Display':
+                  track.name = 'On Display';
+                  track.description = track.description ?? 'The duration the frame was displayed on screen.';
+                  break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  addGPUMasterGroup(): void {
+    const gpuGroup = this.lazyTrackGroup('GPU', {collapsed: false});
+
+    const groupsToCollect: AddTrackGroupArgs[] = [];
+    for (const group of this.trackGroupsToAdd) {
+      if (group.name.startsWith('GPU ') && !group.parentGroup) {
+        groupsToCollect.push(group);
+      }
+    }
+    groupsToCollect.forEach((group) => group.parentGroup = gpuGroup());
+
+    // Collect some tracks, too
+    for (const track of this.tracksToAdd) {
+      if (track.name.startsWith('Vulkan ')) {
+        track.trackGroup = gpuGroup();
+      }
+    }
+  }
+
+  sortTopTrackGroups(): void {
+    // Must create parent groups before subgroups.
+    const topGroups: AddTrackGroupArgs[] = [];
+    for (let i = 0; i < this.trackGroupsToAdd.length; i++) {
+      const group = this.trackGroupsToAdd[i];
+      if (!group.parentGroup) {
+        topGroups.push(group);
+        this.trackGroupsToAdd.splice(i, 1);
+        i--;
+      }
+    }
+
+    // Sort the top-level Processes group to the bottom
+    const comparator = (g1: AddTrackGroupArgs, g2: AddTrackGroupArgs) => {
+      if (g1 === g2) {
+        return 0;
+      }
+      if (g1.name === 'Processes') {
+        return +1; // Last
+      }
+      if (g2.name === 'Processes') {
+        return -1; // Last
+      }
+      return g1.name.localeCompare(g2.name);
+    };
+
+    topGroups.sort(comparator);
+    this.trackGroupsToAdd.unshift(...topGroups);
+  }
+
   private async computeThreadOrderingMetadata(): Promise<UtidToTrackSortKey> {
     const result = await this.engine.query(`
     select
@@ -1934,16 +2090,9 @@ class TrackDecider {
     const promises = pluginManager.findPotentialTracks(this.engine);
     const groups = await Promise.all(promises);
 
-    const groupIds: Record<string, string> = {};
     const grouperator = (track: TrackInfo): string => {
       if (track.group) {
-        let groupId = groupIds[track.group];
-        if (!groupId) {
-          groupId = uuidv4();
-          groupIds[track.group] = groupId;
-          this.createPureTrackGroup(groupId, track.group);
-        }
-        return groupId;
+        return this.lazyTrackGroup(track.group)();
       }
       return SCROLLING_TRACK_GROUP;
     };
@@ -1994,6 +2143,8 @@ class TrackDecider {
     await this.groupTracksByRegex(NETWORK_TRACK_REGEX, NETWORK_TRACK_GROUP);
     await this.groupTracksByRegex(
         ENTITY_RESIDENCY_REGEX, ENTITY_RESIDENCY_GROUP);
+    await this.groupTracksByRegex(BATTERY_TRACK_REGEX, BATTERY_TRACK_GROUP);
+    await this.groupTracksByRegex(GPU_QUEUES_REGEX, GPU_QUEUES_GROUP);
 
     // Pre-group all kernel "threads" (actually processes) if this is a linux
     // system trace. Below, addProcessTrackGroups will skip them due to an
@@ -2035,6 +2186,10 @@ class TrackDecider {
         this.engine.getProxy('TrackDecider::addThreadCpuSampleTracks'));
     await this.addLogsTrack(this.engine.getProxy('TrackDecider::addLogsTrack'));
 
+    await this.addSurfaceFlingerTrackGroups(
+      this.engine.getProxy('TrackDecider::addSurfaceflingerTrackGroups'));
+    this.addGPUMasterGroup();
+
     // TODO(hjd): Move into plugin API.
     {
       const result = scrollJankDecideTracks(this.engine, (utid, upid) => {
@@ -2045,6 +2200,8 @@ class TrackDecider {
         this.tracksToAdd.push(...tracksToAdd);
       }
     }
+
+    this.sortTopTrackGroups();
 
     const actions: DeferredAction[] = [];
     if (filterTracks) {
@@ -2178,27 +2335,38 @@ class TrackDecider {
     }
   }
 
-  lazyPureTrackGroup(name: string,
-      details?: Partial<AddTrackGroupArgs>): (() => string) {
-    let group: AddTrackGroupArgs | undefined;
-    return (): string => {
-      if (!group) {
-        group = this.createPureTrackGroup(uuidv4(), name, details);
-      }
-      return group.id;
-    };
+  lazyTrackGroup(name: string,
+      details?: LazyTrackGroupArgs): (() => string) {
+    let result = this.lazyTrackGroupIds.get(name);
+    if (result === undefined) {
+      let group: AddTrackGroupArgs | undefined;
+      result = (): string => {
+        if (!group) {
+          group = this.createPureTrackGroup(uuidv4(), name, details);
+        }
+        return group.id;
+      };
+      this.lazyTrackGroupIds.set(name, result);
+    }
+    return result;
   }
 
   createPureTrackGroup(id: string, name: string,
-      details: Partial<AddTrackGroupArgs> = {}): AddTrackGroupArgs {
+      details: LazyTrackGroupArgs = {}): AddTrackGroupArgs {
+    const {lazyParentGroup, ...staticDetails} = details;
+
     const result: AddTrackGroupArgs = {
       id,
       engineId: this.engineId,
       name,
       summaryTrackId: id, // Group needs a summary track, even if it's blank
       collapsed: true,
-      ...details,
+      ...staticDetails,
     };
+    if (lazyParentGroup) {
+      result.parentGroup = lazyParentGroup();
+    }
+
     this.trackGroupsToAdd.push(result);
     this.tracksToAdd.push(this.blankSummaryTrack(id));
     return result;
