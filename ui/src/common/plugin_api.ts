@@ -43,6 +43,10 @@ export interface TrackInfo {
   // track name on the left-hand side of the track.
   description?: string;
 
+  // An optional human readable group name for this track.
+  // Tracks of the same group name are collected into a group of that name.
+  group?: string;
+
   // An opaque config for the track.
   config: {};
 }
@@ -59,7 +63,11 @@ export interface PluginContext {
   // 'TrackController' and a 'Track'. In more recent versions of the UI
   // the functionality of |TrackController| has been merged into Track so
   // |TrackController|s are not necessary in new code.
-  registerTrackController(track: TrackControllerFactory): void;
+  // Unless |supersede| is true, then an attempt to register a |track|
+  // controller factory for a |track| kind that is already registered will
+  // throw an error.
+  registerTrackController(track: TrackControllerFactory,
+    supersede?: boolean): void;
 
   // Register a |TrackProvider|. |TrackProvider|s return |TrackInfo| for
   // all potential tracks in a trace. The core UI selects some of these
@@ -75,7 +83,10 @@ export interface PluginContext {
   // which returns GPU counter tracks. The counter track factory itself
   // could be registered in dev.perfetto.CounterTrack - a whole
   // different plugin.
-  registerTrack(track: TrackCreator): void;
+  // Unless |supersede| is true, then an attempt to register a |track|
+  // controller factory for a |track| kind that is already registered will
+  // throw an error.
+  registerTrack(track: TrackCreator, supersede?: boolean): void;
 
   // Register a track or track group filter. When track filtering is
   // enabled, the core UI determines via the registered filters which

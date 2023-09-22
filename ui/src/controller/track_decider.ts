@@ -72,6 +72,9 @@ import {addLatenciesTrack} from '../tracks/scroll_jank/event_latency_track';
 import {addTopLevelScrollTrack} from '../tracks/scroll_jank/scroll_track';
 import {THREAD_STATE_TRACK_KIND} from '../tracks/thread_state';
 import {shouldCreateTrack, shouldCreateTrackGroup} from './track_filter';
+import {TrackInfo} from '../common/plugin_api';
+import {globals} from '../frontend/globals';
+import {METRIC_NAMES} from './trace_controller';
 
 const TRACKS_V2_FLAG = featureFlags.register({
   id: 'tracksV2.1',
@@ -99,7 +102,6 @@ const NETWORK_TRACK_REGEX = new RegExp('^.* (Received|Transmitted)( KB)?$');
 const NETWORK_TRACK_GROUP = 'Networking';
 const ENTITY_RESIDENCY_REGEX = new RegExp('^Entity residency:');
 const ENTITY_RESIDENCY_GROUP = 'Entity residency';
-
 // Sets the default 'scale' for counter tracks. If the regex matches
 // then the paired mode is used. Entries are in priority order so the
 // first match wins.
@@ -129,6 +131,59 @@ export async function decideTracks(
   return (new TrackDecider(engineId, engine)).decideTracks(filterTracks);
 }
 
+type LazyTrackGroupArgs = Partial<AddTrackGroupArgs & {
+  lazyParentGroup: () => string;
+}>;
+
+// Type of a function that produces new IDs on demand.
+type LazyIdProvider = (() => string) & {
+  // Whether the group exists, yet
+  exists(): boolean;
+  // Revoke an ID previously provided, undoing whatever
+  // side-effects its provision entailed
+  revoke(): void;
+};
+
+// A data structure for keeping track (no pun intended)
+// of lazily-created track groups in their unique positions
+// in the group hierarchy, accounting for duplication of
+// names in different parent groups. When the group is created
+// it is stored in its tree node.
+type LazyTrackGroupTree = {
+  name: string;
+  id: LazyIdProvider;
+  group?: AddTrackGroupArgs;
+  parent?: LazyTrackGroupTree;
+  children: LazyTrackGroupTree[];
+}
+
+// A process or thread is considered "idle" that uses less than 0.1%
+// as much CPU as its parent context (trace or process, respectively).
+const IDLE_FACTOR = 1000;
+
+// Return either the |single| or |plural| form of a noun or verb
+// according to the number |n| of objects.
+function pluralize(n: number, single: string, plural = single + 's'): string {
+  return n === 1 ?
+    `${single}` :
+    `${plural}`;
+}
+
+// Count a number |n| of nouns or verbs using either the
+// |single| or |plural| form as appropriate. Unlike the
+// |pluralize| function, the resulting string includes
+// the |n| count.
+function count(n: number, single: string, plural?: string): string {
+  return `${n} ${pluralize(n, single, plural)}`;
+}
+
+// User-friendly titles for tracks.
+const TRACK_TITLES: {[key: string]: string} = {
+  'batt.capacity_pct': 'Capacity (%)',
+  'batt.charge_uah': 'Charge (μAh)',
+  'batt.current_ua': 'Current (μA)',
+};
+
 class TrackDecider {
   private engineId: string;
   private engine: Engine;
@@ -136,6 +191,50 @@ class TrackDecider {
   private utidToUuid = new Map<number, string>();
   private tracksToAdd: AddTrackArgs[] = [];
   private trackGroupsToAdd: AddTrackGroupArgs[] = [];
+
+  // A tree of lazily created track groups. Each node
+  // represents a group that may be created when needed
+  // with a function providing its ID when created
+  private lazyTrackGroups: LazyTrackGroupTree = {
+    name: '',
+    id: (() => SCROLLING_TRACK_GROUP) as LazyIdProvider,
+    children: [],
+  };
+
+  // Set of |upid| from the |process| table recording
+  // processes that are idle (< 0.1% CPU)
+  private idleUpids = new Set<number>();
+
+  // Map of |upid| process identifier from the |thread| table
+  // to |utid| from the |thread| table recording threads
+  // that are idle (< 0.1% of their process's CPU usage)
+  private idleUtids = new Map<number, Set<number>>();
+
+  // Map of |upid| process identifier to count of how many
+  // of its threads were in existence but recorded no data
+  // in the trace and so are not presented at all in the UI
+  private nullThreadCounts = new Map<number, number>();
+
+  // Map of |upid| process identifier to UUID of the thread
+  // group (used for |AddTrackGroupArgs::id|), if any, that
+  // collects its idle threads (< 0.1% CPU)
+  private idleThreadGroups = new Map<number, string>();
+
+  // Top-level "CPU" group for many things CPU-related.
+  private cpuGroup: LazyIdProvider = this.lazyTrackGroup('CPU',
+    {collapsed: false});
+
+  // Top-level "GPU" group for all things GPU-related.
+  private gpuGroup: LazyIdProvider = this.lazyTrackGroup('GPU',
+    {collapsed: false});
+
+  // Top-level "SurfaceFlinger Events" group.
+  private sfEventsGroup: LazyIdProvider = this.lazyTrackGroup('SurfaceFlinger Events');
+
+  // Top-level "Processes" group process groups containing
+  // the process/thread tracks.
+  private processesGroup: LazyIdProvider = this.lazyTrackGroup('Processes',
+    {collapsed: false, description: 'Track groups for each active process.'});
 
   constructor(engineId: string, engine: Engine) {
     this.engineId = engineId;
@@ -209,18 +308,29 @@ class TrackDecider {
       args: Partial<{
         upid: number|null,
         processName: string|null,
-        numThreads: number|null,
+        totalThreads: number|null,
+        idleThreads: number|null,
+        nullThreads: number|null,
       }>): string | undefined {
-    const {upid, processName, numThreads} = args;
+    const {upid, processName, totalThreads, idleThreads, nullThreads} = args;
 
     const hasProcessName = !!processName && upid !== undefined && upid !== null;
-    const hasNumThreads = numThreads !== undefined && numThreads !== null;
+    const hasTotalThreads = totalThreads !== undefined && totalThreads !== null;
+    const hasIdleThreads = idleThreads !== undefined && idleThreads !== null &&
+      idleThreads > 0;
+    const hasNullThreads = nullThreads !== undefined && nullThreads !== null &&
+      nullThreads > 0;
 
     let suffix = '';
     if (hasProcessName) {
       suffix = `Process: ${processName} [${upid}]`;
-    } else if (hasNumThreads) {
-      suffix = numThreads === 1 ? '1 thread' : `${numThreads} threads`;
+    } else if (hasIdleThreads && hasTotalThreads) {
+      const allIdle = idleThreads + (nullThreads ?? 0);
+      suffix = `${count(totalThreads, 'thread')} of which ${count(allIdle, 'is', 'are')} idle.`;
+    } else if (hasNullThreads && hasTotalThreads) {
+      suffix = `${count(totalThreads, 'thread')} of which ${count(nullThreads, 'is', 'are')} not shown, having no data.`;
+    } else if (hasTotalThreads) {
+      suffix = `${count(totalThreads, 'thread')}.`;
     }
 
     const hasDescription = !!description;
@@ -246,15 +356,15 @@ class TrackDecider {
 
     if (hasTrackName) {
       switch (trackName.toLowerCase()) {
-        case 'mem.rss': return 'Memory - Resident Set Size';
-        case 'mem.rss.anon': return 'Memory - Resident Anonymous';
-        case 'mem.rss.file': return 'Memory - Resident File-backed';
-        case 'mem.rss.shmem': return 'Memory - Resident Shared';
-        case 'mem.rss.watermark': return 'Memory - Resident High Water Mark';
-        case 'mem.locked': return 'Memory - Locked';
-        case 'mem.swap': return 'Memory - Swapped Out';
-        case 'mem.virt': return 'Memory - Virtual Memory Size';
-        case 'oom_score_adj': return 'Memory - Out-of-memory Badness Adjustment';
+        case 'mem.rss': return 'Resident Set Size';
+        case 'mem.rss.anon': return 'Resident Anonymous';
+        case 'mem.rss.file': return 'Resident File-backed';
+        case 'mem.rss.shmem': return 'Resident Shared';
+        case 'mem.rss.watermark': return 'Resident High Water Mark';
+        case 'mem.locked': return 'Locked';
+        case 'mem.swap': return 'Swapped Out';
+        case 'mem.virt': return 'Virtual Memory Size';
+        case 'oom_score_adj': return 'Out-of-memory Badness Adjustment';
         default: return trackName;
       }
     }
@@ -289,6 +399,14 @@ class TrackDecider {
     return undefined;
   }
 
+  // Get the trace-processor database track ID for a |track| to be created,
+  // if it has one.
+  static getTrackId(track: AddTrackArgs): number|undefined {
+    return ('trackIds' in track.config && Array.isArray(track.config.trackIds)) ?
+      track.config.trackIds[0] :
+      undefined;
+  }
+
   async guessCpuSizes(): Promise<Map<number, string>> {
     const cpuToSize = new Map<number, string>();
     await this.engine.query(`
@@ -316,6 +434,8 @@ class TrackDecider {
   async addCpuSchedulingTracks(): Promise<void> {
     const cpus = await this.engine.getCpus();
     const cpuToSize = await this.guessCpuSizes();
+    const groupId = this.lazyTrackGroup('CPU Usage',
+      {collapsed: false, lazyParentGroup: this.cpuGroup});
 
     for (const cpu of cpus) {
       const size = cpuToSize.get(cpu);
@@ -325,11 +445,57 @@ class TrackDecider {
         kind: CPU_SLICE_TRACK_KIND,
         trackSortKey: PrimaryTrackSortKey.ORDINARY_TRACK,
         name,
-        trackGroup: SCROLLING_TRACK_GROUP,
+        trackGroup: groupId(),
         config: {
           cpu,
         },
       });
+    }
+  }
+
+  // Group global counter tracks by the name of their parent track, if any, with
+  // some exceptions:
+  // - tracks that are already grouped by the time of this call are not re-grouped
+  // - the 'Power' parent track induces a group named 'Battery'
+  // - the 'Memory' parent track induces a group named 'Memory Usage'
+  // - all tracks of |gpu_counter_track| type are grouped in 'GPU Counters'
+  // - global counter tracks that don't have a parent track are grouped in
+  //   an 'Other Counters' group
+  async groupCounterTracks(): Promise<void> {
+    type GroupDetails = Parameters<TrackDecider['lazyTrackGroup']>[1];
+    const groupNameToGroupDetails = new Map<string, GroupDetails>();
+    groupNameToGroupDetails.set('GPU Counters', {lazyParentGroup: this.gpuGroup});
+
+    const groupingResult = await this.engine.query(`
+      select track.id as track_id, track.name as track_name,
+        (case when parent.name = 'Power' then 'Battery'
+              when parent.name = 'Memory' then 'Memory Usage'
+              else parent.name
+         end) as group_name
+      from track
+      left join track as parent on track.parent_id = parent.id
+      where track.type = 'counter_track' and track.name is not null
+      union
+      select track.id as track_id, track.name as track_name,
+        'GPU Counters' as group_name
+      from track
+      where track.type = 'gpu_counter_track' and track.name is not null
+    `);
+    const trackNameToGroupName = new Map<string, string|null>();
+    const iter = groupingResult.iter({track_name: STR, group_name: STR_NULL})
+    for (; iter.valid(); iter.next()) {
+      trackNameToGroupName.set(iter.track_name, iter.group_name);
+    }
+
+    for (const track of this.tracksToAdd) {
+      if (track.kind !== COUNTER_TRACK_KIND ||
+        (track.trackGroup && track.trackGroup !== SCROLLING_TRACK_GROUP)) {
+        continue;
+      }
+      const groupName = trackNameToGroupName.get(track.name) ?? 'Other Counters';
+      const groupIdProvider = this.lazyTrackGroup(groupName,
+          groupNameToGroupDetails.get(groupName) ?? {});
+      track.trackGroup = groupIdProvider();
     }
   }
 
@@ -362,6 +528,8 @@ class TrackDecider {
     where name = 'cpufreq';
   `);
     const maxCpuFreq = maxCpuFreqResult.firstRow({freq: NUM}).freq;
+    const groupId = this.lazyTrackGroup('CPU Frequencies',
+      {lazyParentGroup: this.cpuGroup});
 
     for (const cpu of cpus) {
       // Only add a cpu freq track if we have
@@ -400,7 +568,7 @@ class TrackDecider {
           trackSortKey: PrimaryTrackSortKey.ORDINARY_TRACK,
           name: `Cpu ${cpu} Frequency`,
           description,
-          trackGroup: SCROLLING_TRACK_GROUP,
+          trackGroup: groupId(),
           config: {
             cpu,
             maximumValue: maxCpuFreq,
@@ -536,6 +704,8 @@ class TrackDecider {
   `);
     const maximumValue =
         maxGpuFreqResult.firstRow({maximumValue: NUM}).maximumValue;
+    const groupId = this.lazyTrackGroup('GPU Frequencies',
+      {lazyParentGroup: this.lazyTrackGroup('GPU', {collapsed: false})});
 
     for (let gpu = 0; gpu < numGpus; gpu++) {
       // Only add a gpu freq track if we have
@@ -555,7 +725,7 @@ class TrackDecider {
           name: `Gpu ${gpu} Frequency`,
           description: description ?? 'Values of the gpufreq counter.',
           trackSortKey: PrimaryTrackSortKey.COUNTER_TRACK,
-          trackGroup: SCROLLING_TRACK_GROUP,
+          trackGroup: groupId(),
           config: {
             trackId,
             maximumValue,
@@ -1031,7 +1201,7 @@ class TrackDecider {
       const upid = it.upid;
       const processName = it.processName;
       const threadName = it.threadName;
-      const uuid = this.getUuidUnchecked(utid, upid);
+      const uuid = this.getThreadProcessGroupUnchecked(utid, upid);
       if (uuid === undefined) {
         // If a thread has no scheduling activity (i.e. the sched table has zero
         // rows for that uid) no track group will be created and we want to skip
@@ -1082,7 +1252,7 @@ class TrackDecider {
       const utid = it.utid;
       const upid = it.upid;
       const threadName = it.threadName;
-      const uuid = this.getUuid(utid, upid);
+      const group = this.getThreadProcessGroup(utid, upid);
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind: CPU_PROFILE_TRACK_KIND,
@@ -1091,7 +1261,7 @@ class TrackDecider {
           priority: InThreadTrackSortKey.CPU_STACK_SAMPLES_TRACK,
         },
         name: `${threadName} (CPU Stack Samples)`,
-        trackGroup: uuid,
+        trackGroup: group,
         config: {utid},
       });
     }
@@ -1137,7 +1307,7 @@ class TrackDecider {
       const trackName = it.trackName;
       const description = it.description?.trim() ?? undefined;
       const threadName = it.threadName;
-      const uuid = this.getUuid(utid, upid);
+      const group = this.getThreadProcessGroup(utid, upid);
       const startTs = it.startTs === null ? undefined : it.startTs;
       const endTs = it.endTs === null ? undefined : it.endTs;
       const kind = COUNTER_TRACK_KIND;
@@ -1154,7 +1324,7 @@ class TrackDecider {
           utid,
           priority: InThreadTrackSortKey.ORDINARY,
         },
-        trackGroup: uuid,
+        trackGroup: group,
         config: {
           name,
           trackId,
@@ -1389,7 +1559,7 @@ class TrackDecider {
       const processName = it.processName;
       const maxDepth = it.maxDepth;
 
-      const uuid = this.getUuid(utid, upid);
+      const group = this.getThreadProcessGroup(utid, upid);
 
       const kind = SLICE_TRACK_KIND;
       const name = TrackDecider.getTrackName(
@@ -1401,7 +1571,7 @@ class TrackDecider {
         description: TrackDecider.decorateTrackDescription(
           'Slices from userspace that explain what the thread was doing during the trace',
           {processName, upid}),
-        trackGroup: uuid,
+        trackGroup: group,
         trackSortKey: {
           utid,
           priority: isDefaultTrackForScope ?
@@ -1420,7 +1590,7 @@ class TrackDecider {
           engineId: this.engineId,
           kind: 'GenericSliceTrack',
           name,
-          trackGroup: uuid,
+          trackGroup: group,
           trackSortKey: {
             utid,
             priority: isDefaultTrackForScope ?
@@ -1457,6 +1627,18 @@ class TrackDecider {
       startTs: LONG_NULL,
       endTs: LONG_NULL,
     });
+
+    const subgroupsByProcess: Record<string, Record<string, string>> = {};
+    const createSubgroup = (kind: string, name: string,
+        parentGroup: string) => {
+      const subgroupId = this.lazyTrackGroup(name, {parentGroup})();
+      const byProcess = subgroupsByProcess[kind] ?? {};
+      subgroupsByProcess[kind] = byProcess;
+      byProcess[parentGroup] = subgroupId;
+
+      return subgroupId;
+    };
+
     for (let i = 0; it.valid(); ++i, it.next()) {
       const pid = it.pid;
       const upid = it.upid;
@@ -1470,6 +1652,15 @@ class TrackDecider {
       const kind = COUNTER_TRACK_KIND;
       const name = TrackDecider.getTrackName(
           {name: trackName, upid, pid, kind, processName});
+
+      // Lazily initialize the "Memory Usage" and Process Counters" subgroups
+      // for this process
+
+      const trackGroup = trackName?.startsWith('mem.') || trackName=== 'oom_score_adj' ?
+        subgroupsByProcess['memUsage']?.[uuid] ??
+          createSubgroup('memUsage', 'Memory Usage', uuid) :
+        subgroupsByProcess['procCounters']?.[uuid] ??
+          createSubgroup('procCounters', 'Process Counters', uuid);
       this.tracksToAdd.push({
         engineId: this.engineId,
         kind,
@@ -1479,7 +1670,7 @@ class TrackDecider {
           {processName, upid}),
         trackSortKey: await this.resolveTrackSortKeyForProcessCounterTrack(
             upid, trackName || undefined),
-        trackGroup: uuid,
+        trackGroup,
         config: {
           name,
           trackId,
@@ -1538,6 +1729,51 @@ class TrackDecider {
 
   getUuid(utid: number, upid: number|null) {
     return assertExists(this.getUuidUnchecked(utid, upid));
+  }
+
+  getThreadProcessGroupUnchecked(utid: number,
+      upid: number|null): string|undefined {
+    // Don't need the Idle Threads group in a process that is idle
+    // because all of its threads would redundantly be in that group.
+    // And don't create a group for just one idle thread.
+    const idle = upid === null ? undefined : this.idleUtids.get(upid);
+    const isIdleProcess = upid !== null && this.idleUpids.has(upid);
+    return idle !== undefined && !isIdleProcess &&
+        (idle.has(utid) && idle.size > 1) ?
+      this.getIdleThreadsGroup(utid, upid) :
+      this.getUuidUnchecked(utid, upid);
+  }
+
+  getThreadProcessGroup(utid: number, upid: number|null): string {
+    return assertExists(this.getThreadProcessGroupUnchecked(utid, upid));
+  }
+
+  getIdleThreadsGroup(utid: number, upid: number|null): string {
+    const key = upid ?? 0;
+    let result = this.idleThreadGroups.get(key);
+    if (!result) {
+      let name = 'Idle Threads (< 0.1%)';
+      const idleThreads = this.idleUtids.get(key)?.size ?? 0;
+      if (idleThreads > 0) {
+        name = `${count(idleThreads, 'Idle thread')} (< 0.1%)`;
+      }
+      const nullThreads = this.nullThreadCounts.get(key) ?? 0;
+      let description = 'An idle thread accounts for less than 0.1% of its process\'s total CPU time.';
+      if (nullThreads > 0) {
+        description = `${description}\n${count(nullThreads, 'additional idle thread')} ${pluralize(nullThreads, 'is', 'are')} not shown because ${pluralize(nullThreads, 'it has', 'they have')} no data.`;
+      }
+
+      // The group for the process that has this idle thread.
+      const processGroup = this.getUuid(utid, upid);
+      result = this.lazyTrackGroup(name,
+        {description, collapsed: true, parentGroup: processGroup})();
+      this.idleThreadGroups.set(key, result);
+    }
+    return result;
+  }
+
+  getTrackGroup(uuid: string): AddTrackGroupArgs|undefined {
+    return this.trackGroupsToAdd.find((group) => group.id === uuid);
   }
 
   getOrCreateUuid(utid: number, upid: number|null) {
@@ -1623,7 +1859,11 @@ class TrackDecider {
   }
 
   async addProcessTrackGroups(engine: EngineProxy): Promise<void> {
+    // Map of process upid to its track group descriptor
     const processTrackGroups = new Map<string, AddTrackGroupArgs>();
+
+    // Map of idle process upid to its track group for descriptor
+    const idleProcessTrackGroups = new Map<string, AddTrackGroupArgs>();
 
     // We want to create groups of tracks in a specific order.
     // The tracks should be grouped:
@@ -1641,7 +1881,8 @@ class TrackDecider {
     select
       the_tracks.upid,
       the_tracks.utid,
-      total_dur as hasSched,
+      total_dur,
+      thread_dur,
       hasHeapProfiles,
       process.pid as pid,
       thread.tid as tid,
@@ -1685,6 +1926,11 @@ class TrackDecider {
       union
       select distinct(upid) as upid, 0 as utid from heap_graph_object
     ) the_tracks
+    left join (
+      select utid, sum(dur) as thread_dur
+      from sched where dur != -1 and utid != 0
+      group by utid
+    ) using(utid)
     left join (
       select upid, sum(thread_total_dur) as total_dur
       from (
@@ -1751,10 +1997,23 @@ class TrackDecider {
       pid: NUM_NULL,
       threadName: STR_NULL,
       processName: STR_NULL,
-      hasSched: NUM_NULL,
+      total_dur: NUM_NULL,
+      thread_dur: NUM_NULL,
       hasHeapProfiles: NUM_NULL,
       chromeProcessLabels: STR,
     });
+
+   const idleProcessesGroupId = this.lazyTrackGroup('Idle Processes (< 0.1%)',
+      {collapsed: true,
+        description: 'CPU usage of an idle process accounts for less than 0.1% of the total trace duration.',
+        lazyParentGroup: this.processesGroup});
+
+    // An "idle process" is measured against the duration of the trace.
+    // The threshold is 0.1%, or one one-thousandth, of the trace time.
+    const traceTime = globals.state.traceTime;
+    const traceDuration = traceTime.end - traceTime.start;
+    const idleProcessThreshold = Number(traceDuration) / IDLE_FACTOR;
+
     for (; it.valid(); it.next()) {
       const utid = it.utid;
       const tid = it.tid;
@@ -1762,8 +2021,40 @@ class TrackDecider {
       const pid = it.pid;
       const threadName = it.threadName;
       const processName = it.processName;
-      const hasSched = !!it.hasSched;
+      const hasSched = !!it.total_dur;
       const hasHeapProfiles = !!it.hasHeapProfiles;
+
+      const idleProcess = (upid !== null) && (
+        (it.total_dur === null) || (it.total_dur < idleProcessThreshold));
+      if (idleProcess) {
+        // Track the process that is idle but will show a track (idle processes
+        // that have no data at all will not show a track)
+        this.idleUpids.add(upid);
+      } else if (upid !== null) {
+        // In case a previous query result row had it idle
+        this.idleUpids.delete(upid);
+      }
+
+      // An "idle thread" is measured against its process's total CPU time
+      // not the duration of the trace
+      const idleThreadThreshold = (it.total_dur ?? 0) / IDLE_FACTOR;
+      // If the total duration is NULL, that means we found no slices for the
+      // thread, so it is manifestly idle. We do not distinguish here between
+      // "null threads" (no track created) and "idle threads" (having a track)
+      // because that is done in the grouping of idle threads elsewhere.
+      // NOTE: the faked `0` utid must not be counted amongst the idle threads
+      //       because it doesn't exist
+      const idleThread = (utid !== 0) &&
+        (it.thread_dur === null || it.thread_dur < idleThreadThreshold);
+      if (idleThread) {
+        const key = upid ?? 0;
+        let mostlyIdleUtids = this.idleUtids.get(key);
+        if (mostlyIdleUtids === undefined) {
+          mostlyIdleUtids = new Set();
+          this.idleUtids.set(key, mostlyIdleUtids);
+        }
+        mostlyIdleUtids.add(utid);
+      }
 
       // Group by upid if present else by utid.
       let pUuid =
@@ -1801,52 +2092,334 @@ class TrackDecider {
           // many expanded process tracks for some perf traces, leading to
           // jankyness.
           collapsed: !hasHeapProfiles,
+          parentGroup: !idleProcess ?
+            this.processesGroup() :
+            idleProcessesGroupId(),
         };
         this.trackGroupsToAdd.push(trackGroup);
         processTrackGroups.set(pUuid, trackGroup);
+        if (idleProcess) {
+          idleProcessTrackGroups.set(pUuid, trackGroup);
+        }
       }
     }
 
     // Count threads per process
     const threadsPerProcess = await engine.query(`
     select
-      count(distinct the_tracks.utid) as threads,
-      the_tracks.upid as upid
-    from (
-      select upid, utid from thread_counter_track join thread using(utid)
-      union
-      select upid, utid from thread_track join thread using(utid)
-      union
-      select upid, utid from sched join thread using(utid) group by utid
-      union
-      select upid, utid from (
-        select distinct(utid) from cpu_profile_stack_sample
-      ) join thread using(utid)
-    ) the_tracks
-    where
-      the_tracks.upid is not null and
-      the_tracks.utid is not null
-    group by
-      the_tracks.upid
+      upid, total_threads, null_threads
+    from
+      (select upid, count(*) as total_threads
+       from process join thread using (upid)
+       where upid != 0 and utid != 0
+       group by upid)
+      left outer join
+      (select upid, count(*) as null_threads
+       from thread left outer join sched using (utid)
+       where upid != 0 and sched.utid is null
+       group by upid) using (upid)
     `);
+
+    const totalProcessCount = threadsPerProcess.numRows();
+    const shownProcessCount = processTrackGroups.size;
+    const idleProcessCount = idleProcessTrackGroups.size;
+    const nullProcessCount = totalProcessCount - shownProcessCount;
+
+    if (shownProcessCount > 0) {
+      const processesGroup = this.getTrackGroup(this.processesGroup());
+      if (processesGroup) {
+        processesGroup.name = `Processes (${shownProcessCount})`;
+        const idleOrNull = idleProcessCount + nullProcessCount;
+        processesGroup.description = `There ${pluralize(totalProcessCount, 'is', 'are')} ${count(totalProcessCount, 'process', 'processes')} in total.`;
+        if (idleOrNull > 0) {
+          processesGroup.description = `${processesGroup.description}\nOf these, ${count(idleOrNull, 'process is', 'processes are')} idle.`;
+        }
+        if (idleProcessCount <= 0 && nullProcessCount > 0) {
+          processesGroup.description = `${processesGroup.description}\nNo idle processes are shown because they recorded no data.`;
+        }
+      }
+    }
+    if (idleProcessCount > 0) {
+      // There are idle processes actually showing tracks
+      const idleProcessesGroup = this.getTrackGroup(idleProcessesGroupId());
+      if (idleProcessesGroup) {
+        if (idleProcessCount === 1) {
+          // Don't create a group for just a single member
+          idleProcessesGroupId.revoke();
+        } else {
+          idleProcessesGroup.name = `${idleProcessCount} Idle Processes (< 0.1%)`;
+          if (nullProcessCount > 0) {
+          const nullProcessesMessage = `${nullProcessCount} additional idle ${pluralize(nullProcessCount, 'process is', 'processes are')} not shown, having no data at all.`;
+            idleProcessesGroup.description = `${idleProcessesGroup.description}\n${nullProcessesMessage}`;
+          }
+        }
+      }
+    }
 
     // Update process group descriptions with thread counts
     const tppIt = threadsPerProcess.iter({
-      threads: NUM,
       upid: NUM,
+      total_threads: NUM,
+      null_threads: NUM_NULL,
     });
     for (; tppIt.valid(); tppIt.next()) {
-      const numThreads = tppIt.threads;
       const upid = tppIt.upid;
+      const totalThreads = tppIt.total_threads;
+      const idleThreads = this.idleUtids.get(upid)?.size ?? 0;
+      const nullThreads = tppIt.null_threads;
+
+      if (nullThreads !== null) {
+        this.nullThreadCounts.set(upid, nullThreads);
+      }
 
       const uuid = this.upidToUuid.get(upid);
       const trackGroup = processTrackGroups.get(uuid ?? '');
       if (trackGroup && trackGroup.id === uuid) {
         trackGroup.description = TrackDecider.decorateTrackDescription(
           undefined,
-          {numThreads});
+          {totalThreads, idleThreads, nullThreads});
       }
     }
+  }
+
+  async addSurfaceFlingerTrackGroups(engine: EngineProxy): Promise<void> {
+    const result = await engine.query(`
+    select distinct gpu_track.id as trackId, frame_slice.layer_name as layerName
+    from frame_slice join gpu_track on (frame_slice.track_id = gpu_track.id)
+    where
+      gpu_track.scope = 'graphics_frame_event'
+      and gpu_track.name is not null
+      and frame_slice.layer_name is not null
+    `);
+
+    const it = result.iter({
+      trackId: NUM,
+      layerName: STR,
+    });
+
+    // Layer names by track ID from the trace DB
+    const layersByTrack = new Map<number, string>();
+    for (; it.valid(); it.next()) {
+      const trackId = it.trackId;
+      const layerName = it.layerName;
+      layersByTrack.set(trackId, layerName);
+    }
+
+    const layerGroup = (layerName: string) => this.lazyTrackGroup(
+      `Layer - ${layerName}`, {lazyParentGroup: this.sfEventsGroup});
+    const layerSubgroup = (layerName: string, subgroup: string) =>
+      this.lazyTrackGroup(subgroup, {lazyParentGroup: layerGroup(layerName)});
+
+    for (const track of this.tracksToAdd) {
+      if (track.trackGroup === SCROLLING_TRACK_GROUP) {
+        const trackId = TrackDecider.getTrackId(track);
+        const layerName = trackId !== undefined ?
+          layersByTrack.get(trackId) :
+          undefined;
+        if (layerName) {
+          const subgroupName = track.name.startsWith('Buffer:') ? 'Buffers' : undefined;
+          if (subgroupName) {
+            // Group the track
+            track.trackGroup = layerSubgroup(layerName, subgroupName)();
+            // And rename it
+            const bufferMatch = /^Buffer: (\d+)?/.exec(track.name);
+            if (bufferMatch) {
+              track.description = track.description ?? track.name;
+              track.name = `Buffer ${bufferMatch[1]}`;
+            }
+          } else {
+            track.trackGroup = layerGroup(layerName)();
+
+            // Rename the track, if applicable
+            const bufferMatch = /^(SF|APP|GPU|Display)_(\d+)?/
+              .exec(track.name);
+            if (bufferMatch) {
+              switch (bufferMatch[1]) {
+                case 'APP':
+                  track.name = `Application - Buffer ${bufferMatch[2]}`;
+                  track.description = track.description ?? 'The time from when the buffer was dequeued by the app to when it was enqueued back.';
+                  break;
+                case 'GPU':
+                  track.name = `Wait for GPU - Buffer ${bufferMatch[2]}`;
+                  track.description = track.description ?? 'The duration the buffer was owned by the GPU. This is the time from when the buffer was sent to the GPU to when the GPU finished its work on the buffer. This does not indicate that the GPU was working only on this buffer during this time.';
+                  break;
+                case 'SF':
+                  track.name = `Composition - Buffer ${bufferMatch[2]}`;
+                  track.description = track.description ?? 'The time from when SurfaceFlinger latched on to the buffer and sent for composition to when it was sent to the display.';
+                  break;
+                case 'Display':
+                  track.name = 'On Display';
+                  track.description = track.description ?? 'The duration the frame was displayed on screen.';
+                  break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  async groupGpuTracks(engine: EngineProxy): Promise<void> {
+    const groupsToCollect: AddTrackGroupArgs[] = [];
+    for (const group of this.trackGroupsToAdd) {
+      if (group.name.startsWith('GPU ') && !group.parentGroup) {
+        groupsToCollect.push(group);
+      }
+    }
+    groupsToCollect.forEach((group) => group.parentGroup = this.gpuGroup());
+
+    // Collect some tracks, too
+    const result = await engine.query(`
+    select id, scope
+    from gpu_track
+    where scope is not null;
+    `);
+    if (result.numRows() === 0) {
+      // No GPU tracks to group
+      return;
+    }
+
+    const gpuQueueTrackIds = new Set<number>();
+    const it = result.iter({
+      id: NUM,
+      scope: STR,
+    });
+    for (; it.valid(); it.next()) {
+      switch (it.scope) {
+        case 'gpu_render_stage':
+          gpuQueueTrackIds.add(it.id);
+          break;
+        case 'vulkan_events':
+          gpuQueueTrackIds.add(it.id);
+          break;
+        default:
+          break; // Group TBD
+      }
+    }
+
+    const gpuQueuesGroup = this.lazyTrackGroup('GPU Queues',
+      {lazyParentGroup: this.gpuGroup});
+    for (const track of this.tracksToAdd) {
+      if (track.trackGroup === SCROLLING_TRACK_GROUP) {
+        const trackId = TrackDecider.getTrackId(track);
+        if (trackId === undefined) {
+          continue;
+        }
+        if (gpuQueueTrackIds.has(trackId)) {
+          track.trackGroup = gpuQueuesGroup();
+        }
+      }
+    }
+  }
+
+  async groupMetricTracks(engine: EngineProxy): Promise<void> {
+    if (!globals.state.metrics.availableMetrics?.length) {
+      return;
+    }
+
+    const metricTableNames = globals.state.metrics.availableMetrics
+      .map((metric) => `${metric}_event`)
+      .map(sqliteString)
+      .join(',');
+    const metricTableNamesThatExist = new Set<string>();
+    const result = await engine.query(`
+      select name from sqlite_master
+      where type in ('table','view') and
+      name in (${metricTableNames})
+    `);
+    const it = result.iter({name: STR});
+    for (; it.valid(); it.next()) {
+      metricTableNamesThatExist.add(it.name);
+    }
+
+    const metricTrackGroupings = new Map<string, Set<string>>();
+    for (const metric of globals.state.metrics.availableMetrics) {
+      const tableName = `${metric}_event`;
+      if (!metricTableNamesThatExist.has(tableName)) {
+        continue;
+      }
+
+      const result = await engine.query(`
+        select distinct track_name from ${tableName};
+      `);
+      if (!result.numRows()) {
+        continue;
+      }
+
+      const it = result.iter({track_name: STR});
+      const tracks = new Set<string>();
+      metricTrackGroupings.set(METRIC_NAMES[metric], tracks);
+
+      for (; it.valid(); it.next()) {
+        tracks.add(it.track_name);
+      }
+    }
+
+    for (const [groupName, tracks] of metricTrackGroupings) {
+      const groupId = this.lazyTrackGroup(groupName,
+        {description: `Results from calculation of the {$groupName} metric.`});
+      // Don't create a group of just one track but do add
+      // to a group if it already exists
+      if (tracks.size < 2 && !groupId.exists()) {
+        continue;
+      }
+      for (const track of this.tracksToAdd) {
+        if (track.trackGroup === SCROLLING_TRACK_GROUP &&
+              tracks.has(track.name)) {
+            track.trackGroup = groupId();
+        }
+      }
+    }
+  }
+
+  // Assign titles for tracks that needs user-friendly names in the UI.
+  // Don't change the track name because it may originate in the trace
+  // database and so be used for correlation purposes.
+  setTrackTitles(): void {
+    this.tracksToAdd.forEach((track) => track.title = TRACK_TITLES[track.name]);
+  }
+
+  sortTopTrackGroups(): void {
+    // Must create parent groups before subgroups.
+    const topGroups: AddTrackGroupArgs[] = [];
+    for (let i = 0; i < this.trackGroupsToAdd.length; i++) {
+      const group = this.trackGroupsToAdd[i];
+      if (!group.parentGroup) {
+        topGroups.push(group);
+        this.trackGroupsToAdd.splice(i, 1);
+        i--;
+      }
+    }
+
+    // Sort the top-level Processes group to the bottom
+    const processesRegex = /Processes \(\d+\)/;
+    const comparator = (g1: AddTrackGroupArgs, g2: AddTrackGroupArgs) => {
+      if (g1 === g2) {
+        return 0;
+      }
+      if (g1.name.match(processesRegex)) {
+        return +1; // Last
+      }
+      if (g2.name.match(processesRegex)) {
+        return -1; // Last
+      }
+      return g1.name.localeCompare(g2.name);
+    };
+
+    topGroups.sort(comparator);
+
+    // And put SurfaceFlinger Events (if exists) after GPU (if exists)
+    const sfEventsIndex = this.sfEventsGroup.exists() ?
+      topGroups.findIndex((group) => group.id === this.sfEventsGroup()) :
+      -1;
+    const gpuGroupIndex = this.gpuGroup.exists() ?
+      topGroups.findIndex((group) => group.id === this.gpuGroup()) :
+      -1;
+    if (sfEventsIndex >= 0 && gpuGroupIndex >= 0) {
+      const move = topGroups.splice(sfEventsIndex, 1);
+      topGroups.splice(gpuGroupIndex + 1, 0, ...move);
+    }
+    this.trackGroupsToAdd.unshift(...topGroups);
   }
 
   private async computeThreadOrderingMetadata(): Promise<UtidToTrackSortKey> {
@@ -1902,6 +2475,14 @@ class TrackDecider {
   async addPluginTracks(): Promise<void> {
     const promises = pluginManager.findPotentialTracks(this.engine);
     const groups = await Promise.all(promises);
+
+    const grouperator = (track: TrackInfo): string => {
+      if (track.group) {
+        return this.lazyTrackGroup(track.group)();
+      }
+      return SCROLLING_TRACK_GROUP;
+    };
+
     for (const infos of groups) {
       for (const info of infos) {
         this.tracksToAdd.push({
@@ -1912,7 +2493,7 @@ class TrackDecider {
           // TODO(hjd): Fix how sorting works. Plugins should expose
           // 'sort keys' which the user can use to choose a sort order.
           trackSortKey: PrimaryTrackSortKey.COUNTER_TRACK,
-          trackGroup: SCROLLING_TRACK_GROUP,
+          trackGroup: grouperator(info),
           config: info.config,
         });
       }
@@ -1948,6 +2529,9 @@ class TrackDecider {
     await this.groupTracksByRegex(NETWORK_TRACK_REGEX, NETWORK_TRACK_GROUP);
     await this.groupTracksByRegex(
         ENTITY_RESIDENCY_REGEX, ENTITY_RESIDENCY_GROUP);
+
+    await this.groupMetricTracks(
+        this.engine.getProxy('TrackDecider::groupMetricTracks'));
 
     // Pre-group all kernel "threads" (actually processes) if this is a linux
     // system trace. Below, addProcessTrackGroups will skip them due to an
@@ -1989,6 +2573,12 @@ class TrackDecider {
         this.engine.getProxy('TrackDecider::addThreadCpuSampleTracks'));
     await this.addLogsTrack(this.engine.getProxy('TrackDecider::addLogsTrack'));
 
+    await this.groupGpuTracks(
+      this.engine.getProxy('TrackDecider::groupGpuTracks'));
+    await this.addSurfaceFlingerTrackGroups(
+      this.engine.getProxy('TrackDecider::addSurfaceflingerTrackGroups'));
+    await this.groupCounterTracks();
+
     // TODO(hjd): Move into plugin API.
     {
       const result = scrollJankDecideTracks(this.engine, (utid, upid) => {
@@ -2000,6 +2590,10 @@ class TrackDecider {
       }
     }
 
+    this.setTrackTitles();
+
+    this.sortTopTrackGroups();
+
     const actions: DeferredAction[] = [];
     if (filterTracks) {
       const rejected = this.filterTracks();
@@ -2008,8 +2602,7 @@ class TrackDecider {
       }));
     }
 
-    actions.push(
-        ...this.trackGroupsToAdd.map(Actions.addTrackGroup));
+    actions.push(Actions.addTrackGroups({trackGroups: this.trackGroupsToAdd}));
     actions.push(Actions.addTracks({tracks: this.tracksToAdd}));
 
     const threadOrderingMetadata = await this.computeThreadOrderingMetadata();
@@ -2130,5 +2723,178 @@ class TrackDecider {
       default:
         return PrimaryTrackSortKey.ORDINARY_THREAD;
     }
+  }
+
+  // Obtain a function that will create a group of the given |name| only when
+  // it is actually needed to get the containing group ID for some track.
+  // When invoked, the returned function returns the ID of the group created
+  // at that moment or earlier and cached.
+  lazyTrackGroup(name: string,
+      details?: LazyTrackGroupArgs): LazyIdProvider {
+    const parent = details?.lazyParentGroup ?
+      (details.lazyParentGroup as LazyIdProvider & {node: LazyTrackGroupTree})
+        .node :
+      details?.parentGroup ?
+        this.getLazyTrackGroupTree(details.parentGroup) :
+        this.lazyTrackGroups;
+    let result = parent.children.find((child) => child.name === name);
+    if (!result) {
+      const path = this.getGroupPath(parent);
+      path.push(name);
+
+      const node: LazyTrackGroupTree = {
+        name,
+        parent,
+        children: [],
+        group: this.findGroup(path),
+        id: ((): string => {
+          // First, try to find a group that exists
+          if (!node.group) {
+            node.group = this.findGroup(path);
+          }
+          // Otherwise, create it
+          if (!node.group) {
+            node.group = this.createPureTrackGroup(
+                uuidv4(), name, details);
+          }
+          return node.group.id;
+        }) as LazyIdProvider,
+      };
+      parent.children.push(node);
+
+      Object.assign(node.id, {
+        node,
+        exists: () => !!node.group,
+        revoke: () => {
+          if (node.group) {
+            this.removeTrackGroup(node.group.id);
+          }
+        },
+      });
+      result = node;
+    }
+    return result.id;
+  }
+
+  // Find a group previously added to the |trackGroupsToAdd| property
+  // by the |path| of group names from the top of the UI.
+  private findGroup(path: string[]): AddTrackGroupArgs | undefined {
+    if (path.length === 0) {
+      return undefined;
+    }
+
+    const name = path[path.length - 1];
+    const parentPath = path.slice(0, -1);
+    for (const group of this.trackGroupsToAdd) {
+      if (group.name === name) {
+        // Candidate. Does it not have a parent?
+        if (parentPath.length === 0 &&
+            (!group.parentGroup ||
+              group.parentGroup === SCROLLING_TRACK_GROUP)) {
+          return group;
+        }
+
+        // Otherwise, does its parent match?
+        const parent = this.findGroup(parentPath);
+        if (parent?.id && (parent?.id === group.parentGroup)) {
+          return group;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  // Get the tree node book-keeping the lazily created group of the
+  // given ID.
+  //
+  // Preconditions: the |groupId| is the ID of a group that actually has
+  //     been added to the |trackGroupsToAdd| property. i.e., if it is
+  //     a lazily-created group then that lazy creation has occurred
+  private getLazyTrackGroupTree(groupId: string): LazyTrackGroupTree {
+    const group = assertExists(
+      this.trackGroupsToAdd.find((group) => group.id === groupId));
+    const name = group.name;
+    let result: LazyIdProvider;
+    if (!group.parentGroup || group.parentGroup === SCROLLING_TRACK_GROUP) {
+      result = this.lazyTrackGroup(name);
+    } else {
+      const lazyParentGroup = this.getLazyTrackGroupTree(group.parentGroup).id;
+      result = this.lazyTrackGroup(name, {lazyParentGroup});
+    }
+    return (result as LazyIdProvider & {node: LazyTrackGroupTree}).node;
+  }
+
+  // Get the path from the root of the UI to the group represented by the
+  // given lazy-track-group tree |node|.
+  private getGroupPath(node: LazyTrackGroupTree): string[] {
+    if (node === this.lazyTrackGroups) {
+      return [];
+    }
+    const result = this.getGroupPath(node.parent ?? this.lazyTrackGroups);
+    result.push(node.name);
+    return result;
+  }
+
+  createPureTrackGroup(id: string, name: string,
+      details: LazyTrackGroupArgs = {}): AddTrackGroupArgs {
+    const {lazyParentGroup, ...staticDetails} = details;
+
+    const result: AddTrackGroupArgs = {
+      id,
+      engineId: this.engineId,
+      name,
+      summaryTrackId: id, // Group needs a summary track, even if it's blank
+      collapsed: true,
+      ...staticDetails,
+    };
+    if (lazyParentGroup) {
+      result.parentGroup = lazyParentGroup();
+    }
+
+    this.trackGroupsToAdd.push(result);
+    this.tracksToAdd.push(this.blankSummaryTrack(id));
+    return result;
+  }
+
+  blankSummaryTrack(id: string): AddTrackArgs {
+    return {
+      engineId: this.engineId,
+      id: id,
+      kind: NULL_TRACK_KIND,
+      name: '',
+      trackSortKey: PrimaryTrackSortKey.NULL_TRACK,
+      trackGroup: undefined,
+      config: {},
+    };
+  }
+
+  protected removeTrackGroup(id: string): void {
+    const groupIndex = this.trackGroupsToAdd.findIndex(
+      (group) => group.id === id);
+    if (groupIndex < 0) {
+      return; // Nothing to remove
+    }
+    const [group] = this.trackGroupsToAdd.splice(groupIndex, 1);
+    const parentGroup = group.parentGroup;
+
+    // remove the summary track
+    const summary = this.tracksToAdd.findIndex(
+      (track) => track.id === group?.summaryTrackId);
+    if (summary >= 0) {
+      this.tracksToAdd.splice(summary, 1);
+    }
+
+    // And re-group all members
+    this.tracksToAdd.forEach((track) => {
+      if (track.trackGroup === id) {
+        track.trackGroup = parentGroup ?? SCROLLING_TRACK_GROUP;
+      }
+    });
+    this.trackGroupsToAdd.forEach((trackGroup) => {
+      if (trackGroup.parentGroup === id) {
+        trackGroup.parentGroup = parentGroup;
+      }
+    });
   }
 }

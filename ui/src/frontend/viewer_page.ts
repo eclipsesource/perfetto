@@ -33,6 +33,7 @@ import {TimeSelectionPanel} from './time_selection_panel';
 import {DISMISSED_PANNING_HINT_KEY} from './topbar';
 import {TrackGroupPanel} from './track_group_panel';
 import {TrackPanel} from './track_panel';
+import {TrackGroupState} from '../common/state';
 
 const SIDEBAR_WIDTH = 256;
 
@@ -248,7 +249,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
     const scrollingPanels: AnyAttrsVnode[] = globals.state.scrollingTracks.map(
         (id) => m(TrackPanel, {key: id, id, selectable: true}));
 
-    for (const group of Object.values(globals.state.trackGroups)) {
+    const renderGroup = (group: TrackGroupState, panels: AnyAttrsVnode[]) => {
       const headerPanel = m(TrackGroupPanel, {
         trackGroupId: group.id,
         key: `trackgroup-${group.id}`,
@@ -256,9 +257,23 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
       });
 
       const childTracks: AnyAttrsVnode[] = [];
-      // The first track is the summary track, and is displayed as part of the
-      // group panel, we don't want to display it twice so we start from 1.
       if (!group.collapsed) {
+        // Recursively render subgroups, first, except idle processes/threads
+        let idleSubgroup: TrackGroupState|undefined;
+        for (const id of group.subgroups) {
+          const subgroup = globals.state.trackGroups[id];
+          if (subgroup) {
+            if (!idleSubgroup && subgroup.name.search(/\bIdle\b/) >= 0) {
+              // Defer
+              idleSubgroup = subgroup;
+            } else {
+              renderGroup(subgroup, childTracks);
+            }
+          }
+        }
+
+        // The first track is the summary track, and is displayed as part of the
+        // group panel, we don't want to display it twice so we start from 1.
         for (let i = 1; i < group.tracks.length; ++i) {
           const id = group.tracks[i];
           childTracks.push(m(TrackPanel, {
@@ -267,13 +282,23 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
             selectable: true,
           }));
         }
+
+        // And the idle processes/tracks subgroup
+        if (idleSubgroup) {
+          renderGroup(idleSubgroup, childTracks);
+        }
       }
-      scrollingPanels.push(m(TrackGroup, {
+
+      panels.push(m(TrackGroup, {
         header: headerPanel,
         collapsed: group.collapsed,
         childTracks,
       } as TrackGroupAttrs));
-    }
+    };
+
+    Object.values(globals.state.trackGroups)
+      .filter((group) => group.parentGroup === undefined)
+      .forEach((group) => renderGroup(group, scrollingPanels));
 
     const overviewPanel = [];
     if (OVERVIEW_PANEL_FLAG.get()) {
@@ -326,6 +351,6 @@ export function createViewerPage(attrs: TraceViewerAttrs) {
   return createPage({
     view() {
       return m(TraceViewer, attrs);
-    }
+    },
   });
 }

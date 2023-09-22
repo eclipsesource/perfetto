@@ -31,6 +31,7 @@ import {trackRegistry} from './track_registry';
 import {
   drawVerticalLineAtTime,
 } from './vertical_line_helper';
+import {SCROLLING_TRACK_GROUP, getContainingTrackIds} from '../common/state';
 
 function getTitleSize(title: string): string|undefined {
   const length = title.length;
@@ -90,6 +91,17 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
       }
     }
 
+    const depth = attrs.trackState.trackGroup === SCROLLING_TRACK_GROUP ?
+      0 :
+      getContainingTrackIds(globals.state, attrs.trackState.id)?.length ?? 0;
+    const trackTitle = attrs.trackState.title ?? attrs.trackState.name;
+    const titleStyling: Record<string, string|undefined> = {
+      fontSize: getTitleSize(trackTitle),
+    };
+    if (depth > 0) {
+      titleStyling.marginLeft = `${depth/2}rem`;
+    }
+
     const dragClass = this.dragging ? `drag` : '';
     const dropClass = this.dropping ? `drop-${this.dropping}` : '';
     return m(
@@ -106,11 +118,9 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
             'h1',
             {
               title: attrs.trackState.description,
-              style: {
-                'font-size': getTitleSize(attrs.trackState.name),
-              },
+              style: titleStyling,
             },
-            attrs.trackState.name,
+            trackTitle,
             ('namespace' in attrs.trackState.config) &&
                 m('span.chip', 'metric'),
             ),

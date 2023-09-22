@@ -65,6 +65,7 @@ import {
 } from './state';
 import {TPDuration, TPTime} from './time';
 import {STR} from './query_result';
+import {remove} from '../base/array_utils';
 
 export const DEBUG_SLICE_TRACK_KIND = 'DebugSliceTrack';
 
@@ -75,6 +76,7 @@ export interface AddTrackArgs {
   engineId: string;
   kind: string;
   name: string;
+  title?: string;
   description?: string;
   labels?: string[];
   trackSortKey: TrackSortKey;
@@ -89,16 +91,34 @@ export interface AddTrackGroupArgs {
   description?: string;
   summaryTrackId: string;
   collapsed: boolean;
+  parentGroup?: string;
+  subgroups?: string[];
 }
 
 export type AddTrackLikeArgs = AddTrackArgs | AddTrackGroupArgs;
 
-export function isAddTrackArgs(args: AddTrackLikeArgs): args is AddTrackArgs {
-  return 'kind' in args && 'trackSortKey' in args && 'config' in args;
+export interface RemoveTrackArgs {
+  // The ID of the track to remove
+  id: string;
+  // Whether to keep the ID so that it may be reused when the
+  // track is subsequently added again (required for group
+  // summary tracks only).
+  keepId?: boolean;
 }
 
-export function isAddTrackGroupArgs(args: AddTrackLikeArgs): args is AddTrackGroupArgs {
-  return 'summaryTrackId' in args; // 'collapsed' is a boolean and so quasi-defaulted
+export interface RemoveTrackGroupArgs {
+  id: string;
+  summaryTrackId: string;
+}
+
+export function isAddTrackArgs(args: AddTrackLikeArgs): args is AddTrackArgs {
+  return 'kind' in args && 'trackSortKey' in args &&
+    'config' in args;
+}
+
+export function isAddTrackGroupArgs(
+    args: AddTrackLikeArgs): args is AddTrackGroupArgs {
+  return 'summaryTrackId' in args || 'parentGroup' in args; // 'collapsed' is a boolean and so quasi-defaulted
 }
 
 export interface PostedTrace {
@@ -164,16 +184,26 @@ function removeTrack(state: StateDraft, trackId: string) {
 
 // A helper to clean the state for a given removable track group.
 function removeTrackGroup(state: StateDraft, groupId: string) {
+  const trackGroup = state.trackGroups[groupId];
+  const parent = trackGroup.parentGroup ?
+    state.trackGroups[trackGroup.parentGroup] :
+    undefined;
+  if (parent) {
+    remove(parent.subgroups, groupId);
+  }
   delete state.trackGroups[groupId];
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== groupId);
 }
+
 // Query whether an |other| track matches enough details of a |track| as
 // to represent the same track
-function isSameTrack(track: AddTrackArgs, other: Partial<AddTrackArgs>): boolean {
+function isSameTrack(track: AddTrackArgs,
+    other: Partial<AddTrackArgs>): boolean {
   return track.kind === other.kind &&
-      track.trackGroup == other.trackGroup &&
-      // TODO: This may not be reliable. May need to deep-compare the config object
-      track.name == other.name;
+      track.trackGroup === other.trackGroup &&
+      // TODO: This may not be reliable. May need to deep-compare
+      // the config object
+      track.name === other.name;
 }
 
 function unfilterTracklike(
@@ -186,12 +216,16 @@ function unfilterTracklike(
 }
 
 function unfilterTrack(state: StateDraft, track: TrackState) {
-  unfilterTracklike(state, (filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
+  unfilterTracklike(state,
+    (filtered) => isAddTrackArgs(filtered) && isSameTrack(filtered, track));
 }
 
 function unfilterTrackGroup(state: StateDraft, trackGroup: TrackGroupState) {
-  unfilterTracklike(state, (filtered) => isAddTrackGroupArgs(filtered) && filtered.id === trackGroup.id);
+  unfilterTracklike(state,
+    (filtered) => isAddTrackGroupArgs(filtered) &&
+      filtered.id === trackGroup.id);
 }
+
 // A helper to delete the private tables and views created by a track.
 // TODO: These should recorded by each track that creates them and cleaned up
 //       by an explicit disposable-track protocol.
@@ -340,6 +374,7 @@ export const StateActions = {
       } else if (track.trackGroup !== undefined) {
         assertExists(state.trackGroups[track.trackGroup]).tracks.push(id);
       }
+      unfilterTrack(state, state.tracks[id]);
     });
   },
 
@@ -349,9 +384,9 @@ export const StateActions = {
   },
 
   addTrack(state: StateDraft, args: {
-    id?: string; engineId: string; kind: string; name: string;
-    trackGroup?: string; config: {}; trackSortKey: TrackSortKey;
-    description?: string;
+    id?: string; engineId: string; kind: string; name: string; title?: string;
+    trackGroup?: string; trackSubgroup?: string; config: {};
+    trackSortKey: TrackSortKey; description?: string
   }): void {
     const id = args.id !== undefined ? args.id : generateNextId(state);
     const description = args.description ?
@@ -362,6 +397,7 @@ export const StateActions = {
       engineId: args.engineId,
       kind: args.kind,
       name: args.name,
+      title: args.title,
       description,
       trackSortKey: args.trackSortKey,
       trackGroup: args.trackGroup,
@@ -377,17 +413,25 @@ export const StateActions = {
     }
   },
 
+  addTrackGroups(state: StateDraft,
+      args: {trackGroups: AddTrackGroupArgs[]}): void {
+    args.trackGroups.forEach((trackGroup) =>
+      this.addTrackGroup(state, trackGroup));
+  },
+
   addTrackGroup(
       state: StateDraft,
       // Define ID in action so a track group can be referred to without running
       // the reducer.
       args: {
         engineId: string; name: string; id: string; summaryTrackId: string;
-        collapsed: boolean; description?: string;
+        collapsed: boolean; description?: string; parentGroup?: string;
+        subgroups?: string[];
       }): void {
     const description = args.description ?
       `${args.name}\n\n${args.description}` :
       args.name;
+    const subgroups = args.subgroups ? [...args.subgroups] : [];
     state.trackGroups[args.id] = {
       engineId: args.engineId,
       name: args.name,
@@ -395,7 +439,15 @@ export const StateActions = {
       id: args.id,
       collapsed: args.collapsed,
       tracks: [args.summaryTrackId],
+      parentGroup: args.parentGroup,
+      subgroups,
     };
+    const parentGroup = args.parentGroup ?
+      state.trackGroups[args.parentGroup] :
+      undefined;
+    if (parentGroup) {
+      parentGroup.subgroups.push(args.id);
+    }
     unfilterTrackGroup(state, state.trackGroups[args.id]);
   },
 
@@ -433,7 +485,13 @@ export const StateActions = {
     removeTrack(state, args.trackId);
   },
 
-  removeTrack(state: StateDraft, args: {trackId: string}): void {
+  removeTracks(state: StateDraft, args: {tracks: RemoveTrackArgs[]}): void {
+    args.tracks.forEach((track) => this.removeTrack(
+      state, {trackId: track.id, keepId: track.keepId}));
+  },
+
+  removeTrack(state: StateDraft,
+      args: {trackId: string, keepId?: boolean}): void {
     const track = state.tracks[args.trackId];
     if (!track) {
       return;
@@ -442,34 +500,38 @@ export const StateActions = {
 
     this.cleanUiTrackIdByTraceTrackId(state, track as TrackState, args.trackId);
 
-      // Don't assume that we can reuse the track's ID, unless
-      // it's a group summary track that has a fixed explicit ID.
-      // Note that (some, at least) summary tracks don't reference
-      // their group
-      const id = track.trackGroup !== SCROLLING_TRACK_GROUP &&
-              Object.values(state.trackGroups).some((group) => group.tracks.length && group.tracks[0] === track.id) ?
-          {id: track.id} :
-          {};
-      state.filteredTracks.push({
-        ...id,
-        kind: track.kind,
-        engineId: track.engineId,
-        name: track.name,
-        trackSortKey: track.trackSortKey,
-        trackGroup: track.trackGroup,
-        labels: track.labels,
-        config: current(track.config),
-      });
+    // Don't attempt to reuse track IDs unless requested (usually only
+    // for group summary tracks)
+    const id = args.keepId ? {id: args.trackId} : {};
+    state.filteredTracks.push({
+      ...id,
+      kind: track.kind,
+      engineId: track.engineId,
+      name: track.name,
+      title: track.title,
+      trackSortKey: track.trackSortKey,
+      trackGroup: track.trackGroup,
+      labels: track.labels,
+      config: current(track.config),
+    });
 
     dropTables(track.engineId, track.id);
   },
 
-  removeTrackGroup(state: StateDraft, args: {id: string, summaryTrackId: string}): void {
+  removeTrackGroups(state: StateDraft,
+      args: {trackGroups: RemoveTrackGroupArgs[]}): void {
+    args.trackGroups.forEach((trackGroup) => this.removeTrackGroup(
+      state, trackGroup));
+  },
+
+  removeTrackGroup(state: StateDraft,
+      args: {id: string, summaryTrackId: string}): void {
     const trackGroup = state.trackGroups[args.id];
     if (!trackGroup) {
       return;
     }
-
+    this.removeTrack(state,
+      {trackId: args.summaryTrackId, keepId: true});
     removeTrackGroup(state, args.id);
       state.filteredTracks.push({
         id: trackGroup.id,
@@ -477,6 +539,8 @@ export const StateActions = {
         name: trackGroup.name,
         collapsed: trackGroup.collapsed,
         summaryTrackId: args.summaryTrackId,
+        parentGroup: trackGroup.parentGroup,
+        subgroups: trackGroup.subgroups,
       });
   },
 

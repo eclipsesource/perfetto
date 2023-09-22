@@ -16,9 +16,9 @@ import {hex} from 'color-convert';
 import m from 'mithril';
 
 import {assertExists} from '../base/logging';
-import {Actions} from '../common/actions';
+import {Actions, RemoveTrackArgs, RemoveTrackGroupArgs} from '../common/actions';
 import {
-  getContainingTrackId,
+  getContainingTrackIds,
   TrackGroupState,
   TrackState,
 } from '../common/state';
@@ -103,8 +103,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const searchIndex = globals.state.searchIndex;
     if (searchIndex !== -1) {
       const trackId = globals.currentSearchResults.trackIds[searchIndex];
-      const parentTrackId = getContainingTrackId(globals.state, trackId);
-      if (parentTrackId === attrs.trackGroupId) {
+      const parentTrackIds = getContainingTrackIds(globals.state, trackId);
+      if (parentTrackIds && parentTrackIds.includes(attrs.trackGroupId)) {
         highlightClass = 'flash';
       }
     }
@@ -131,6 +131,16 @@ export class TrackGroupPanel extends Panel<Attrs> {
       child = this.summaryTrackState.labels.join(', ');
     }
 
+    const depth: (group?: TrackGroupState) => number =
+      (group?: TrackGroupState) =>
+        group?.parentGroup ?
+          depth(globals.state.trackGroups[group.parentGroup]) + 1 :
+          0;
+    const indent = (depth: number) => depth <= 0 ?
+      {} :
+      {style: {marginLeft: `${depth/2}rem`}};
+
+    const titleStyling = indent(depth(trackGroup));
     return m(
         `.track-group-panel[collapsed=${collapsed}]`,
         {id: 'track_' + this.trackGroupId},
@@ -146,9 +156,11 @@ export class TrackGroupPanel extends Panel<Attrs> {
           },
 
           m('.fold-button',
+            {...titleStyling},
             m('i.material-icons',
               this.trackGroupState.collapsed ? EXPAND_DOWN : EXPAND_UP)),
           m('.title-wrapper',
+            {...titleStyling},
             m('h1.track-title',
               {title: trackGroup.description},
               name,
@@ -182,6 +194,16 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
   oncreate(vnode: m.CVnodeDOM<Attrs>) {
     this.onupdate(vnode);
+    const trackGroupId = vnode.attrs.trackGroupId;
+    if (globals.frontendLocalState.expandTrackGroupIds.has(trackGroupId)) {
+      // An attempt to scroll to reveal a track that is contained within
+      // this group was waiting for it to be created by expansion of an
+      // ancestor, so make sure that it is expanded now that it exists
+      if (this.trackGroupState.collapsed) {
+        globals.dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
+      }
+      globals.frontendLocalState.expandTrackGroupIds.delete(trackGroupId);
+    }
   }
 
   onupdate({dom}: m.CVnodeDOM<Attrs>) {
@@ -208,22 +230,52 @@ export class TrackGroupPanel extends Panel<Attrs> {
       result.push(
         m(TrackButton, {
           action: (e: MouseEvent) => {
+            const removeTracks: RemoveTrackArgs[] = [];
+            const removeGroups: RemoveTrackGroupArgs[] = [];
+            this.collectRemoveTrackGroupActions(
+              this.trackGroupState,
+              removeTracks,
+              removeGroups,
+            );
             globals.dispatchMultiple([
-              ...this.trackGroupState.tracks.map((trackId) => Actions.removeTrack({trackId})),
-              Actions.removeTrackGroup({
-                  id: this.trackGroupState.id,
-                  summaryTrackId: this.trackGroupState.tracks[0],
-                }),
-              ]);
+              Actions.removeTracks({tracks: removeTracks}),
+              Actions.removeTrackGroups({trackGroups: removeGroups}),
+            ]);
             e.stopPropagation();
           },
           i: 'delete',
           disabled,
-          tooltip: 'Remove track',
+          tooltip: 'Remove track group',
           showButton: false, // Only show on roll-over
           fullHeight: true,
         }));
     return result;
+  }
+
+  // Collect, recursively, the nested track groups and tracks to remove
+  // along with the given trackGroup, as deferred actions to be dispatched
+  protected collectRemoveTrackGroupActions(
+      trackGroup: TrackGroupState,
+      removeTracks: RemoveTrackArgs[],
+      removeGroups: RemoveTrackGroupArgs[]): void {
+    // First, recursively remove subgroups, if any
+    for (const subgroupId of trackGroup.subgroups) {
+      const subgroup = globals.state.trackGroups[subgroupId];
+      if (subgroup) {
+        this.collectRemoveTrackGroupActions(subgroup,
+          removeTracks, removeGroups);
+      }
+    }
+
+    // Then tracks, except the summary, which is handled by
+    // the track group, below
+    trackGroup.tracks.slice(1).forEach((id) => removeTracks.push({id}));
+
+    // Then the group
+    removeGroups.push({
+      id: trackGroup.id,
+      summaryTrackId: trackGroup.tracks[0],
+    });
   }
 
   // We cannot delete a track group while its tracks are loading,

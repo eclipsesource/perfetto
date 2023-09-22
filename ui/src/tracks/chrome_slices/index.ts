@@ -56,6 +56,14 @@ export interface Data extends TrackData {
   cpuTimeRatio?: Float64Array;
 }
 
+// Like a Slice, but only of the instantaneous kind and
+// only enough information to render it in the track
+export interface Instant {
+  title: string;
+  color: string;
+  tmAscent: number;
+}
+
 export class ChromeSliceTrackController extends TrackController<Config, Data> {
   static kind = SLICE_TRACK_KIND;
   private maxDurNs: TPDuration = 0n;
@@ -197,7 +205,9 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     ctx.textAlign = 'center';
 
     // measuretext is expensive so we only use it once.
-    const charWidth = ctx.measureText('ACBDLqsdfg').width / 10;
+    const charTM = ctx.measureText('ACBDLqsdfg');
+    const charWidth = charTM.width / 10;
+    const charAscent = charTM.actualBoundingBoxAscent;
 
     // The draw of the rect on the selected slice must happen after the other
     // drawings, otherwise it would result under another rect.
@@ -212,7 +222,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       const isInstant = data.isInstant[i];
       const isIncomplete = data.isIncomplete[i];
       const title = data.strings[titleId];
-      const colorOverride = data.colors && data.strings[data.colors[i]];
+      const colorOverride = this.getColorOverride(data, i);
       if (isIncomplete) {  // incomplete slice
         // TODO(stevegolton): This isn't exactly equivalent, ideally we should
         // choose tEnd once we've conerted to screen space coords.
@@ -253,6 +263,12 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       // D       B
       // Then B, C, D and back to A:
       if (isInstant) {
+        const instant: Instant = {
+          title,
+          color,
+          tmAscent: charAscent,
+        };
+
         if (isSelected) {
           drawRectOnSelected = () => {
             ctx.save();
@@ -264,19 +280,19 @@ export class ChromeSliceTrack extends Track<Config, Data> {
             ctx.scale(INNER_CHEVRON_SCALE, INNER_CHEVRON_SCALE);
             ctx.fillStyle = cachedHsluvToHex(hue, 100, 10);
 
-            this.drawChevron(ctx);
+            this.drawChevron(ctx, instant);
             ctx.restore();
 
             // Draw inner chevron as interior
             ctx.fillStyle = color;
-            this.drawChevron(ctx);
+            this.drawChevron(ctx, instant);
 
             ctx.restore();
           };
         } else {
           ctx.save();
           ctx.translate(rect.left, rect.top);
-          this.drawChevron(ctx);
+          this.drawChevron(ctx, instant);
           ctx.restore();
         }
         continue;
@@ -325,7 +341,15 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     drawRectOnSelected();
   }
 
-  drawChevron(ctx: CanvasRenderingContext2D) {
+  // Draw a chevron for the current intantaneous slice in the track.
+  // The optional |Instant| provides additional hints that may be
+  // useful in rendering the slice.
+  //
+  // Precondition: the calling context must first |save| the |ctx| because this
+  //   method is free to change fill style, transform, and other properties of
+  //   the context. And the caller must |restore| the |ctx| on return from this
+  //   method to clear any such changes.
+  drawChevron(ctx: CanvasRenderingContext2D, _instant?: Instant) {
     // Draw a chevron at a fixed location and size. Should be used with
     // ctx.translate and ctx.scale to alter location and size.
     ctx.beginPath();
@@ -335,6 +359,12 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     ctx.lineTo(-HALF_CHEVRON_WIDTH_PX, SLICE_HEIGHT);
     ctx.lineTo(0, 0);
     ctx.fill();
+  }
+
+  // Get a color to override the default paint color for the indicated slice.
+  // By default, an override is sought in the array if |colors| in the |data|.
+  getColorOverride(data: Data, sliceIndex: number): string|undefined {
+    return data.colors ? data.strings[data.colors[sliceIndex]] : undefined;
   }
 
   getSliceIndex({x, y}: {x: number, y: number}): number|void {
