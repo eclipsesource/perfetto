@@ -15,13 +15,15 @@
 import {BigintMath as BIMath} from '../../base/bigint_math';
 import {PluginContext} from '../../common/plugin_api';
 import {LONG, LONG_NULL, NUM, STR} from '../../common/query_result';
-import {TPDuration, TPTime} from '../../common/time';
+import {TPDuration, TPTime, tpTimeToString} from '../../common/time';
 import {TrackData} from '../../common/track_data';
 import {
   TrackController,
 } from '../../controller/track_controller';
 import {NewTrackArgs, Track} from '../../frontend/track';
 import {ChromeSliceTrack} from '../chrome_slices';
+import {globals} from '../../frontend/globals';
+import {search} from '../../base/binary_search';
 
 export const ASYNC_SLICE_TRACK_KIND = 'AsyncSliceTrack';
 
@@ -136,6 +138,36 @@ export class AsyncSliceTrack extends ChromeSliceTrack {
   static readonly kind = ASYNC_SLICE_TRACK_KIND;
   static create(args: NewTrackArgs): Track {
     return new AsyncSliceTrack(args);
+  }
+
+  renderCanvas(ctx: CanvasRenderingContext2D): void {
+      super.renderCanvas(ctx);
+
+      const sliceId = globals.state.highlightedSliceId;
+      if (sliceId >= 0) {
+        const data = this.data();
+        const slice = search(data?.sliceIds ?? [], sliceId);
+        if (data && (slice >= 0) &&
+            (data.sliceIds[slice] === sliceId)) {
+          const titleId = data.titles[slice];
+          const title = data.strings[titleId];
+          const startTs = data.starts[slice];
+          const endTs = data.ends[slice];
+          const depth = data.depths[slice];
+          const dur = data.isInstant[slice] || data.isIncomplete[slice] ?
+            undefined :
+            data.ends[slice] - data.starts[slice];
+          const durStr = dur === undefined ? '' :
+            ` (${tpTimeToString(dur)})`;
+          const tooltip = `${title}${durStr}`;
+          const sliceRect = this.getSliceRect(startTs, endTs, depth);
+          if (sliceRect?.visible) {
+            const x = sliceRect.left;
+            const y = sliceRect.top;
+            this.drawTrackHoverTooltip(ctx, {x, y}, tooltip);
+          }
+        }
+      }
   }
 }
 
