@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {hsluvToHex} from 'hsluv';
+import {hexToHsluv, hsluvToHex} from 'hsluv';
 
 class HsluvCache {
   storage = new Map<number, string>();
@@ -36,4 +36,22 @@ const cache = new HsluvCache();
 export function cachedHsluvToHex(
     hue: number, saturation: number, lightness: number): string {
   return cache.get(hue, saturation, lightness);
+}
+
+const textColorCache = new Map<string, string>();
+
+export function contrastingTextColor(color: string): string;
+export function contrastingTextColor(hue: number,
+  saturation: number, lightness: number): string;
+export function contrastingTextColor(colorOrHue: string|number,
+    saturation?: number, lightness?: number): string {
+  const color = typeof colorOrHue === 'string' ? colorOrHue :
+    hsluvToHex([colorOrHue, saturation ?? 100, lightness ?? 60]);
+  let result = textColorCache.get(color);
+  if (!result) {
+    const lightness = hexToHsluv(color)[2];
+    result = lightness > 65 ? '#404040' : '#ffffff';
+    textColorCache.set(color, result);
+  }
+  return result;
 }

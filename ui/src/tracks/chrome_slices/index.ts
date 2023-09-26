@@ -56,6 +56,18 @@ export interface Data extends TrackData {
   cpuTimeRatio?: Float64Array;
 }
 
+// Like a Slice, but only of the instantaneous kind and
+// only enough information to render it in the track
+export interface Instant {
+  id: number;
+  start: bigint;
+  depth: number;
+  title: string;
+  color: string;
+  tmAscent: number;
+  tmWidth: number;
+}
+
 export class ChromeSliceTrackController extends TrackController<Config, Data> {
   static kind = SLICE_TRACK_KIND;
   private maxDurNs: TPDuration = 0n;
@@ -197,7 +209,9 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     ctx.textAlign = 'center';
 
     // measuretext is expensive so we only use it once.
-    const charWidth = ctx.measureText('ACBDLqsdfg').width / 10;
+    const charTM = ctx.measureText('ACBDLqsdfg');
+    const charWidth = charTM.width / 10;
+    const charAscent = charTM.actualBoundingBoxAscent;
 
     // The draw of the rect on the selected slice must happen after the other
     // drawings, otherwise it would result under another rect.
@@ -253,6 +267,16 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       // D       B
       // Then B, C, D and back to A:
       if (isInstant) {
+        const instant: Instant = {
+          id: sliceId,
+          depth,
+          title,
+          start: tStart,
+          color,
+          tmAscent: charAscent,
+          tmWidth: charWidth,
+        };
+
         if (isSelected) {
           drawRectOnSelected = () => {
             ctx.save();
@@ -264,19 +288,19 @@ export class ChromeSliceTrack extends Track<Config, Data> {
             ctx.scale(INNER_CHEVRON_SCALE, INNER_CHEVRON_SCALE);
             ctx.fillStyle = cachedHsluvToHex(hue, 100, 10);
 
-            this.drawChevron(ctx);
+            this.drawChevron(ctx, instant);
             ctx.restore();
 
             // Draw inner chevron as interior
             ctx.fillStyle = color;
-            this.drawChevron(ctx);
+            this.drawChevron(ctx, instant);
 
             ctx.restore();
           };
         } else {
           ctx.save();
           ctx.translate(rect.left, rect.top);
-          this.drawChevron(ctx);
+          this.drawChevron(ctx, instant);
           ctx.restore();
         }
         continue;
@@ -325,7 +349,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     drawRectOnSelected();
   }
 
-  drawChevron(ctx: CanvasRenderingContext2D) {
+  drawChevron(ctx: CanvasRenderingContext2D, _instant?: Instant) {
     // Draw a chevron at a fixed location and size. Should be used with
     // ctx.translate and ctx.scale to alter location and size.
     ctx.beginPath();

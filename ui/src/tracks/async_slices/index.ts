@@ -21,9 +21,15 @@ import {
   TrackController,
 } from '../../controller/track_controller';
 import {NewTrackArgs, Track} from '../../frontend/track';
-import {ChromeSliceTrack} from '../chrome_slices';
+import {ChromeSliceTrack, Instant} from '../chrome_slices';
+import {contrastingTextColor} from '../../frontend/hsluv_cache';
 
 export const ASYNC_SLICE_TRACK_KIND = 'AsyncSliceTrack';
+
+const SLICE_HEIGHT = 18;
+const DIAMOND_WIDTH_PX = 16;
+const HALF_SLICE_HEIGHT = SLICE_HEIGHT / 2;
+const HALF_DIAMOND_WIDTH_PX = DIAMOND_WIDTH_PX / 2;
 
 export interface Config {
   maxDepth: number;
@@ -136,6 +142,33 @@ export class AsyncSliceTrack extends ChromeSliceTrack {
   static readonly kind = ASYNC_SLICE_TRACK_KIND;
   static create(args: NewTrackArgs): Track {
     return new AsyncSliceTrack(args);
+  }
+
+  drawChevron(ctx: CanvasRenderingContext2D, instant?: Instant) {
+    if (this.trackState.name.search(/^Buffer:? \d+/) !== 0) {
+      // Not a GPU buffer, so draw a regular chevron
+      return super.drawChevron(ctx);
+    }
+    if (!instant?.title) {
+      // Don't need a diamond if there's no text to fill
+      return super.drawChevron(ctx);
+    }
+
+    // Draw a diamond at a fixed location and size with the initial
+    // of the instant's title at the centre. Should be used with
+    // ctx.translate and ctx.scale to alter location and size.
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(HALF_DIAMOND_WIDTH_PX, HALF_SLICE_HEIGHT);
+    ctx.lineTo(0, SLICE_HEIGHT);
+    ctx.lineTo(-HALF_DIAMOND_WIDTH_PX, HALF_SLICE_HEIGHT);
+    ctx.lineTo(0, 0);
+    ctx.fill();
+
+    const x = 0;
+    const y = (SLICE_HEIGHT + instant.tmAscent) / 2;
+    ctx.fillStyle = contrastingTextColor(instant.color);
+    ctx.fillText(instant.title.substring(0, 1).toUpperCase(), x, y);
   }
 }
 
