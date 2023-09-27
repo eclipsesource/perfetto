@@ -59,13 +59,9 @@ export interface Data extends TrackData {
 // Like a Slice, but only of the instantaneous kind and
 // only enough information to render it in the track
 export interface Instant {
-  id: number;
-  start: bigint;
-  depth: number;
   title: string;
   color: string;
   tmAscent: number;
-  tmWidth: number;
 }
 
 export class ChromeSliceTrackController extends TrackController<Config, Data> {
@@ -268,13 +264,9 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       // Then B, C, D and back to A:
       if (isInstant) {
         const instant: Instant = {
-          id: sliceId,
-          depth,
           title,
-          start: tStart,
           color,
           tmAscent: charAscent,
-          tmWidth: charWidth,
         };
 
         if (isSelected) {
