@@ -341,6 +341,14 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     drawRectOnSelected();
   }
 
+  // Draw a chevron for the current intantaneous slice in the track.
+  // The optional |Instant| provides additional hints that may be
+  // useful in rendering the slice.
+  //
+  // Precondition: the calling context must first |save| the |ctx| because this
+  //   method is free to change fill style, transform, and other properties of
+  //   the context. And the caller must |restore| the |ctx| on return from this
+  //   method to clear any such changes.
   drawChevron(ctx: CanvasRenderingContext2D, _instant?: Instant) {
     // Draw a chevron at a fixed location and size. Should be used with
     // ctx.translate and ctx.scale to alter location and size.
