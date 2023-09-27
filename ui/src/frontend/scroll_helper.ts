@@ -121,35 +121,60 @@ export function verticalScrollToTrack(
     return;
   }
 
-  let trackGroupId: string | undefined;
-  let trackSubgroupId: string | undefined;
-  let trackGroup = null;
-  let trackSubgroup = null;
+  // Track groups containing the track to be revealed, in order from top
+  // down, represented either as the rendered HTML element or, if not
+  // rendered because an ancestor group is collapsed, its UUID
+  const trackGroupsTopDown: (Element|string)[] = [];
   const containingIds = getContainingTrackIds(globals.state, trackIdString);
-  if (containingIds) {
-    trackGroupId = containingIds[0];
-    trackSubgroupId = containingIds[1];
-    trackGroup = document.querySelector('#track_' + trackGroupId);
-    if (trackSubgroupId) {
-      trackSubgroup = document.querySelector('#track_' + trackSubgroupId);
-    }
-  }
-
-  if (!trackGroupId || !trackGroup) {
+  if (!containingIds || !containingIds.length) {
     console.error(`Can't scroll, track (${trackIdString}) not found.`);
     return;
   }
 
-  // The requested track is inside a closed track group, either open the track
-  // group and scroll to the track or just scroll to the track group.
+  for (const trackGroupId of containingIds) {
+    const group = document.querySelector('#track_' + trackGroupId);
+
+    if (group) {
+      trackGroupsTopDown.push(group);
+    } else {
+      // Some containing group is collapsed, so this one is not rendered
+      trackGroupsTopDown.push(trackGroupId);
+    }
+  }
+
+  // The requested track is inside a closed track group. Either open the track
+  // group and scroll to the track or just scroll to deepest nested track group
+  // that has been rendered.
   if (openGroup) {
     // After the track exists in the dom, it will be scrolled to.
     globals.frontendLocalState.scrollToTrackId = trackId;
-    globals.dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
-    // TODO(cwd): Handle the track subgroup
+    for (let i = 1; i < trackGroupsTopDown.length; i++) {
+      const trackGroup = trackGroupsTopDown[i];
+      if (typeof trackGroup === 'string') {
+        // Expand its parent
+        if (typeof trackGroupsTopDown[i - 1] !== 'string') {
+          const trackGroupId = containingIds[i - 1];
+          globals.dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
+        }
+
+        // And mark all the rest for expansion when they are created
+        globals.frontendLocalState.expandTrackGroupIds.add(trackGroup);
+      } else if (i === (trackGroupsTopDown.length - 1)) {
+        // Need to expand the bottommost group to create the track to reveal
+        const trackGroupId = containingIds[i];
+        globals.dispatch(Actions.toggleTrackGroupCollapsed({trackGroupId}));
+      }
+    }
     return;
-  } else {
-    (trackSubgroup ?? trackGroup).scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  }
+
+  // Find the deepest rendered group and scroll to it
+  for (let i = trackGroupsTopDown.length - 1; i >= 0; i--) {
+    const trackGroup = trackGroupsTopDown[i];
+    if (typeof trackGroup !== 'string') {
+      trackGroup.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+      break;
+    }
   }
 }
 
