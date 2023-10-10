@@ -21,6 +21,7 @@ import {getContainingTrackIds} from '../common/state';
 import {TPTime} from '../common/time';
 
 import {globals} from './globals';
+import {assertFalse, assertTrue} from '../base/logging';
 
 
 // Given a timestamp, if |ts| is not currently in view move the view to
@@ -180,17 +181,29 @@ function getTrackGroupsTopDown(groupIds: string[]): (Element|string)[] {
 // some tail of the former that are UUIDs representing unrendered
 // groups (because their container is collapsed), there may be
 // overlap in these arrays.
+//
+// Preconditions:
+//   - |trackGroupsTopDown| is non-empty
+//   - |trackGroupsTopDown| and |containingGroupIds| have the same length
+//   - |trackGroupsTopDown[0]| is a rendered |Element|
 function expandGroupsToRevealTrack(trackId: string,
     containingGroupIds: string[],
     trackGroupsTopDown: (Element|string)[]): void {
   // After the track exists in the DOM, it will be scrolled to.
   globals.frontendLocalState.scrollToTrackId = trackId;
 
+  assertTrue(trackGroupsTopDown.length > 0, 'No track groups to expand.');
+  assertTrue(
+    trackGroupsTopDown.length === containingGroupIds.length,
+    'Mismatched track groups and track group IDs.',
+  );
+  // It should not happen that the topmost group is not rendered
+  // because it has no real parent group that could be collapsed.
+  assertFalse(typeof trackGroupsTopDown[0] === 'string', 'Topmost track group is unrendered.');
+
   trackGroupsTopDown.forEach(
       (trackGroup: Element|string, i: number) => {
-    // It should not happen that the topmost group is not rendered
-    // because it has no real parent group that could be collapsed.
-    if ((typeof trackGroup === 'string') && (i > 0)) {
+    if (typeof trackGroup === 'string') {
       // Expand its parent
       if (typeof trackGroupsTopDown[i - 1] !== 'string') {
         const trackGroupId = containingGroupIds[i - 1];
