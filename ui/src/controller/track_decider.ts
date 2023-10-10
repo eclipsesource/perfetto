@@ -150,6 +150,22 @@ type LazyIdProvider = (() => string) & {
 // as much CPU as its parent context (trace or process, respectively).
 const IDLE_FACTOR = 1000;
 
+// Return either the |single| or |plural| form of a noun or verb
+// according to the number |n| of objects.
+function pluralize(n: number, single: string, plural = single + 's'): string {
+  return n === 1 ?
+    `${single}` :
+    `${plural}`;
+}
+
+// Count a number |n| of nouns or verbs using either the
+// |single| or |plural| form as appropriate. Unlike the
+// |pluralize| function, the resulting string includes
+// the |n| count.
+function count(n: number, single: string, plural?: string): string {
+  return `${n} ${pluralize(n, single, plural)}`;
+}
+
 class TrackDecider {
   private engineId: string;
   private engine: Engine;
@@ -161,17 +177,21 @@ class TrackDecider {
   // Map of track group name to function providing an ID for it
   // when the time comes that the track group needs to be created
   private lazyTrackGroupIds = new Map<string, LazyIdProvider>;
+
   // Set of |upid| from the |process| table recording
   // processes that are idle (< 0.1% CPU)
-  private mostlyIdleUpids = new Set<number>();
+  private idleUpids = new Set<number>();
+
   // Map of |upid| process identifier from the |thread| table
   // to |utid| from the |thread| table recording threads
-  // that are idle (< 0.1% CPU)
-  private mostlyIdleUtids = new Map<number, Set<number>>();
+  // that are idle (< 0.1% of their process's CPU usage)
+  private idleUtids = new Map<number, Set<number>>();
+
   // Map of |upid| process identifier to count of how many
   // of its threads were in existence but recorded no data
   // in the trace and so are not presented at all in the UI
   private nullThreadCounts = new Map<number, number>();
+
   // Map of |upid| process identifier to UUID of the thread
   // group (used for |AddTrackGroupArgs::id|), if any, that
   // collects its idle threads (< 0.1% CPU)
@@ -261,9 +281,6 @@ class TrackDecider {
       idleThreads > 0;
     const hasNullThreads = nullThreads !== undefined && nullThreads !== null &&
       nullThreads > 0;
-    const count = (n: number, single: string, plural = single + 's') => n === 1 ?
-      `1 ${single}` :
-      `${n} ${plural}`;
 
     let suffix = '';
     if (hasProcessName) {
@@ -1620,8 +1637,8 @@ class TrackDecider {
     // Don't need the Idle Threads group in a process that is idle
     // because all of its threads would redundantly be in that group.
     // And don't create a group for just one idle thread.
-    const idle = upid === null ? undefined : this.mostlyIdleUtids.get(upid);
-    const isIdleProcess = upid !== null && this.mostlyIdleUpids.has(upid);
+    const idle = upid === null ? undefined : this.idleUtids.get(upid);
+    const isIdleProcess = upid !== null && this.idleUpids.has(upid);
     return idle !== undefined && !isIdleProcess &&
         (idle.has(utid) && idle.size > 1) ?
       this.getIdleThreadsGroup(utid, upid) :
@@ -1629,26 +1646,23 @@ class TrackDecider {
   }
 
   getIdleThreadsGroup(utid: number, upid: number|null): string {
-    const processGroup = this.getUuid(utid, upid);
     const key = upid ?? 0;
     let result = this.idleThreadGroups.get(key);
     if (!result) {
       result = uuidv4();
-      let count = '';
-      let threads = 'Threads';
-      const idleThreads = this.mostlyIdleUtids.get(key)?.size ?? 0;
+      let name = 'Idle Threads (< 0.1%)';
+      const idleThreads = this.idleUtids.get(key)?.size ?? 0;
       if (idleThreads > 0) {
-        count = `${idleThreads} `;
-        if (idleThreads === 1) {
-          threads = 'Thread';
-        }
+        name = `${count(idleThreads, 'Idle thread')} (< 0.1%)`;
       }
       const nullThreads = this.nullThreadCounts.get(key) ?? 0;
-      const name = `${count}Idle ${threads} (< 0.1%)`;
       let description = 'An idle thread accounts for less than 0.1% of its process\'s total CPU time.';
       if (nullThreads > 0) {
-        description = `${description}\n${nullThreads} additional threads are not shown because they have no data.`;
+        description = `${description}\n${count(nullThreads, 'additional idle thread')} ${pluralize(nullThreads, 'is', 'are')} not shown because ${pluralize(nullThreads, 'it has', 'they have')} no data.`;
       }
+
+      // The group for the process that has this idle thread.
+      const processGroup = this.getUuid(utid, upid);
       this.createPureTrackGroup(result, name,
         {description, collapsed: true, parentGroup: processGroup});
       this.idleThreadGroups.set(key, result);
@@ -1743,7 +1757,11 @@ class TrackDecider {
   }
 
   async addProcessTrackGroups(engine: EngineProxy): Promise<void> {
+    // Map of process upid to its track group descriptor
     const processTrackGroups = new Map<string, AddTrackGroupArgs>();
+
+    // Map of idle process upid to its track group for descriptor
+    const idleProcessTrackGroups = new Map<string, AddTrackGroupArgs>();
 
     // We want to create groups of tracks in a specific order.
     // The tracks should be grouped:
@@ -1895,7 +1913,6 @@ class TrackDecider {
     const traceTime = globals.state.traceTime;
     const traceDuration = traceTime.end - traceTime.start;
     const idleProcessThreshold = Number(traceDuration) / IDLE_FACTOR;
-    const nullProcesses = new Set<number>();
 
     for (; it.valid(); it.next()) {
       const utid = it.utid;
@@ -1907,27 +1924,32 @@ class TrackDecider {
       const hasSched = !!it.total_dur;
       const hasHeapProfiles = !!it.hasHeapProfiles;
 
-      const nullProcess = it.total_dur === null;
-      if (nullProcess && upid !== null) {
-        nullProcesses.add(upid);
-      }
-      const idleProcess = !it.total_dur ||
-        (it.total_dur < idleProcessThreshold);
-      if (idleProcess && upid !== null) {
-        this.mostlyIdleUpids.add(upid);
+      const idleProcess = (upid !== null) && (
+        (it.total_dur === null) || (it.total_dur < idleProcessThreshold));
+      if (idleProcess) {
+        // Track the process that is idle but will show a track (idle processes
+        // that have no data at all will not show a track)
+        this.idleUpids.add(upid);
+      } else if (upid !== null) {
+        // In case a previous query result row had it idle
+        this.idleUpids.delete(upid);
       }
 
       // An "idle thread" is measured against its process's total CPU time
       // not the duration of the trace
       const idleThreadThreshold = (it.total_dur ?? 0) / IDLE_FACTOR;
-      const idleThread = !it.thread_total_dur ||
+      // If the total duration is NULL, that means we found no slices for the
+      // thread, so it is manifestly idle. We do not distinguish here between
+      // "null threads" (no track created) and "idle threads" (having a track)
+      // because that is done in the grouping of idle threads elsewhere.
+      const idleThread = it.thread_total_dur === null ||
         it.thread_total_dur < idleThreadThreshold;
       if (idleThread) {
         const key = upid ?? 0;
-        let mostlyIdleUtids = this.mostlyIdleUtids.get(key);
+        let mostlyIdleUtids = this.idleUtids.get(key);
         if (mostlyIdleUtids === undefined) {
           mostlyIdleUtids = new Set();
-          this.mostlyIdleUtids.set(key, mostlyIdleUtids);
+          this.idleUtids.set(key, mostlyIdleUtids);
         }
         mostlyIdleUtids.add(utid);
       }
@@ -1974,41 +1996,8 @@ class TrackDecider {
         };
         this.trackGroupsToAdd.push(trackGroup);
         processTrackGroups.set(pUuid, trackGroup);
-      }
-    }
-
-    const nonIdleProcessCount = processTrackGroups.size;
-    const idleProcessCount = this.mostlyIdleUpids.size;
-    const nullProcessCount = nullProcesses.size;
-    const totalProcessCount = nonIdleProcessCount +
-      idleProcessCount +
-      nullProcessCount;
-
-    if (nonIdleProcessCount > 0) {
-      const processesGroup = this.getTrackGroup(processesGroupId());
-      if (processesGroup) {
-        const nullProcessesMessage = `${nullProcessCount} of the processes ${nullProcessCount === 1 ? 'is' : 'are'} not shown, having no data.`;
-        processesGroup.name = `Processes (${totalProcessCount})`;
-        processesGroup.description = idleProcessCount > 0 ?
-          `${idleProcessCount + nullProcessCount} of the processes are idle.` :
-          nullProcessCount > 0 ?
-            nullProcessesMessage :
-            `${totalProcessCount} processes in total.`;
-      }
-    }
-    if (idleProcessCount > 0) {
-      // There are idle processes
-      const idleProcessesGroup = this.getTrackGroup(idleProcessesGroupId());
-      if (idleProcessesGroup) {
-        if (idleProcessCount === 1) {
-          // Don't create a group for just a single member
-          idleProcessesGroupId.revoke();
-        } else {
-          idleProcessesGroup.name = `${idleProcessCount} Idle Processes (< 0.1%)`;
-          const nullProcessesMessage = `${nullProcessCount} additional processes ${nullProcessCount === 1 ? 'is' : 'are'} not shown, having no data.`;
-          if (nullProcessCount > 0) {
-            idleProcessesGroup.description = `${idleProcessesGroup.description}\n${nullProcessesMessage}`;
-          }
+        if (idleProcess) {
+          idleProcessTrackGroups.set(pUuid, trackGroup);
         }
       }
     }
@@ -2020,14 +2009,50 @@ class TrackDecider {
     from
       (select upid, count(*) as total_threads
        from process join thread using (upid)
-       where utid != 0
+       where upid != 0 and utid != 0
        group by upid)
       left outer join
       (select upid, count(*) as null_threads
        from thread left outer join sched using (utid)
-       where sched.utid is null
+       where upid != 0 and sched.utid is null
        group by upid) using (upid)
     `);
+
+    const totalProcessCount = threadsPerProcess.numRows();
+    const shownProcessCount = processTrackGroups.size;
+    const idleProcessCount = idleProcessTrackGroups.size;
+    const nullProcessCount = totalProcessCount - shownProcessCount;
+
+    if (shownProcessCount > 0) {
+      const processesGroup = this.getTrackGroup(processesGroupId());
+      if (processesGroup) {
+        processesGroup.name = `Processes (${shownProcessCount})`;
+        const idleOrNull = idleProcessCount + nullProcessCount;
+        processesGroup.description = `There ${pluralize(totalProcessCount, 'is', 'are')} ${count(totalProcessCount, 'process', 'processes')} in total.`;
+        if (idleOrNull > 0) {
+          processesGroup.description = `${processesGroup.description}\nOf these, ${count(idleOrNull, 'process is', 'processes are')} idle.`;
+        }
+        if (idleProcessCount <= 0 && nullProcessCount > 0) {
+          processesGroup.description = `${processesGroup.description}\nNo idle processes are shown because they recorded no data.`;
+        }
+      }
+    }
+    if (idleProcessCount > 0) {
+      // There are idle processes actually showing tracks
+      const idleProcessesGroup = this.getTrackGroup(idleProcessesGroupId());
+      if (idleProcessesGroup) {
+        if (idleProcessCount === 1) {
+          // Don't create a group for just a single member
+          idleProcessesGroupId.revoke();
+        } else {
+          idleProcessesGroup.name = `${idleProcessCount} Idle Processes (< 0.1%)`;
+          if (nullProcessCount > 0) {
+          const nullProcessesMessage = `${nullProcessCount} additional idle ${pluralize(nullProcessCount, 'process is', 'processes are')} not shown, having no data at all.`;
+            idleProcessesGroup.description = `${idleProcessesGroup.description}\n${nullProcessesMessage}`;
+          }
+        }
+      }
+    }
 
     // Update process group descriptions with thread counts
     const tppIt = threadsPerProcess.iter({
@@ -2038,7 +2063,7 @@ class TrackDecider {
     for (; tppIt.valid(); tppIt.next()) {
       const upid = tppIt.upid;
       const totalThreads = tppIt.total_threads;
-      const idleThreads = this.mostlyIdleUtids.get(upid)?.size ?? 0;
+      const idleThreads = this.idleUtids.get(upid)?.size ?? 0;
       const nullThreads = tppIt.null_threads;
 
       if (nullThreads !== null) {
