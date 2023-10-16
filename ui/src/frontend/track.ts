@@ -23,6 +23,7 @@ import {TrackData} from '../common/track_data';
 import {checkerboard} from './checkerboard';
 import {globals} from './globals';
 import {TrackButtonAttrs} from './track_panel';
+import {getActiveVsyncData, renderVsyncColumns} from './vsync_helper';
 
 // Args passed to the track constructors when creating a new track.
 export interface NewTrackArgs {
@@ -138,6 +139,13 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
           Math.ceil(visibleTimeScale.hpTimeToPx(visibleWindowTime.end));
       checkerboard(ctx, this.getHeight(), startPx, endPx);
     } else {
+      // If we have vsync data, render columns under the track
+      const vsync = getActiveVsyncData();
+      if (vsync) {
+        ctx.save();
+        renderVsyncColumns(ctx, this.getHeight(), vsync);
+        ctx.restore();
+      }
       this.renderCanvas(ctx);
     }
   }
