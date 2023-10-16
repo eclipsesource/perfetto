@@ -120,6 +120,7 @@ import {
 import {TrackControllerArgs, trackControllerRegistry} from './track_controller';
 import {decideTracks} from './track_decider';
 import {VisualisedArgController} from './visualised_args_controller';
+import {VsyncController} from './vsync_controller';
 
 type States = 'init' | 'loading_trace' | 'ready';
 
@@ -328,6 +329,10 @@ export class TraceController extends Controller<States> {
         childControllers.push(
           Child('traceError', TraceErrorController, {engine}));
         childControllers.push(Child('metrics', MetricsController, {engine}));
+
+        // Vsync data from SurfaceFlinger's VSYNC-app counter, if available
+        childControllers.push(
+          Child('vsync', VsyncController, {engine, app: globals}));
 
         return childControllers;
 
