@@ -420,8 +420,11 @@ class TrackDecider {
     for (let index = 0; index < this.tracksToAdd.length; index++) {
       const track = this.tracksToAdd[index];
       if (track.kind !== COUNTER_TRACK_KIND ||
-        (track.trackGroup && track.trackGroup !== SCROLLING_TRACK_GROUP) ||
-        globalCounters.includes(track.name)) {
+        (track.trackGroup && track.trackGroup !== SCROLLING_TRACK_GROUP)) {
+        continue;
+      }
+      if (globalCounters.includes(track.name)) {
+        this.tracksToAdd[index].trackGroup = this.lazyTrackGroup('Memory Usage')();
         continue;
       }
       this.tracksToAdd[index].trackGroup = this.lazyTrackGroup('GPU Counters', {collapsed: false, parentGroup: this.gpuGroup()})();
