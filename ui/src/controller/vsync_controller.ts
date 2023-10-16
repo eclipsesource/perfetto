@@ -54,7 +54,7 @@ export class VsyncController extends Controller<'init'|'ready'> {
         if (this.timeSpan === undefined ||
             !this.timeSpan.equals(visibleTimeSpan)) {
           this.timeSpan = visibleTimeSpan;
-          this.getVsyncData(this.trackId, this.timeSpan);
+          this.loadVsyncData(this.trackId, this.timeSpan);
         }
         break;
       default:
@@ -77,13 +77,17 @@ export class VsyncController extends Controller<'init'|'ready'> {
       return undefined;
     }
 
-    const trackId = result.firstRow({'trackId': NUM}).trackId;
-    return trackId;
+    return result.firstRow({'trackId': NUM}).trackId;
   }
 
-  async getVsyncData(trackId: number, timeSpan: Span<bigint>) {
-    // Get at least two changes of the counter in the currently
-    // visible timespan of the trace
+  async loadVsyncData(trackId: number, timeSpan: Span<bigint>) {
+    // Try to get at least two changes of the counter, even if that means
+    // reaching beyond the currently visible timespan of the trace.
+    // But in any case get all changes of the counter that are in that
+    // visible span. Depending on the trace, and when zoomed in tight
+    // towards the end of the trace, there may not even be as many as
+    // two counter events to retrieve, so in that case we'll just
+    // get what we can.
     const result = await this.engine.query(`
       select ts, value from (
         select row_number() over (order by ts) as rn, ts, value
