@@ -312,8 +312,6 @@ export class TrackGroupPanel extends Panel<Attrs> {
       ctx.restore();
     }
 
-    this.highlightIfTrackSelected(ctx, size);
-
     drawGridLines(
         ctx,
         size.width,
