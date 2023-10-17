@@ -40,6 +40,7 @@ import {
   drawVerticalLineAtTime,
 } from './vertical_line_helper';
 import {getActiveVsyncData, renderVsyncColumns} from './vsync_helper';
+import {SELECTION_FILL_COLOR} from './css_constants';
 
 interface Attrs {
   trackGroupId: string;
@@ -285,7 +286,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const selectedArea = globals.state.areas[selection.areaId];
     const selectedAreaDuration = selectedArea.end - selectedArea.start;
     if (selectedArea.tracks.includes(this.trackGroupId)) {
-      ctx.fillStyle = 'rgba(131, 152, 230, 0.3)';
+      ctx.fillStyle = SELECTION_FILL_COLOR;
       ctx.fillRect(
           visibleTimeScale.tpTimeToPx(selectedArea.start) + this.shellWidth,
           0,
