@@ -103,7 +103,6 @@ const ENTITY_RESIDENCY_REGEX = new RegExp('^Entity residency:');
 const ENTITY_RESIDENCY_GROUP = 'Entity residency';
 const BATTERY_TRACK_REGEX = new RegExp('^(batt|power)\\..*$');
 const BATTERY_TRACK_GROUP = 'Battery';
-const MEMORY_USAGE_COUNTERS = ['Buffers', 'Cached', 'MemFree', 'MemTotal', 'SwapCached'];
 // Sets the default 'scale' for counter tracks. If the regex matches
 // then the paired mode is used. Entries are in priority order so the
 // first match wins.
@@ -422,11 +421,13 @@ class TrackDecider {
         (track.trackGroup && track.trackGroup !== SCROLLING_TRACK_GROUP)) {
         continue;
       }
-      if (MEMORY_USAGE_COUNTERS.includes(track.name)) {
+      // Check if track is a GPU counter
+      const result = await this.engine.query('select description from gpu_counter_track where name = "' + track.name + '"');
+      if (result.numRows() > 0) {
+        track.trackGroup = this.lazyTrackGroup('GPU Counters', {collapsed: false, parentGroup: this.gpuGroup()})();
+      } else {
         track.trackGroup = this.lazyTrackGroup('Memory Usage')();
-        continue;
       }
-      track.trackGroup = this.lazyTrackGroup('GPU Counters', {collapsed: false, parentGroup: this.gpuGroup()})();
     }
   }
   async addScrollJankTracks(engine: Engine): Promise<void> {
