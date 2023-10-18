@@ -416,14 +416,17 @@ class TrackDecider {
   }
 
   async groupCounterTracks(): Promise<void> {
+    const counterTracks : string[] = [];
+    const iter = (await this.engine.query(`select name from gpu_counter_track`)).iter({name: STR});
+    for (; iter.valid(); iter.next()) {
+      counterTracks.push(iter.name);
+    }
     for (const track of this.tracksToAdd) {
       if (track.kind !== COUNTER_TRACK_KIND ||
         (track.trackGroup && track.trackGroup !== SCROLLING_TRACK_GROUP)) {
         continue;
       }
-      // Check if track is a GPU counter
-      const result = await this.engine.query(`select description from gpu_counter_track where name = "${track.name}"`);
-      if (result.numRows() > 0) {
+      if (counterTracks.includes(track.name)) {
         track.trackGroup = this.lazyTrackGroup('GPU Counters', {collapsed: false, parentGroup: this.gpuGroup()})();
       } else {
         track.trackGroup = this.lazyTrackGroup('Memory Usage')();
