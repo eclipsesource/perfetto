@@ -422,7 +422,7 @@ class TrackDecider {
         continue;
       }
       // Check if track is a GPU counter
-      const result = await this.engine.query('select description from gpu_counter_track where name = "' + track.name + '"');
+      const result = await this.engine.query(`select description from gpu_counter_track where name = "${track.name}"`);
       if (result.numRows() > 0) {
         track.trackGroup = this.lazyTrackGroup('GPU Counters', {collapsed: false, parentGroup: this.gpuGroup()})();
       } else {
