@@ -670,13 +670,13 @@ button.query-ctrl {
 .track-group-panel {
   --collapsed-background: var(--main-background-color);
   --collapsed-transparent: fade-out(var(--main-background-color),1);
-  color: var(--main-foreground-color);
+  --expanded-background: var(--main-foreground-color);
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: 1fr;
   transition: background-color 0.4s, color 0.4s;
   height: 40px;
-
+  
   &::after {
     display: block;
     content: "";
@@ -729,6 +729,8 @@ button.query-ctrl {
     opacity: 1;
   }
   &[collapsed="true"] {
+    color: var(--main-foreground-color);
+    background-color: var(--main-background-color);
     .shell {
       border-right: 1px solid var(--main-foreground-color);
       background-color: var(--collapsed-background);
@@ -738,8 +740,8 @@ button.query-ctrl {
     }
   }
   &[collapsed="false"] {
-    background-color: var(--collapsed-background);
-    color: var(--main-foreground-color);
+    color: var(--main-background-color);
+    background-color: var(--main-foreground-color);
     font-weight: bold;
     span.chip {
       color: #121212;
