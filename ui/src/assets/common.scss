@@ -435,7 +435,6 @@ $bottom-tab-padding: 10px;
 
     .track-button {
       @include transition();
-      color: rgb(60, 86, 136);
       cursor: pointer;
       width: 22px;
       font-size: 18px;
@@ -456,7 +455,7 @@ $bottom-tab-padding: 10px;
       justify-content: center;
       
       &:hover:not(.disabled) {
-        background-color: var(--alt-background-color);
+        filter: brightness(2);
       }
     }
 
@@ -693,7 +692,6 @@ button.query-ctrl {
 
   .track-button {
     @include transition();
-    color: rgb(60, 86, 136);
     cursor: pointer;
     width: 22px;
     font-size: 18px;
@@ -721,7 +719,7 @@ button.query-ctrl {
     justify-content: center;
 
     &:hover {
-      background-color: var(--alt-background-color);
+      filter: brightness(2);
     }
   }
 
@@ -734,9 +732,6 @@ button.query-ctrl {
     .shell {
       border-right: 1px solid var(--main-foreground-color);
       background-color: var(--collapsed-background);
-    }
-    .track-button {
-      color: rgb(60, 86, 136);
     }
   }
   &[collapsed="false"] {
