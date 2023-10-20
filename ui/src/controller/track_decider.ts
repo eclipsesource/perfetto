@@ -197,9 +197,18 @@ class TrackDecider {
   // collects its idle threads (< 0.1% CPU)
   private idleThreadGroups = new Map<number, string>();
 
+  // Top-level "CPU" group for many things CPU-related.
+  private cpuGroup: LazyIdProvider = this.lazyTrackGroup('CPU',
+    {collapsed: false});
+
   // Top-level "GPU" group for all things GPU-related.
   private gpuGroup: LazyIdProvider = this.lazyTrackGroup('GPU',
     {collapsed: false});
+
+  // Top-level "Processes" group process groups containing
+  // the process/thread tracks.
+  private processesGroup: LazyIdProvider = this.lazyTrackGroup('Processes',
+    {collapsed: false, description: 'Track groups for each active process.'});
 
   constructor(engineId: string, engine: Engine) {
     this.engineId = engineId;
@@ -400,7 +409,7 @@ class TrackDecider {
     const cpus = await this.engine.getCpus();
     const cpuToSize = await this.guessCpuSizes();
     const groupId = this.lazyTrackGroup('CPU Usage',
-      {collapsed: false, lazyParentGroup: this.lazyTrackGroup('CPU', {collapsed: false})});
+      {collapsed: false, lazyParentGroup: this.cpuGroup});
 
     for (const cpu of cpus) {
       const size = cpuToSize.get(cpu);
@@ -430,7 +439,8 @@ class TrackDecider {
         continue;
       }
       if (counterTracks.includes(track.name)) {
-        track.trackGroup = this.lazyTrackGroup('GPU Counters', {collapsed: false, parentGroup: this.gpuGroup()})();
+        track.trackGroup = this.lazyTrackGroup('GPU Counters',
+          {lazyParentGroup: this.gpuGroup})();
       } else {
         track.trackGroup = this.lazyTrackGroup('Memory Usage')();
       }
@@ -466,7 +476,7 @@ class TrackDecider {
   `);
     const maxCpuFreq = maxCpuFreqResult.firstRow({freq: NUM}).freq;
     const groupId = this.lazyTrackGroup('CPU Frequencies',
-      {lazyParentGroup: this.lazyTrackGroup('CPU', {collapsed: false})});
+      {lazyParentGroup: this.cpuGroup});
 
     for (const cpu of cpus) {
       // Only add a cpu freq track if we have
@@ -1942,12 +1952,10 @@ class TrackDecider {
       chromeProcessLabels: STR,
     });
 
-    const processesGroupId = this.lazyTrackGroup('Processes',
-      {description: 'Track groups for each active process.'});
-    const idleProcessesGroupId = this.lazyTrackGroup('Idle Processes (< 0.1%)',
+   const idleProcessesGroupId = this.lazyTrackGroup('Idle Processes (< 0.1%)',
       {collapsed: true,
         description: 'CPU usage of an idle process accounts for less than 0.1% of the total trace duration.',
-        lazyParentGroup: processesGroupId});
+        lazyParentGroup: this.processesGroup});
 
     // An "idle process" is measured against the duration of the trace.
     // The threshold is 0.1%, or one one-thousandth, of the trace time.
@@ -2032,7 +2040,7 @@ class TrackDecider {
           // jankyness.
           collapsed: !hasHeapProfiles,
           parentGroup: !idleProcess ?
-            processesGroupId() :
+            this.processesGroup() :
             idleProcessesGroupId(),
         };
         this.trackGroupsToAdd.push(trackGroup);
@@ -2065,7 +2073,7 @@ class TrackDecider {
     const nullProcessCount = totalProcessCount - shownProcessCount;
 
     if (shownProcessCount > 0) {
-      const processesGroup = this.getTrackGroup(processesGroupId());
+      const processesGroup = this.getTrackGroup(this.processesGroup());
       if (processesGroup) {
         processesGroup.name = `Processes (${shownProcessCount})`;
         const idleOrNull = idleProcessCount + nullProcessCount;
