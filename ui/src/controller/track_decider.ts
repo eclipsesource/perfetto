@@ -205,6 +205,9 @@ class TrackDecider {
   private gpuGroup: LazyIdProvider = this.lazyTrackGroup('GPU',
     {collapsed: false});
 
+  // Top-level "SurfaceFlinger Events" group.
+  private sfEventsGroup: LazyIdProvider = this.lazyTrackGroup('SurfaceFlinger Events');
+
   // Top-level "Processes" group process groups containing
   // the process/thread tracks.
   private processesGroup: LazyIdProvider = this.lazyTrackGroup('Processes',
@@ -2152,8 +2155,7 @@ class TrackDecider {
     }
 
     const layerGroup = (layerName: string) => this.lazyTrackGroup(
-      `Layer - ${layerName}`, {lazyParentGroup: this.lazyTrackGroup('Frame Lifecycle',
-        {lazyParentGroup: this.gpuGroup})});
+      `Layer - ${layerName}`, {lazyParentGroup: this.sfEventsGroup});
     const layerSubgroups = new Map<string, Map<string, string>>();
     const layerSubgroup = (layerName: string, subgroup: string) => {
       let subgroups = layerSubgroups.get(layerName);
@@ -2363,6 +2365,18 @@ class TrackDecider {
     };
 
     topGroups.sort(comparator);
+
+    // And put SurfaceFlinger Events (if exists) after GPU (if exists)
+    const sfEventsIndex = this.sfEventsGroup.exists() ?
+      topGroups.findIndex((group) => group.id === this.sfEventsGroup()) :
+      -1;
+    const gpuGroupIndex = this.gpuGroup.exists() ?
+      topGroups.findIndex((group) => group.id === this.gpuGroup()) :
+      -1;
+    if (sfEventsIndex >= 0 && gpuGroupIndex >= 0) {
+      const move = topGroups.splice(sfEventsIndex, 1);
+      topGroups.splice(gpuGroupIndex + 1, 0, ...move);
+    }
     this.trackGroupsToAdd.unshift(...topGroups);
   }
 
