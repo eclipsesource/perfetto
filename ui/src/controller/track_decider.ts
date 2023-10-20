@@ -166,6 +166,13 @@ function count(n: number, single: string, plural?: string): string {
   return `${n} ${pluralize(n, single, plural)}`;
 }
 
+// User-friendly titles for tracks.
+const TRACK_TITLES: {[key: string]: string} = {
+  'batt.capacity_pct': 'Capacity (%)',
+  'batt.charge_uah': 'Charge (μAh)',
+  'batt.current_ua': 'Current (μA)',
+};
+
 class TrackDecider {
   private engineId: string;
   private engine: Engine;
@@ -2337,6 +2344,13 @@ class TrackDecider {
     }
   }
 
+  // Assign titles for tracks that needs user-friendly names in the UI.
+  // Don't change the track name because it may originate in the trace
+  // database and so be used for correlation purposes.
+  setTrackTitles(): void {
+    this.tracksToAdd.forEach((track) => track.title = TRACK_TITLES[track.name]);
+  }
+
   sortTopTrackGroups(): void {
     // Must create parent groups before subgroups.
     const topGroups: AddTrackGroupArgs[] = [];
@@ -2548,6 +2562,8 @@ class TrackDecider {
         this.tracksToAdd.push(...tracksToAdd);
       }
     }
+
+    this.setTrackTitles();
 
     this.sortTopTrackGroups();
 
