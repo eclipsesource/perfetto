@@ -455,7 +455,7 @@ $bottom-tab-padding: 10px;
       justify-content: center;
       
       &:hover:not(.disabled) {
-        filter: brightness(2);
+        filter: invert(.25);
       }
     }
 
@@ -719,7 +719,7 @@ button.query-ctrl {
     justify-content: center;
 
     &:hover {
-      filter: brightness(2);
+      filter: invert(.25);
     }
   }
 
