@@ -67,7 +67,7 @@ export class TickmarkPanel extends Panel {
       const rectStart =
           Math.max(visibleTimeScale.tpTimeToPx(tStart), 0) + TRACK_SHELL_WIDTH;
       const rectEnd = visibleTimeScale.tpTimeToPx(tEnd) + TRACK_SHELL_WIDTH;
-      ctx.fillStyle = '#ffe263';
+      ctx.fillStyle = getCssStr('--track-highlight-background');
       ctx.fillRect(
           Math.floor(rectStart),
           0,
@@ -79,7 +79,7 @@ export class TickmarkPanel extends Panel {
       const start = globals.currentSearchResults.tsStarts[index];
       const triangleStart =
           Math.max(visibleTimeScale.tpTimeToPx(start), 0) + TRACK_SHELL_WIDTH;
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = getCssStr('--main-foreground-color');
       ctx.beginPath();
       ctx.moveTo(triangleStart, size.height);
       ctx.lineTo(triangleStart - 3, 0);
