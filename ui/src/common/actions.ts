@@ -645,6 +645,9 @@ export const StateActions = {
   moveTrack(
       state: StateDraft,
       args: {srcId: string; op: 'before' | 'after', dstId: string}): void {
+        // Is the ID a track or trackGroup
+        // Get parent group
+        // Groups have parentGroup.  Tracks have trackGroup.
     const moveWithinTrackList = (trackList: string[]) => {
       const newList: string[] = [];
       for (let i = 0; i < trackList.length; i++) {
@@ -664,7 +667,18 @@ export const StateActions = {
         trackList.push(x);
       });
     };
-
+    const trackLike: TrackState | TrackGroupState =
+      state.tracks[args.srcId] || state.trackGroups[args.srcId];
+    if (trackLike) {
+      if (trackLike.trackGroup) {
+        // If Id matches a track
+        moveWithinTrackList(state.trackGroups[trackLike.trackGroup].tracks);
+      } else if ((trackLike as any).parentGroup) {
+        // If Id matches a trackGroup
+        moveWithinTrackList(
+          state.trackGroups[(trackLike as any).parentGroup].subgroups);
+      }
+    }
     moveWithinTrackList(state.pinnedTracks);
     moveWithinTrackList(state.scrollingTracks);
   },
