@@ -645,9 +645,6 @@ export const StateActions = {
   moveTrack(
       state: StateDraft,
       args: {srcId: string; op: 'before' | 'after', dstId: string}): void {
-        // Is the ID a track or trackGroup
-        // Get parent group
-        // Groups have parentGroup.  Tracks have trackGroup.
     const moveWithinTrackList = (trackList: string[]) => {
       const newList: string[] = [];
       for (let i = 0; i < trackList.length; i++) {
@@ -667,16 +664,25 @@ export const StateActions = {
         trackList.push(x);
       });
     };
-    const trackLike: TrackState | TrackGroupState =
-      state.tracks[args.srcId] || state.trackGroups[args.srcId];
-    if (trackLike) {
-      if (trackLike.trackGroup) {
-        // If Id matches a track
-        moveWithinTrackList(state.trackGroups[trackLike.trackGroup].tracks);
-      } else if ((trackLike as any).parentGroup) {
-        // If Id matches a trackGroup
+    let trackLikeSrc: TrackState | TrackGroupState = state.tracks[args.srcId];
+    let trackLikeDst: TrackState | TrackGroupState = state.tracks[args.dstId];
+    if ((trackLikeSrc && trackLikeSrc.name) &&
+      (trackLikeDst && trackLikeDst.name)) {
+      // Its a track
+      if (trackLikeSrc.trackGroup &&
+        trackLikeSrc.trackGroup === trackLikeDst.trackGroup) {
+        // Both Ids match a track with the same parent
+        moveWithinTrackList(state.trackGroups[trackLikeSrc.trackGroup].tracks);
+      }
+    } else {
+      // Its a Track Group
+      trackLikeSrc = state.trackGroups[args.srcId];
+      trackLikeDst = state.trackGroups[args.dstId];
+      if (trackLikeSrc && (trackLikeSrc as any).parentGroup &&
+      (trackLikeSrc as any).parentGroup === (trackLikeDst as any).parentGroup) {
+        // Both Ids match a trackGroups with the same parent
         moveWithinTrackList(
-          state.trackGroups[(trackLike as any).parentGroup].subgroups);
+          state.trackGroups[(trackLikeSrc as any).parentGroup].subgroups);
       }
     }
     moveWithinTrackList(state.pinnedTracks);
