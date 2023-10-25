@@ -702,6 +702,17 @@ export const StateActions = {
     }
   },
 
+  moveIdlesToBottom(state: StateDraft, _: {}): void {
+    for (const group of Object.values(state.trackGroups)) {
+      if (group.name.search(/\bIdle\b/) >= 0) {
+        const parent = state.trackGroups[group.parentGroup!];
+        // Move TrackGroup to end of sort order
+        const index = parent.sortOrder.findIndex((id)=>id === group.id);
+        parent.sortOrder.push(parent.sortOrder.splice(index, 1)[0]);
+      }
+    }
+  },
+
   toggleTrackPinned(state: StateDraft, args: {trackId: string}): void {
     const id = args.trackId;
     const isPinned = state.pinnedTracks.includes(id);

@@ -253,10 +253,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
 
       const childTracks: AnyAttrsVnode[] = [];
       if (!group.collapsed) {
-        // Recursively render subgroups, first, except idle processes/threads
-        // let idleSubgroup: TrackGroupState|undefined;
         for (const id of group.sortOrder) {
-          /* track? */
           if (group.tracks.includes(id) && id !== group.tracks[0]) {
             childTracks.push(m(TrackPanel, {
               key: `track-${group.id}-${id}`,
@@ -266,39 +263,10 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
             continue;
           }
           const trackGroup = globals.state.trackGroups[id];
-          /* group? */
           if (trackGroup && trackGroup.name) {
             renderGroup(trackGroup, childTracks);
-            continue;
           }
         }
-        // for (const id of group.subgroups) {
-        //   const subgroup = globals.state.trackGroups[id];
-        //   if (subgroup) {
-        //     if (!idleSubgroup && subgroup.name.search(/\bIdle\b/) >= 0) {
-        //       // Defer
-        //       idleSubgroup = subgroup;
-        //     } else {
-        //       renderGroup(subgroup, childTracks);
-        //     }
-        //   }
-        // }
-
-        // The first track is the summary track, and is displayed as part of the
-        // group panel, we don't want to display it twice so we start from 1.
-        // for (let i = 1; i < group.tracks.length; ++i) {
-        //   const id = group.tracks[i];
-        //   childTracks.push(m(TrackPanel, {
-        //     key: `track-${group.id}-${id}`,
-        //     id,
-        //     selectable: true,
-        //   }));
-        // }
-
-        // And the idle processes/tracks subgroup
-        // if (idleSubgroup) {
-        //   renderGroup(idleSubgroup, childTracks);
-        // }
       }
 
       panels.push(m(TrackGroup, {
@@ -324,10 +292,6 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
         }
       },
     );
-    // Might be covered by above
-    // Object.values(globals.state.trackGroups)
-    //   .filter((group) => group.parentGroup === undefined)
-    //   .forEach((group) => renderGroup(group, rootNode));
 
     const overviewPanel = [];
     if (OVERVIEW_PANEL_FLAG.get()) {

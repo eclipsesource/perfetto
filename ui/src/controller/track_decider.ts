@@ -2578,12 +2578,22 @@ class TrackDecider {
         filteredTracks: rejected,
       }));
     }
+    // Top lvl tracks need to be added first
+    // Idle Groups need to be added last, along with their tracks
+    // Order:
+    //  Toplvl Tracks,
+    //  Track Groups that aren't Idles,
+    //  Tracks under Track Groups that aren't Idles.
+    //  Idle Track Groups,
+    //  Idle Track Group children (dang that's complicated :nervous_laugh:)
 
     actions.push(Actions.addTrackGroups({trackGroups: this.trackGroupsToAdd}));
     actions.push(Actions.addTracks({tracks: this.tracksToAdd}));
 
     const threadOrderingMetadata = await this.computeThreadOrderingMetadata();
     actions.push(Actions.setUtidToTrackSortKey({threadOrderingMetadata}));
+
+    actions.push(Actions.moveIdlesToBottom({}));
 
     this.applyDefaultCounterScale();
 
