@@ -696,6 +696,10 @@ export const StateActions = {
         moveWithinTrackList(state.trackGroups[srcParent].sortOrder);
       }
     }
+    // Currently we don't support making track groups pinned
+    if ('trackGroup' in trackLikeSrc) {
+      moveWithinTrackList(state.pinnedTracks);
+    }
   },
 
   toggleTrackPinned(state: StateDraft, args: {trackId: string}): void {
