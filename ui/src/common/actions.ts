@@ -178,6 +178,7 @@ function removeTrack(state: StateDraft, trackId: string) {
     removeTrackId(state.scrollingTracks);
   } else if (track.trackGroup !== undefined) {
     removeTrackId(state.trackGroups[track.trackGroup].tracks);
+    removeTrackId(state.trackGroups[track.trackGroup].sortOrder);
   }
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== trackId);
 }
@@ -190,6 +191,7 @@ function removeTrackGroup(state: StateDraft, groupId: string) {
     undefined;
   if (parent) {
     remove(parent.subgroups, groupId);
+    remove(parent.sortOrder, groupId);
   }
   delete state.trackGroups[groupId];
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== groupId);
@@ -373,6 +375,7 @@ export const StateActions = {
         state.scrollingTracks.push(id);
       } else if (track.trackGroup !== undefined) {
         assertExists(state.trackGroups[track.trackGroup]).tracks.push(id);
+        assertExists(state.trackGroups[track.trackGroup]).sortOrder.push(id);
       }
       unfilterTrack(state, state.tracks[id]);
     });
@@ -410,6 +413,7 @@ export const StateActions = {
       state.scrollingTracks.push(id);
     } else if (args.trackGroup !== undefined) {
       assertExists(state.trackGroups[args.trackGroup]).tracks.push(id);
+      assertExists(state.trackGroups[args.trackGroup]).sortOrder.push(id);
     }
   },
 
@@ -432,6 +436,13 @@ export const StateActions = {
       `${args.name}\n\n${args.description}` :
       args.name;
     const subgroups = args.subgroups ? [...args.subgroups] : [];
+    const parentString = args.parentGroup || SCROLLING_TRACK_GROUP;
+    if (parentString === SCROLLING_TRACK_GROUP) {
+      state.scrollingTracks.push(args.id);
+    } else {
+      state.trackGroups[parentString].subgroups.push(args.id);
+      state.trackGroups[parentString].sortOrder.push(args.id);
+    }
     state.trackGroups[args.id] = {
       engineId: args.engineId,
       name: args.name,
@@ -439,15 +450,11 @@ export const StateActions = {
       id: args.id,
       collapsed: args.collapsed,
       tracks: [args.summaryTrackId],
-      parentGroup: args.parentGroup,
+      parentGroup: parentString,
       subgroups,
+      sortOrder: [],
     };
-    const parentGroup = args.parentGroup ?
-      state.trackGroups[args.parentGroup] :
-      undefined;
-    if (parentGroup) {
-      parentGroup.subgroups.push(args.id);
-    }
+
     unfilterTrackGroup(state, state.trackGroups[args.id]);
   },
 
@@ -666,27 +673,29 @@ export const StateActions = {
     };
     let trackLikeSrc: TrackState | TrackGroupState = state.tracks[args.srcId];
     let trackLikeDst: TrackState | TrackGroupState = state.tracks[args.dstId];
-    if ((trackLikeSrc && trackLikeSrc.name) &&
-      (trackLikeDst && trackLikeDst.name)) {
-      // Its a track
-      if (trackLikeSrc.trackGroup &&
-        trackLikeSrc.trackGroup === trackLikeDst.trackGroup) {
-        // Both Ids match a track with the same parent
-        moveWithinTrackList(state.trackGroups[trackLikeSrc.trackGroup].tracks);
-      }
+    let srcParent: string | undefined;
+    let dstParent: string | undefined;
+    if (trackLikeSrc && trackLikeSrc.name) {
+      srcParent = trackLikeSrc.trackGroup;
     } else {
-      // Its a Track Group
       trackLikeSrc = state.trackGroups[args.srcId];
+      srcParent = trackLikeSrc.parentGroup;
+    }
+
+    if (trackLikeDst && trackLikeDst.name) {
+      dstParent = trackLikeDst.trackGroup;
+    } else {
       trackLikeDst = state.trackGroups[args.dstId];
-      if (trackLikeSrc && (trackLikeSrc as any).parentGroup &&
-      (trackLikeSrc as any).parentGroup === (trackLikeDst as any).parentGroup) {
-        // Both Ids match a trackGroups with the same parent
-        moveWithinTrackList(
-          state.trackGroups[(trackLikeSrc as any).parentGroup].subgroups);
+      dstParent = trackLikeDst.parentGroup;
+    }
+
+    if (srcParent && srcParent === dstParent) {
+      if (srcParent === SCROLLING_TRACK_GROUP) {
+        moveWithinTrackList(state.scrollingTracks);
+      } else {
+        moveWithinTrackList(state.trackGroups[srcParent].sortOrder);
       }
     }
-    moveWithinTrackList(state.pinnedTracks);
-    moveWithinTrackList(state.scrollingTracks);
   },
 
   toggleTrackPinned(state: StateDraft, args: {trackId: string}): void {
