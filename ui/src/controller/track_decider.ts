@@ -2578,15 +2578,15 @@ class TrackDecider {
         filteredTracks: rejected,
       }));
     }
-    // Top lvl tracks need to be added first
-    // Idle Groups need to be added last, along with their tracks
-    // Order:
-    //  Toplvl Tracks,
-    //  Track Groups that aren't Idles,
-    //  Tracks under Track Groups that aren't Idles.
-    //  Idle Track Groups,
-    //  Idle Track Group children (dang that's complicated :nervous_laugh:)
 
+    const topLvlTracks = this.tracksToAdd.filter((track, index)=> {
+      if (!track.trackGroup || track.trackGroup === SCROLLING_TRACK_GROUP) {
+        this.tracksToAdd.splice(index, 1);
+        return true;
+      }
+      return false;
+    });
+    actions.push(Actions.addTracks({tracks: topLvlTracks}));
     actions.push(Actions.addTrackGroups({trackGroups: this.trackGroupsToAdd}));
     actions.push(Actions.addTracks({tracks: this.tracksToAdd}));
 
