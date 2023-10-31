@@ -67,7 +67,7 @@ export class TickmarkPanel extends Panel {
       const rectStart =
           Math.max(visibleTimeScale.tpTimeToPx(tStart), 0) + TRACK_SHELL_WIDTH;
       const rectEnd = visibleTimeScale.tpTimeToPx(tEnd) + TRACK_SHELL_WIDTH;
-      ctx.fillStyle = getCssStr('--track-highlight-background');
+      ctx.fillStyle = '#dcdc3b';
       ctx.fillRect(
           Math.floor(rectStart),
           0,
@@ -80,12 +80,14 @@ export class TickmarkPanel extends Panel {
       const triangleStart =
           Math.max(visibleTimeScale.tpTimeToPx(start), 0) + TRACK_SHELL_WIDTH;
       ctx.fillStyle = getCssStr('--main-foreground-color');
+      ctx.strokeStyle = getCssStr('--main-background-color');
       ctx.beginPath();
       ctx.moveTo(triangleStart, size.height);
       ctx.lineTo(triangleStart - 3, 0);
       ctx.lineTo(triangleStart + 3, 0);
       ctx.lineTo(triangleStart, size.height);
       ctx.fill();
+      ctx.stroke();
       ctx.closePath();
     }
 
