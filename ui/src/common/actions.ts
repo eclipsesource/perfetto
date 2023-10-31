@@ -193,6 +193,9 @@ function removeTrackGroup(state: StateDraft, groupId: string) {
     remove(parent.subgroups, groupId);
     remove(parent.sortOrder, groupId);
   }
+  if (state.scrollingTracks.includes(groupId)) {
+    remove(state.scrollingTracks, groupId);
+  }
   delete state.trackGroups[groupId];
   state.pinnedTracks = state.pinnedTracks.filter((id) => id !== groupId);
 }
