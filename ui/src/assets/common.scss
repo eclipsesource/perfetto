@@ -457,7 +457,8 @@ $bottom-tab-padding: 10px;
       opacity: 1;
     }
     &.flash {
-      background-color: var(--track-highlight-background);
+      color:var(--main-background-color);
+      background-color: var(--track-highlight-background) ;
     }
   }
 }
@@ -790,6 +791,7 @@ button.query-ctrl {
       }
     }
     &.flash {
+      color:var(--main-background-color);
       background-color: var(--track-highlight-background);
     }
     &.selected {
