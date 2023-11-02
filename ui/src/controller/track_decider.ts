@@ -2592,8 +2592,13 @@ class TrackDecider {
 
     const threadOrderingMetadata = await this.computeThreadOrderingMetadata();
     actions.push(Actions.setUtidToTrackSortKey({threadOrderingMetadata}));
-
-    actions.push(Actions.moveIdlesToBottom({}));
+    const idleGroups: string[] = [];
+    for (const group of Object.values(globals.state.trackGroups)) {
+      if (group.name.search(/\bIdle\b/) >= 0) {
+        idleGroups.push(group.id);
+      }
+    }
+    actions.push(Actions.moveTrackGroupsToBottom({ids: idleGroups}));
 
     this.applyDefaultCounterScale();
 

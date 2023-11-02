@@ -705,13 +705,20 @@ export const StateActions = {
     }
   },
 
-  moveIdlesToBottom(state: StateDraft, _: {}): void {
-    for (const group of Object.values(state.trackGroups)) {
-      if (group.name.search(/\bIdle\b/) >= 0) {
-        const parent = state.trackGroups[group.parentGroup!];
+  moveTrackGroupsToBottom(state: StateDraft, args:{ids:string[]}): void {
+    for (const id of args.ids) {
+      const group = state.trackGroups[id];
+      if (group && group.parentGroup) {
+        const parent = state.trackGroups[group.parentGroup];
+        if (!parent) {
+          console.warn('Parent not found');
+          return;
+        }
         // Move TrackGroup to end of sort order
         const index = parent.sortOrder.findIndex((id)=>id === group.id);
-        parent.sortOrder.push(parent.sortOrder.splice(index, 1)[0]);
+        parent.sortOrder.push(...parent.sortOrder.splice(index, 1));
+      } else {
+        console.warn('Group is parentless');
       }
     }
   },
