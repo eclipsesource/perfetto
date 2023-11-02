@@ -2593,7 +2593,7 @@ class TrackDecider {
     const threadOrderingMetadata = await this.computeThreadOrderingMetadata();
     actions.push(Actions.setUtidToTrackSortKey({threadOrderingMetadata}));
     const idleGroups: string[] = [];
-    for (const group of Object.values(globals.state.trackGroups)) {
+    for (const group of Object.values(this.trackGroupsToAdd)) {
       if (group.name.search(/\bIdle\b/) >= 0) {
         idleGroups.push(group.id);
       }
