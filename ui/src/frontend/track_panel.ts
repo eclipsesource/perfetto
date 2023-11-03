@@ -163,6 +163,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     globals.rafScheduler.scheduleFullRedraw();
     dataTransfer.setData('perfetto/track', `${this.attrs!.trackState.id}`);
     dataTransfer.setDragImage(new Image(), 0, 0);
+    dataTransfer.effectAllowed = 'move';
   }
 
   ondragend() {

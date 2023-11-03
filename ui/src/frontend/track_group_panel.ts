@@ -209,6 +209,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     globals.rafScheduler.scheduleFullRedraw();
     dataTransfer.setData('perfetto/track', `${this.trackGroupId}`);
     dataTransfer.setDragImage(new Image(), 0, 0);
+    dataTransfer.effectAllowed = 'move';
   }
 
   ondragend() {
