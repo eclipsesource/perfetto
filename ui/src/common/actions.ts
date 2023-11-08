@@ -676,22 +676,24 @@ export const StateActions = {
         trackList.push(x);
       });
     };
-    let trackLikeSrc: TrackState | TrackGroupState = state.tracks[args.srcId];
-    let trackLikeDst: TrackState | TrackGroupState = state.tracks[args.dstId];
+    let trackLikeSrc: TrackState | TrackGroupState =
+      state.trackGroups[args.srcId];
+    let trackLikeDst: TrackState | TrackGroupState =
+      state.trackGroups[args.dstId];
     let srcParent: string | undefined;
     let dstParent: string | undefined;
-    if (trackLikeSrc && trackLikeSrc.name) {
-      srcParent = trackLikeSrc.trackGroup;
-    } else {
-      trackLikeSrc = state.trackGroups[args.srcId];
+    if (trackLikeSrc) {
       srcParent = trackLikeSrc.parentGroup;
+    } else {
+      trackLikeSrc = state.tracks[args.srcId];
+      srcParent = trackLikeSrc.trackGroup;
     }
 
-    if (trackLikeDst && trackLikeDst.name) {
-      dstParent = trackLikeDst.trackGroup;
-    } else {
-      trackLikeDst = state.trackGroups[args.dstId];
+    if (trackLikeDst) {
       dstParent = trackLikeDst.parentGroup;
+    } else {
+      trackLikeDst = state.tracks[args.dstId];
+      dstParent = trackLikeDst.trackGroup;
     }
 
     if (srcParent && srcParent === dstParent) {

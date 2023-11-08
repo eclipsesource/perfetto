@@ -279,16 +279,17 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
     globals.state.scrollingTracks.forEach(
       (id) => {
         let trackLike : TrackState | TrackGroupState =
-        globals.state.tracks[id];
+        globals.state.trackGroups[id];
+        // Check groups first since summary tracks have same id a lot of times
+        // If is a trackGroup
+        if (trackLike) {
+          renderGroup(trackLike, rootNode);
+        }
+        trackLike = globals.state.tracks[id];
         // If is a track
-        if (trackLike && trackLike.name) {
+        if (trackLike) {
           rootNode.push(m(TrackPanel, {key: id, id, selectable: true}));
           return;
-        }
-        trackLike = globals.state.trackGroups[id];
-        // If is a trackGroup
-        if (trackLike && trackLike.name) {
-          renderGroup(trackLike, rootNode);
         }
       },
     );

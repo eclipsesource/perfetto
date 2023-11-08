@@ -2869,12 +2869,12 @@ class TrackDecider {
   createPureTrackGroup(id: string, name: string,
       details: LazyTrackGroupArgs = {}): AddTrackGroupArgs {
     const {lazyParentGroup, ...staticDetails} = details;
-
+    const summaryTrackId = id+':summary';
     const result: AddTrackGroupArgs = {
       id,
       engineId: this.engineId,
       name,
-      summaryTrackId: id, // Group needs a summary track, even if it's blank
+      summaryTrackId, // Group needs a summary track, even if it's blank
       collapsed: true,
       ...staticDetails,
     };
@@ -2883,16 +2883,16 @@ class TrackDecider {
     }
 
     this.trackGroupsToAdd.push(result);
-    this.tracksToAdd.push(this.blankSummaryTrack(id, name + ' Summary Track'));
+    this.tracksToAdd.push(this.blankSummaryTrack(summaryTrackId));
     return result;
   }
 
-  blankSummaryTrack(id: string, name: string): AddTrackArgs {
+  blankSummaryTrack(id: string): AddTrackArgs {
     return {
       engineId: this.engineId,
       id: id,
       kind: NULL_TRACK_KIND,
-      name,
+      name: id,
       trackSortKey: PrimaryTrackSortKey.NULL_TRACK,
       trackGroup: undefined,
       config: {},
