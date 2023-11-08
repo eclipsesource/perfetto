@@ -2868,7 +2868,7 @@ class TrackDecider {
     }
 
     this.trackGroupsToAdd.push(result);
-    this.tracksToAdd.push(this.blankSummaryTrack(id, name));
+    this.tracksToAdd.push(this.blankSummaryTrack(id, name + ' Summary Track'));
     return result;
   }
 
