@@ -160,6 +160,10 @@ export class TrackGroupPanel extends Panel<Attrs> {
             },
             class: `${highlightClass} ${dragClass} ${dropClass}`,
             ondragstart: this.ondragstart.bind(this),
+            ondragenter: (e: DragEvent)=>{
+              e.preventDefault();
+              e.stopPropagation();
+            },
             ondragend: this.ondragend.bind(this),
             ondragover: this.ondragover.bind(this),
             ondragleave: this.ondragleave.bind(this),
@@ -206,10 +210,11 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const dataTransfer = e.dataTransfer;
     if (dataTransfer === null) return;
     this.dragging = true;
+    e.stopPropagation();
     globals.rafScheduler.scheduleFullRedraw();
+    dataTransfer.effectAllowed = 'move';
     dataTransfer.setData('perfetto/track', `${this.trackGroupId}`);
     dataTransfer.setDragImage(new Image(), 0, 0);
-    dataTransfer.effectAllowed = 'move';
   }
 
   ondragend() {
@@ -223,6 +228,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const dataTransfer = e.dataTransfer;
     if (dataTransfer === null) return;
     if (!dataTransfer.types.includes('perfetto/track')) return;
+    e.stopPropagation();
     dataTransfer.dropEffect = 'move';
     e.preventDefault();
 
