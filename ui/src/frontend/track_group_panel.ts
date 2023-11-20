@@ -373,8 +373,6 @@ export class TrackGroupPanel extends Panel<Attrs> {
     ctx.fillStyle = this.backgroundColor;
     ctx.fillRect(0, 0, size.width, size.height);
 
-    if (!collapsed) return;
-
     // If we have vsync data, render columns under the track group
     const vsync = getActiveVsyncData();
     if (vsync) {
@@ -389,13 +387,14 @@ export class TrackGroupPanel extends Panel<Attrs> {
         size.width,
         size.height);
 
-    ctx.save();
-    ctx.translate(this.shellWidth, 0);
-    if (this.summaryTrack) {
-      this.summaryTrack.render(ctx);
+    if (!collapsed) {
+      ctx.save();
+      ctx.translate(this.shellWidth, 0);
+      if (this.summaryTrack) {
+        this.summaryTrack.render(ctx);
+      }
+      ctx.restore();
     }
-    ctx.restore();
-
     this.highlightIfTrackSelected(ctx, size);
 
     const {visibleTimeScale} = globals.frontendLocalState;
