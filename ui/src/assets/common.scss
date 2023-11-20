@@ -721,10 +721,6 @@ button.query-ctrl {
     opacity: 1;
   }
   &[collapsed="true"] {
-    .shell {
-      border-right: 1px solid var(--main-foreground-color);
-      background-color: var(--collapsed-background);
-    }
     .track-button {
       color: rgb(60, 86, 136);
     }
@@ -736,6 +732,8 @@ button.query-ctrl {
     }
   }
   .shell {
+    border-right: 1px solid var(--main-foreground-color);
+    background-color: var(--collapsed-background);
     padding: 0px 4px;
     display: grid;
     grid-template-areas: "fold-button title buttons";
