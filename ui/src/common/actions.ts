@@ -605,9 +605,6 @@ export const StateActions = {
     // rather than T1, T10, T11, ..., T2, T20, T21 .
     const coll = new Intl.Collator([], {sensitivity: 'base', numeric: true});
     for (const group of Object.values(state.trackGroups)) {
-      // This sort is not working as intended
-      // Changing track does nothing
-      // sortOrder must be changed in its place
       group.sortOrder.sort((a: string, b: string) => {
         if (state.tracks[a] && state.tracks[b]) {
           const aRank = getFullKey(a);
