@@ -228,10 +228,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const dataTransfer = e.dataTransfer;
     if (dataTransfer === null) return;
     const dataType = dataTransfer.types.find((dataType)=>{
-      if (dataType.startsWith('perfetto/track/')) {
-        return true;
-      }
-      return false;
+      return dataType.startsWith('perfetto/track/');
     });
     if (!dataType) return;
     const trackLikeId = dataType.split('/').pop();
