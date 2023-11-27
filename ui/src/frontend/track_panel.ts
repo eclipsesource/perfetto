@@ -182,10 +182,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     const dataTransfer = e.dataTransfer;
     if (dataTransfer === null) return;
     const dataType = dataTransfer.types.find((dataType)=>{
-      if (dataType.startsWith('perfetto/track/')) {
-        return true;
-      }
-      return false;
+      return dataType.startsWith('perfetto/track/');
     });
     if (!dataType) return;
     const trackLikeId = dataType.split('/').pop();
@@ -195,12 +192,10 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     e.preventDefault();
 
     // Test if id has same parent as current
-    // If no do not set this.dropping
-    let trackLike : TrackState | TrackGroupState =
-      globals.state.trackGroups[trackLikeId];
-    if (!trackLike) {
-      trackLike = globals.state.tracks[trackLikeId];
-    }
+    // If not do not set this.dropping
+    const trackLike : TrackState | TrackGroupState =
+      globals.state.trackGroups[trackLikeId] ??
+        globals.state.tracks[trackLikeId];
     if (('trackGroup' in trackLike && this.attrs!.trackState.trackGroup === trackLike.trackGroup) ||
     'parentGroup' in trackLike && this.attrs!.trackState.trackGroup === trackLike.parentGroup) {
       // Apply some hysteresis to the drop logic so that the lightened border
@@ -225,10 +220,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     if (dataTransfer === null) return;
     globals.rafScheduler.scheduleFullRedraw();
     const dataType = dataTransfer.types.find((dataType)=>{
-      if (dataType.startsWith('perfetto/track/')) {
-        return true;
-      }
-      return false;
+      return dataType.startsWith('perfetto/track/');
     });
     if (!dataType) return;
     const srcId = dataType.split('/').pop();

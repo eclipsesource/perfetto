@@ -238,12 +238,10 @@ export class TrackGroupPanel extends Panel<Attrs> {
     e.preventDefault();
 
     // Test if id has same parent as current
-    // If no do not set this.dropping
-    let trackLike : TrackState | TrackGroupState =
-      globals.state.trackGroups[trackLikeId];
-    if (!trackLike) {
-      trackLike = globals.state.tracks[trackLikeId];
-    }
+    // If not do not set this.dropping
+    const trackLike : TrackState | TrackGroupState =
+      globals.state.trackGroups[trackLikeId] ??
+        globals.state.tracks[trackLikeId];
     if (('trackGroup' in trackLike && this.trackGroupState.parentGroup === trackLike.trackGroup) ||
       'parentGroup' in trackLike && this.trackGroupState.parentGroup === trackLike.parentGroup) {
       // Apply some hysteresis to the drop logic so that the lightened border
