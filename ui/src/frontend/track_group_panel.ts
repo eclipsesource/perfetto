@@ -268,10 +268,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     if (dataTransfer === null) return;
     globals.rafScheduler.scheduleFullRedraw();
     const dataType = dataTransfer.types.find((dataType)=>{
-      if (dataType.startsWith('perfetto/track/')) {
-        return true;
-      }
-      return false;
+      return dataType.startsWith('perfetto/track/');
     });
     if (!dataType) return;
     const srcId = dataType.split('/').pop();
