@@ -245,6 +245,7 @@ export interface TrackState {
   labels?: string[];
   trackSortKey: TrackSortKey;
   trackGroup?: string;
+  scaleMultiplier: number;
   config: {
     trackId?: number;
     trackIds?: number[];

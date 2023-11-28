@@ -234,14 +234,13 @@ class CounterTrack extends Track<Config, Data> {
   private hoveredValue: number|undefined = undefined;
   private hoveredTs: bigint|undefined = undefined;
   private hoveredTsEnd: bigint|undefined = undefined;
-  multiplier = 1;
 
   constructor(args: NewTrackArgs) {
     super(args);
   }
 
   getHeight() {
-    return MARGIN_TOP + (RECT_HEIGHT * this.multiplier);
+    return MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier);
   }
 
   getContextMenu(): m.Vnode<any> {
@@ -272,9 +271,7 @@ class CounterTrack extends Track<Config, Data> {
           trigger: m('button',
           m(TrackButton,
             {
-              action: ()=>{
-                this.multiplier++;
-              },
+              action: ()=>{},
               i: 'show_chart',
               tooltip: 'Change scale',
               showButton: false,
@@ -327,7 +324,7 @@ class CounterTrack extends Track<Config, Data> {
     }
 
     const endPx = windowSpan.end;
-    const zeroY = MARGIN_TOP + (RECT_HEIGHT * this.multiplier) /
+    const zeroY = MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier) /
      (minimumValue < 0 ? 2 : 1);
 
     // Quantize the Y axis to quarters of powers of tens (7.5K, 10K, 12.5K).
@@ -375,8 +372,9 @@ class CounterTrack extends Track<Config, Data> {
       return Math.floor(timeScale.tpTimeToPx(ts));
     };
     const calculateY = (value: number) => {
-      return MARGIN_TOP + (RECT_HEIGHT*this.multiplier) -
-          Math.round(((value - yMin) / yRange) * RECT_HEIGHT * this.multiplier);
+      return MARGIN_TOP + (RECT_HEIGHT*this.trackState.scaleMultiplier) -
+          Math.round(((value - yMin) / yRange) *
+            RECT_HEIGHT * this.trackState.scaleMultiplier);
     };
 
     ctx.beginPath();
@@ -437,9 +435,9 @@ class CounterTrack extends Track<Config, Data> {
       const xEnd = this.hoveredTsEnd === undefined ?
           endPx :
           Math.floor(timeScale.tpTimeToPx(this.hoveredTsEnd));
-      const y = MARGIN_TOP + (RECT_HEIGHT * this.multiplier) -
+      const y = MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier) -
           Math.round(((this.hoveredValue - yMin) / yRange) * RECT_HEIGHT *
-          this.multiplier);
+          this.trackState.scaleMultiplier);
 
       // Highlight line.
       ctx.beginPath();
