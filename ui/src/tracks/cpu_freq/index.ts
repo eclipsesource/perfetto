@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getCssStr } from '../../frontend/css_constants';
+import {getCssStr} from '../../frontend/css_constants';
 import {BigintMath as BIMath} from '../../base/bigint_math';
 import {searchSegment} from '../../base/binary_search';
 import {assertTrue} from '../../base/logging';
@@ -282,7 +282,7 @@ class CpuFreqTrack extends Track<Config, Data> {
   }
 
   getHeight() {
-    return MARGIN_TOP + RECT_HEIGHT;
+    return MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier);
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
@@ -305,7 +305,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     assertTrue(data.timestamps.length === data.lastIdleValues.length);
 
     const endPx = windowSpan.end;
-    const zeroY = MARGIN_TOP + RECT_HEIGHT;
+    const zeroY = MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier);
 
     // Quantize the Y axis to quarters of powers of tens (7.5K, 10K, 12.5K).
     let yMax = data.maximumValue;
@@ -331,7 +331,8 @@ class CpuFreqTrack extends Track<Config, Data> {
       return Math.floor(visibleTimeScale.tpTimeToPx(timestamp));
     };
     const calculateY = (value: number) => {
-      return zeroY - Math.round((value / yMax) * RECT_HEIGHT);
+      return zeroY - Math.round((value / yMax) *
+        (RECT_HEIGHT * this.trackState.scaleMultiplier));
     };
 
     const start = visibleWindowTime.start;
@@ -409,7 +410,8 @@ class CpuFreqTrack extends Track<Config, Data> {
       const xEnd = this.hoveredTsEnd === undefined ?
           endPx :
           Math.floor(visibleTimeScale.tpTimeToPx(this.hoveredTsEnd));
-      const y = zeroY - Math.round((this.hoveredValue / yMax) * RECT_HEIGHT);
+      const y = zeroY - Math.round((this.hoveredValue / yMax) *
+        (RECT_HEIGHT * this.trackState.scaleMultiplier));
 
       // Highlight line.
       ctx.beginPath();
