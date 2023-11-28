@@ -207,7 +207,6 @@ class CpuSliceTrackController extends TrackController<Config, Data> {
 
 const MARGIN_TOP = 3;
 const RECT_HEIGHT = 24;
-const TRACK_HEIGHT = MARGIN_TOP * 2 + RECT_HEIGHT;
 
 class CpuSliceTrack extends Track<Config, Data> {
   static readonly kind = CPU_SLICE_TRACK_KIND;
@@ -223,7 +222,7 @@ class CpuSliceTrack extends Track<Config, Data> {
   }
 
   getHeight(): number {
-    return TRACK_HEIGHT;
+    return (MARGIN_TOP * 2) + (RECT_HEIGHT * this.trackState.scaleMultiplier);
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
@@ -258,7 +257,12 @@ class CpuSliceTrack extends Track<Config, Data> {
     const visWindowEndPx = visibleTimeScale.hpTimeToPx(visibleWindowTime.end);
 
     ctx.textAlign = 'center';
-    ctx.font = '12px Roboto Condensed';
+    const mainTextSize =
+      Math.floor((RECT_HEIGHT * this.trackState.scaleMultiplier)*0.50);
+    const subTextSize =
+      Math.floor((RECT_HEIGHT * this.trackState.scaleMultiplier)*0.40);
+
+    ctx.font = mainTextSize + 'px Roboto Condensed';
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
     const startTime = visibleTimeSpan.start;
@@ -306,9 +310,11 @@ class CpuSliceTrack extends Track<Config, Data> {
       }
       ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
       if (data.isIncomplete[i]) {
-        drawIncompleteSlice(ctx, rectStart, MARGIN_TOP, rectWidth, RECT_HEIGHT);
+        drawIncompleteSlice(ctx, rectStart, MARGIN_TOP, rectWidth,
+          (RECT_HEIGHT * this.trackState.scaleMultiplier));
       } else {
-        ctx.fillRect(rectStart, MARGIN_TOP, rectWidth, RECT_HEIGHT);
+        ctx.fillRect(rectStart, MARGIN_TOP, rectWidth,
+          (RECT_HEIGHT * this.trackState.scaleMultiplier));
       }
 
       // Don't render text when we have less than 5px to play with.
@@ -333,15 +339,24 @@ class CpuSliceTrack extends Track<Config, Data> {
       const right = Math.min(visWindowEndPx, rectEnd);
       const left = Math.max(rectStart, 0);
       const visibleWidth = Math.max(right - left, 1);
-      title = cropText(title, charWidth, visibleWidth);
-      subTitle = cropText(subTitle, charWidth, visibleWidth);
+
       const rectXCenter = left + visibleWidth / 2;
       ctx.fillStyle = '#fff';
-      ctx.font = '12px Roboto Condensed';
-      ctx.fillText(title, rectXCenter, MARGIN_TOP + RECT_HEIGHT / 2 - 1);
+      ctx.font = mainTextSize + 'px Roboto Condensed';
+      title = cropText(title,
+        charWidth,
+        visibleWidth);
+      ctx.fillText(title, rectXCenter,
+        MARGIN_TOP + (RECT_HEIGHT*this.trackState.scaleMultiplier/2));
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.font = '10px Roboto Condensed';
-      ctx.fillText(subTitle, rectXCenter, MARGIN_TOP + RECT_HEIGHT / 2 + 9);
+      ctx.font = subTextSize + 'px Roboto Condensed';
+      subTitle = cropText(subTitle,
+        charWidth,
+        visibleWidth);
+      ctx.fillText(subTitle, rectXCenter,
+        MARGIN_TOP +
+        (RECT_HEIGHT*this.trackState.scaleMultiplier/2) +
+        subTextSize);
     }
 
     const selection = globals.state.currentSelection;
@@ -361,7 +376,8 @@ class CpuSliceTrack extends Track<Config, Data> {
         ctx.strokeStyle = `hsl(${color.h}, ${color.s}%, 30%)`;
         ctx.beginPath();
         ctx.lineWidth = 3;
-        ctx.strokeRect(rectStart, MARGIN_TOP - 1.5, rectWidth, RECT_HEIGHT + 3);
+        ctx.strokeRect(rectStart, MARGIN_TOP - 1.5, rectWidth,
+          (RECT_HEIGHT * this.trackState.scaleMultiplier) + 3);
         ctx.closePath();
         // Draw arrow from wakeup time of current slice.
         if (details.wakeupTs) {
@@ -370,7 +386,7 @@ class CpuSliceTrack extends Track<Config, Data> {
           drawDoubleHeadedArrow(
               ctx,
               wakeupPos,
-              MARGIN_TOP + RECT_HEIGHT,
+              MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier),
               latencyWidth,
               latencyWidth >= 20,
               2,
@@ -383,7 +399,8 @@ class CpuSliceTrack extends Track<Config, Data> {
             ctx.fillStyle = getCssStr('--main-background-color');
             ctx.fillRect(
                 wakeupPos + latencyWidth / 2 - measured.width / 2 - 1,
-                MARGIN_TOP + RECT_HEIGHT - 12,
+                MARGIN_TOP +
+                  (RECT_HEIGHT * this.trackState.scaleMultiplier) - 12,
                 measured.width + 2,
                 11);
             ctx.textBaseline = 'bottom';
@@ -391,7 +408,8 @@ class CpuSliceTrack extends Track<Config, Data> {
             ctx.fillText(
                 displayText,
                 wakeupPos + (latencyWidth) / 2,
-                MARGIN_TOP + RECT_HEIGHT - 1);
+                MARGIN_TOP +
+                  (RECT_HEIGHT * this.trackState.scaleMultiplier) - 1);
           }
         }
       }
@@ -401,11 +419,15 @@ class CpuSliceTrack extends Track<Config, Data> {
         const wakeupPos =
             Math.floor(visibleTimeScale.tpTimeToPx(details.wakeupTs));
         ctx.beginPath();
-        ctx.moveTo(wakeupPos, MARGIN_TOP + RECT_HEIGHT / 2 + 8);
+        ctx.moveTo(wakeupPos, MARGIN_TOP +
+          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2 + 8);
         ctx.fillStyle = getCssStr('--main-foreground-color');
-        ctx.lineTo(wakeupPos + 6, MARGIN_TOP + RECT_HEIGHT / 2);
-        ctx.lineTo(wakeupPos, MARGIN_TOP + RECT_HEIGHT / 2 - 8);
-        ctx.lineTo(wakeupPos - 6, MARGIN_TOP + RECT_HEIGHT / 2);
+        ctx.lineTo(wakeupPos + 6, MARGIN_TOP +
+          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2);
+        ctx.lineTo(wakeupPos, MARGIN_TOP +
+          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2 - 8);
+        ctx.lineTo(wakeupPos - 6, MARGIN_TOP +
+          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2);
         ctx.fill();
         ctx.closePath();
       }
@@ -428,7 +450,8 @@ class CpuSliceTrack extends Track<Config, Data> {
     this.mousePos = pos;
     if (data === undefined) return;
     const {visibleTimeScale} = globals.frontendLocalState;
-    if (pos.y < MARGIN_TOP || pos.y > MARGIN_TOP + RECT_HEIGHT) {
+    if (pos.y < MARGIN_TOP ||
+        pos.y > MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier)) {
       this.utidHoveredInThisTrack = -1;
       globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
