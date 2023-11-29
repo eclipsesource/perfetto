@@ -175,6 +175,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
+    this.supportsEnhancing = true;
   }
 
   // Font used to render the slice name on the current track.

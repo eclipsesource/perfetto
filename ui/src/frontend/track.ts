@@ -56,7 +56,14 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
   // The UI-generated track ID (not to be confused with the SQL track.id).
   protected readonly trackId: string;
   protected readonly engine: Engine;
+  private _supportsEnhancing: boolean = false;
 
+  get supportsEnhancing(): boolean {
+    return this._supportsEnhancing;
+  }
+  protected set supportsEnhancing(doesIt: boolean) {
+    this._supportsEnhancing = doesIt;
+  }
   // When true this is a new controller-less track type.
   // TODO(hjd): eventually all tracks will be controller-less and this
   // should be removed then.

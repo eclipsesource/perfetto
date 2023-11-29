@@ -219,6 +219,7 @@ class CpuSliceTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
+    this.supportsEnhancing = true;
   }
 
   getHeight(): number {

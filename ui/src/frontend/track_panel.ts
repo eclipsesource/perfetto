@@ -241,16 +241,18 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
       fullHeight: true,
       disabled: !this.canDeleteTrack(attrs.trackState),
     }));
-    result.push(m(TrackButton, {
-      action: () => {
-        globals.state.tracks[attrs.trackState.id].scaleMultiplier++;
-        globals.rafScheduler.scheduleFullRedraw();
-      },
-      i: 'height',
-      tooltip: 'Enhance',
-      showButton: false, // Only show on roll-over
-      fullHeight: true,
-    }));
+    if (attrs.track.supportsEnhancing) {
+      result.push(m(TrackButton, {
+        action: () => {
+          globals.state.tracks[attrs.trackState.id].scaleMultiplier++;
+          globals.rafScheduler.scheduleFullRedraw();
+        },
+        i: 'height',
+        tooltip: 'Enhance',
+        showButton: false, // Only show on roll-over
+        fullHeight: true,
+      }));
+    }
     return result;
   }
 
