@@ -28,13 +28,12 @@ import {cachedHsluvToHex} from '../../frontend/hsluv_cache';
 import {NewTrackArgs, SliceRect, Track} from '../../frontend/track';
 
 export const SLICE_TRACK_KIND = 'ChromeSliceTrack';
-const SLICE_HEIGHT = 18;
+const DEFAULT_SLICE_HEIGHT = 18;
 const TRACK_PADDING = 2;
 const CHEVRON_WIDTH_PX = 10;
 const HALF_CHEVRON_WIDTH_PX = CHEVRON_WIDTH_PX / 2;
 const INNER_CHEVRON_OFFSET = -3;
-const INNER_CHEVRON_SCALE =
-    (SLICE_HEIGHT - 2 * INNER_CHEVRON_OFFSET) / SLICE_HEIGHT;
+let sliceHeight = DEFAULT_SLICE_HEIGHT;
 
 export interface Config {
   maxDepth: number;
@@ -180,12 +179,15 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
   // Font used to render the slice name on the current track.
   protected getFont() {
-    return '12px Roboto Condensed';
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+
+    return Math.floor(sliceHeight * (2/3)) + 'px Roboto Condensed';
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO: fonts and colors should come from the CSS and not hardcoded here.
 
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
     const {visibleTimeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
 
@@ -203,7 +205,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     );
 
     ctx.textAlign = 'center';
-
+      ctx.font = this.getFont();
     // measuretext is expensive so we only use it once.
     const charTM = ctx.measureText('ACBDLqsdfg');
     const charWidth = charTM.width / 10;
@@ -277,7 +279,9 @@ export class ChromeSliceTrack extends Track<Config, Data> {
             // Draw outer chevron as dark border
             ctx.save();
             ctx.translate(0, INNER_CHEVRON_OFFSET);
-            ctx.scale(INNER_CHEVRON_SCALE, INNER_CHEVRON_SCALE);
+            const innerChevronScale =
+              (sliceHeight - 2 * INNER_CHEVRON_OFFSET) / sliceHeight;
+            ctx.scale(innerChevronScale, innerChevronScale);
             ctx.fillStyle = cachedHsluvToHex(hue, 100, 10);
 
             this.drawChevron(ctx, instant);
@@ -298,8 +302,8 @@ export class ChromeSliceTrack extends Track<Config, Data> {
         continue;
       }
 
-      if (isIncomplete && rect.width > SLICE_HEIGHT / 4) {
-        drawIncompleteSlice(ctx, rect.left, rect.top, rect.width, SLICE_HEIGHT);
+      if (isIncomplete && rect.width > sliceHeight / 4) {
+        drawIncompleteSlice(ctx, rect.left, rect.top, rect.width, sliceHeight);
       } else if (
           data.cpuTimeRatio !== undefined && data.cpuTimeRatio[i] < 1 - 1e-9) {
         // We draw two rectangles, representing the ratio between wall time and
@@ -307,16 +311,16 @@ export class ChromeSliceTrack extends Track<Config, Data> {
         const cpuTimeRatio = data.cpuTimeRatio![i];
         const firstPartWidth = rect.width * cpuTimeRatio;
         const secondPartWidth = rect.width * (1 - cpuTimeRatio);
-        ctx.fillRect(rect.left, rect.top, firstPartWidth, SLICE_HEIGHT);
+        ctx.fillRect(rect.left, rect.top, firstPartWidth, sliceHeight);
         ctx.fillStyle =
             colorForThreadIdleSlice(hue, saturation, lightness, hasFocus);
         ctx.fillRect(
             rect.left + firstPartWidth,
             rect.top,
             secondPartWidth,
-            SLICE_HEIGHT);
+            sliceHeight);
       } else {
-        ctx.fillRect(rect.left, rect.top, rect.width, SLICE_HEIGHT);
+        ctx.fillRect(rect.left, rect.top, rect.width, sliceHeight);
       }
 
       // Selected case
@@ -326,7 +330,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
           ctx.beginPath();
           ctx.lineWidth = 3;
           ctx.strokeRect(
-              rect.left, rect.top - 1.5, rect.width, SLICE_HEIGHT + 3);
+              rect.left, rect.top - 1.5, rect.width, sliceHeight + 3);
           ctx.closePath();
         };
       }
@@ -335,8 +339,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
       const displayText = cropText(title, charWidth, rect.width);
       const rectXCenter = rect.left + rect.width / 2;
       ctx.textBaseline = 'middle';
-      ctx.font = this.getFont();
-      ctx.fillText(displayText, rectXCenter, rect.top + SLICE_HEIGHT / 2);
+      ctx.fillText(displayText, rectXCenter, rect.top + sliceHeight / 2);
     }
     drawRectOnSelected();
   }
@@ -354,9 +357,9 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     // ctx.translate and ctx.scale to alter location and size.
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(HALF_CHEVRON_WIDTH_PX, SLICE_HEIGHT);
-    ctx.lineTo(0, SLICE_HEIGHT - HALF_CHEVRON_WIDTH_PX);
-    ctx.lineTo(-HALF_CHEVRON_WIDTH_PX, SLICE_HEIGHT);
+    ctx.lineTo(HALF_CHEVRON_WIDTH_PX, sliceHeight);
+    ctx.lineTo(0, sliceHeight - HALF_CHEVRON_WIDTH_PX);
+    ctx.lineTo(-HALF_CHEVRON_WIDTH_PX, sliceHeight);
     ctx.lineTo(0, 0);
     ctx.fill();
   }
@@ -377,7 +380,8 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     if (y < TRACK_PADDING) return;
     const instantWidthTime = timeScale.pxDeltaToDuration(HALF_CHEVRON_WIDTH_PX);
     const t = timeScale.pxToHpTime(x);
-    const depth = Math.floor((y - TRACK_PADDING) / SLICE_HEIGHT);
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+    const depth = Math.floor((y - TRACK_PADDING) / sliceHeight);
 
     for (let i = 0; i < data.starts.length; i++) {
       if (depth !== data.depths[i]) {
@@ -435,7 +439,8 @@ export class ChromeSliceTrack extends Track<Config, Data> {
   }
 
   getHeight() {
-    return SLICE_HEIGHT * (this.config.maxDepth + 1) + 2 * TRACK_PADDING;
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+    return sliceHeight * (this.config.maxDepth + 1) + 2 * TRACK_PADDING;
   }
 
   getSliceRect(tStart: TPTime, tEnd: TPTime, depth: number): SliceRect
@@ -452,12 +457,12 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
     const visible =
         !(visibleWindowTime.start.gt(tEnd) || visibleWindowTime.end.lt(tStart));
-
+        sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
     return {
       left,
       width: Math.max(right - left, 1),
-      top: TRACK_PADDING + depth * SLICE_HEIGHT,
-      height: SLICE_HEIGHT,
+      top: TRACK_PADDING + depth * sliceHeight,
+      height: sliceHeight,
       visible,
     };
   }
