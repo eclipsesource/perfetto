@@ -395,15 +395,16 @@ class CpuSliceTrack extends Track<Config, Data> {
           // Latency time background.
           const latency = tStart - details.wakeupTs;
           const displayText = tpTimeToString(latency);
+          ctx.font = subTextSize + 'px Roboto Condensed';
           const measured = ctx.measureText(displayText);
           if (latencyWidth >= measured.width + 2) {
             ctx.fillStyle = getCssStr('--main-background-color');
             ctx.fillRect(
                 wakeupPos + latencyWidth / 2 - measured.width / 2 - 1,
                 MARGIN_TOP +
-                  (RECT_HEIGHT * this.trackState.scaleMultiplier) - 12,
+                  (RECT_HEIGHT * this.trackState.scaleMultiplier / 2),
                 measured.width + 2,
-                11);
+                (RECT_HEIGHT * this.trackState.scaleMultiplier /2)- MARGIN_TOP);
             ctx.textBaseline = 'bottom';
             ctx.fillStyle = getCssStr('--main-foreground-color');
             ctx.fillText(
