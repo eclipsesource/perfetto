@@ -439,6 +439,10 @@
       padding-right: 0.35rem;
     }
 
+    select {
+      color: var(--main-foreground-color);
+      background-color: var(--main-background-color);
+    }
     .tag-container {
       height: auto;
       min-height: 34px;
@@ -476,6 +480,8 @@
 
       .chip-input {
         margin-left: 5px;
+        color: var(--main-foreground-color);
+        background-color: var(--main-background-color);
       }
     }
 
