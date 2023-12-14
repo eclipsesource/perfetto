@@ -108,6 +108,14 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     return m(
         `.track-shell[draggable=true]`,
         {
+          tabindex: '0',
+          onkeydown: (event: KeyboardEvent)=> {
+            if (event.key === 'Backspace' || event.key === 'Delete') {
+              event.preventDefault();
+              globals.dispatch(
+                Actions.removeTrack({trackId: attrs.trackState.id}));
+            }
+          },
           class: `${highlightClass} ${dragClass} ${dropClass}`,
           ondragstart: this.ondragstart.bind(this),
           ondragenter: (e: DragEvent)=>{

@@ -147,16 +147,28 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const titleStyling = indent(depth(trackGroup));
     const dragClass = this.dragging ? `drag` : '';
     const dropClass = this.dropping ? `drop-${this.dropping}` : '';
+    const onclick = (e: Event) => {
+      globals.dispatch(Actions.toggleTrackGroupCollapsed({
+        trackGroupId: attrs.trackGroupId,
+      })),
+          e.stopPropagation();
+    };
     return m(
         `.track-group-panel[collapsed=${collapsed}]`,
         {id: 'track_' + this.trackGroupId},
         m(`.shell[draggable=true]`,
           {
-            onclick: (e: MouseEvent) => {
-              globals.dispatch(Actions.toggleTrackGroupCollapsed({
-                trackGroupId: attrs.trackGroupId,
-              })),
-                  e.stopPropagation();
+            tabindex: '0',
+            onclick,
+            onkeydown: (event: KeyboardEvent)=> {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onclick(event);
+              }
+              if (this.canDeleteTrackGroup(this.trackGroupState) && (event.key === 'Backspace' || event.key === 'Delete')) {
+                event.preventDefault();
+                this.remove(event);
+              }
             },
             class: `${highlightClass} ${dragClass} ${dropClass}`,
             ondragstart: this.ondragstart.bind(this),
@@ -307,25 +319,27 @@ export class TrackGroupPanel extends Panel<Attrs> {
     }
   }
 
+  protected remove = (e: Event) => {
+    const removeTracks: RemoveTrackArgs[] = [];
+    const removeGroups: RemoveTrackGroupArgs[] = [];
+    this.collectRemoveTrackGroupActions(
+      this.trackGroupState,
+      removeTracks,
+      removeGroups,
+    );
+    globals.dispatchMultiple([
+      Actions.removeTracks({tracks: removeTracks}),
+      Actions.removeTrackGroups({trackGroups: removeGroups}),
+    ]);
+    e.stopPropagation();
+  };
+
   getTrackGroupActionButtons(): m.Vnode<any>[] {
     const result: m.Vnode<any>[] = [];
   const disabled = !this.canDeleteTrackGroup(this.trackGroupState);
       result.push(
         m(TrackButton, {
-          action: (e: MouseEvent) => {
-            const removeTracks: RemoveTrackArgs[] = [];
-            const removeGroups: RemoveTrackGroupArgs[] = [];
-            this.collectRemoveTrackGroupActions(
-              this.trackGroupState,
-              removeTracks,
-              removeGroups,
-            );
-            globals.dispatchMultiple([
-              Actions.removeTracks({tracks: removeTracks}),
-              Actions.removeTrackGroups({trackGroups: removeGroups}),
-            ]);
-            e.stopPropagation();
-          },
+          action: this.remove,
           i: 'delete',
           disabled,
           tooltip: 'Remove track group',
