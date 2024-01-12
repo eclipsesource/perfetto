@@ -440,6 +440,8 @@ export class TraceController extends Controller<States> {
     // traceUuid will be '' if the trace is not cacheable (URL or RPC).
     const traceUuid = await this.cacheCurrentTrace();
 
+    const clamp = await globals.timelineSubsetRange?.(this.engine);
+    this.engine.timelineConstraint = clamp;
     const traceTime = await this.engine.getTraceTimeBounds();
     const start = traceTime.start;
     const end = traceTime.end;
