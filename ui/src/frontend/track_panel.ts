@@ -199,9 +199,13 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
             y += (evMove.clientY -previousClientY);
             previousClientY = evMove.clientY;
             if (this.attrs && this.initialHeight) {
-                this.attrs.trackState.scaleMultiplier =
-                y / this.initialHeight;
-                globals.rafScheduler.scheduleFullRedraw();
+              const newMultiplier = y / this.initialHeight;
+              if (newMultiplier<1) {
+                this.attrs.trackState.scaleMultiplier = 1;
+              } else {
+                this.attrs.trackState.scaleMultiplier = newMultiplier;
+              }
+              globals.rafScheduler.scheduleFullRedraw();
             }
         };
         const mouseUpEvent = (): void => {
