@@ -667,7 +667,6 @@ button.query-ctrl {
   grid-template-columns: auto 1fr;
   grid-template-rows: 1fr;
   transition: background-color 0.4s, color 0.4s;
-  height: 40px;
 
   &::after {
     display: block;
@@ -745,7 +744,6 @@ button.query-ctrl {
     align-items: center;
     line-height: 1;
     width: var(--track-shell-width);
-    min-height: 40px;
     transition: background-color 0.4s;
 
     .track-title {
