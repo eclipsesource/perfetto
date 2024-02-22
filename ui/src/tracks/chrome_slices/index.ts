@@ -175,20 +175,20 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
-    this.supportsEnhancing = true;
+    this.supportsResizing = true;
   }
 
   // Font used to render the slice name on the current track.
   protected getFont() {
-    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleFactor;
 
-    return Math.floor(sliceHeight * (2/3)) + 'px Roboto Condensed';
+    return Math.floor(sliceHeight * 2 / 3) + 'px Roboto Condensed';
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
     // TODO: fonts and colors should come from the CSS and not hardcoded here.
 
-    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleFactor;
     const {visibleTimeScale, visibleWindowTime} = globals.frontendLocalState;
     const data = this.data();
 
@@ -381,7 +381,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
     if (y < TRACK_PADDING) return;
     const instantWidthTime = timeScale.pxDeltaToDuration(HALF_CHEVRON_WIDTH_PX);
     const t = timeScale.pxToHpTime(x);
-    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleFactor;
     const depth = Math.floor((y - TRACK_PADDING) / sliceHeight);
 
     for (let i = 0; i < data.starts.length; i++) {
@@ -440,7 +440,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
   }
 
   getHeight() {
-    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+    sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleFactor;
     return sliceHeight * (this.config.maxDepth + 1) + 2 * TRACK_PADDING;
   }
 
@@ -458,7 +458,7 @@ export class ChromeSliceTrack extends Track<Config, Data> {
 
     const visible =
         !(visibleWindowTime.start.gt(tEnd) || visibleWindowTime.end.lt(tStart));
-        sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleMultiplier;
+        sliceHeight = DEFAULT_SLICE_HEIGHT * this.trackState.scaleFactor;
     return {
       left,
       width: Math.max(right - left, 1),

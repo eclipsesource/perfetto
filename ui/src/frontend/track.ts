@@ -58,10 +58,10 @@ export abstract class Track<Config = {}, Data extends TrackData = TrackData> {
   protected readonly engine: Engine;
   private _supportsEnhancing: boolean = false;
 
-  get supportsEnhancing(): boolean {
+  get supportsResizing(): boolean {
     return this._supportsEnhancing;
   }
-  protected set supportsEnhancing(doesIt: boolean) {
+  protected set supportsResizing(doesIt: boolean) {
     this._supportsEnhancing = doesIt;
   }
   // When true this is a new controller-less track type.

@@ -219,11 +219,11 @@ class CpuSliceTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
-    this.supportsEnhancing = true;
+    this.supportsResizing = true;
   }
 
   getHeight(): number {
-    return (MARGIN_TOP * 2) + (RECT_HEIGHT * this.trackState.scaleMultiplier);
+    return (MARGIN_TOP * 2) + (RECT_HEIGHT * this.trackState.scaleFactor);
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
@@ -259,9 +259,9 @@ class CpuSliceTrack extends Track<Config, Data> {
 
     ctx.textAlign = 'center';
     const mainTextSize =
-      Math.floor((RECT_HEIGHT * this.trackState.scaleMultiplier)*0.50);
+       Math.floor((RECT_HEIGHT * this.trackState.scaleFactor) * 0.50);
     const subTextSize =
-      Math.floor((RECT_HEIGHT * this.trackState.scaleMultiplier)*0.40);
+      Math.floor((RECT_HEIGHT * this.trackState.scaleFactor) * 0.40);
 
     ctx.font = mainTextSize + 'px Roboto Condensed';
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
@@ -312,10 +312,10 @@ class CpuSliceTrack extends Track<Config, Data> {
       ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
       if (data.isIncomplete[i]) {
         drawIncompleteSlice(ctx, rectStart, MARGIN_TOP, rectWidth,
-          (RECT_HEIGHT * this.trackState.scaleMultiplier));
+          (RECT_HEIGHT * this.trackState.scaleFactor));
       } else {
         ctx.fillRect(rectStart, MARGIN_TOP, rectWidth,
-          (RECT_HEIGHT * this.trackState.scaleMultiplier));
+          (RECT_HEIGHT * this.trackState.scaleFactor));
       }
 
       // Don't render text when we have less than 5px to play with.
@@ -348,7 +348,7 @@ class CpuSliceTrack extends Track<Config, Data> {
         charWidth,
         visibleWidth);
       ctx.fillText(title, rectXCenter,
-        MARGIN_TOP + (RECT_HEIGHT*this.trackState.scaleMultiplier/2));
+        MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleFactor/2));
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.font = subTextSize + 'px Roboto Condensed';
       subTitle = cropText(subTitle,
@@ -356,7 +356,7 @@ class CpuSliceTrack extends Track<Config, Data> {
         visibleWidth);
       ctx.fillText(subTitle, rectXCenter,
         MARGIN_TOP +
-        (RECT_HEIGHT*this.trackState.scaleMultiplier/2) +
+        (RECT_HEIGHT * this.trackState.scaleFactor/2) +
         subTextSize);
     }
 
@@ -378,7 +378,7 @@ class CpuSliceTrack extends Track<Config, Data> {
         ctx.beginPath();
         ctx.lineWidth = 3;
         ctx.strokeRect(rectStart, MARGIN_TOP - 1.5, rectWidth,
-          (RECT_HEIGHT * this.trackState.scaleMultiplier) + 3);
+          (RECT_HEIGHT * this.trackState.scaleFactor) + 3);
         ctx.closePath();
         // Draw arrow from wakeup time of current slice.
         if (details.wakeupTs) {
@@ -387,7 +387,7 @@ class CpuSliceTrack extends Track<Config, Data> {
           drawDoubleHeadedArrow(
               ctx,
               wakeupPos,
-              MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier),
+              MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleFactor),
               latencyWidth,
               latencyWidth >= 20,
               2,
@@ -402,16 +402,16 @@ class CpuSliceTrack extends Track<Config, Data> {
             ctx.fillRect(
                 wakeupPos + latencyWidth / 2 - measured.width / 2 - 1,
                 MARGIN_TOP +
-                  (RECT_HEIGHT * this.trackState.scaleMultiplier / 2),
+                  (RECT_HEIGHT * this.trackState.scaleFactor / 2),
                 measured.width + 2,
-                (RECT_HEIGHT * this.trackState.scaleMultiplier /2)- MARGIN_TOP);
+                (RECT_HEIGHT * this.trackState.scaleFactor / 2)- MARGIN_TOP);
             ctx.textBaseline = 'bottom';
             ctx.fillStyle = getCssStr('--main-foreground-color');
             ctx.fillText(
                 displayText,
                 wakeupPos + (latencyWidth) / 2,
                 MARGIN_TOP +
-                  (RECT_HEIGHT * this.trackState.scaleMultiplier) - 1);
+                  (RECT_HEIGHT * this.trackState.scaleFactor) - 1);
           }
         }
       }
@@ -422,14 +422,14 @@ class CpuSliceTrack extends Track<Config, Data> {
             Math.floor(visibleTimeScale.tpTimeToPx(details.wakeupTs));
         ctx.beginPath();
         ctx.moveTo(wakeupPos, MARGIN_TOP +
-          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2 + 8);
+          (RECT_HEIGHT * this.trackState.scaleFactor) / 2 + 8);
         ctx.fillStyle = getCssStr('--main-foreground-color');
         ctx.lineTo(wakeupPos + 6, MARGIN_TOP +
-          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2);
+          (RECT_HEIGHT * this.trackState.scaleFactor) / 2);
         ctx.lineTo(wakeupPos, MARGIN_TOP +
-          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2 - 8);
+          (RECT_HEIGHT * this.trackState.scaleFactor) / 2 - 8);
         ctx.lineTo(wakeupPos - 6, MARGIN_TOP +
-          (RECT_HEIGHT * this.trackState.scaleMultiplier) / 2);
+          (RECT_HEIGHT * this.trackState.scaleFactor) / 2);
         ctx.fill();
         ctx.closePath();
       }
@@ -453,7 +453,7 @@ class CpuSliceTrack extends Track<Config, Data> {
     if (data === undefined) return;
     const {visibleTimeScale} = globals.frontendLocalState;
     if (pos.y < MARGIN_TOP ||
-        pos.y > MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier)) {
+        pos.y > MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleFactor)) {
       this.utidHoveredInThisTrack = -1;
       globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;

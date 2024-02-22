@@ -279,11 +279,11 @@ class CpuFreqTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
-    this.supportsEnhancing = true;
+    this.supportsResizing = true;
   }
 
   getHeight() {
-    return MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier);
+    return MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleFactor);
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
@@ -306,7 +306,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     assertTrue(data.timestamps.length === data.lastIdleValues.length);
 
     const endPx = windowSpan.end;
-    const zeroY = MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleMultiplier);
+    const zeroY = MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleFactor);
 
     // Quantize the Y axis to quarters of powers of tens (7.5K, 10K, 12.5K).
     let yMax = data.maximumValue;
@@ -333,7 +333,7 @@ class CpuFreqTrack extends Track<Config, Data> {
     };
     const calculateY = (value: number) => {
       return zeroY - Math.round((value / yMax) *
-        (RECT_HEIGHT * this.trackState.scaleMultiplier));
+        (RECT_HEIGHT * this.trackState.scaleFactor));
     };
 
     const start = visibleWindowTime.start;
@@ -412,7 +412,7 @@ class CpuFreqTrack extends Track<Config, Data> {
           endPx :
           Math.floor(visibleTimeScale.tpTimeToPx(this.hoveredTsEnd));
       const y = zeroY - Math.round((this.hoveredValue / yMax) *
-        (RECT_HEIGHT * this.trackState.scaleMultiplier));
+        (RECT_HEIGHT * this.trackState.scaleFactor));
 
       // Highlight line.
       ctx.beginPath();

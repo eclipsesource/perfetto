@@ -47,6 +47,7 @@ interface Attrs {
   selectable: boolean;
 }
 
+const MOUSE_TARGETING_THRESHOLD_PX = 5;
 export class TrackGroupPanel extends Panel<Attrs> {
   private readonly trackGroupId: string;
   private shellWidth = 0;
@@ -100,9 +101,11 @@ export class TrackGroupPanel extends Panel<Attrs> {
   }
 
   onmousemove(e: MouseEvent) {
-    if (this.summaryTrack && this.summaryTrack.supportsEnhancing) {
+    if (this.summaryTrack && this.summaryTrack.supportsResizing) {
       if (e.currentTarget instanceof HTMLElement &&
-        e.offsetY >= e.currentTarget.scrollHeight - 5) {
+          e.offsetY >=
+          e.currentTarget.scrollHeight - MOUSE_TARGETING_THRESHOLD_PX
+          ) {
           e.currentTarget.style.cursor = 'row-resize';
       } else if (e.currentTarget instanceof HTMLElement) {
         e.currentTarget.style.cursor = 'unset';
@@ -110,7 +113,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     }
   }
   onmouseleave(e: MouseEvent) {
-    if (this.summaryTrack && this.summaryTrack.supportsEnhancing &&
+    if (this.summaryTrack && this.summaryTrack.supportsResizing &&
         e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.cursor = 'unset';
     }
@@ -238,23 +241,23 @@ export class TrackGroupPanel extends Panel<Attrs> {
             null);
   }
   ondragstart(e: DragEvent) {
-    if (this.summaryTrack && this.summaryTrack.supportsEnhancing &&
+    if (this.summaryTrack && this.summaryTrack.supportsResizing &&
       e.target instanceof HTMLElement &&
-      e.offsetY >= e.target.scrollHeight - 5) {
+      e.offsetY >= e.target.scrollHeight - MOUSE_TARGETING_THRESHOLD_PX) {
         e.stopPropagation();
         e.preventDefault();
         let y = e.offsetY;
-        let previousClientY =e.clientY;
+        let previousClientY = e.clientY;
         const mouseMoveEvent = (evMove: MouseEvent): void => {
             evMove.preventDefault();
             y += (evMove.clientY -previousClientY);
             previousClientY = evMove.clientY;
             if (this.attrs && this.initialHeight) {
               const newMultiplier = y / this.initialHeight;
-              if (newMultiplier<1) {
-                this.summaryTrackState.scaleMultiplier = 1;
+              if (newMultiplier < 1) {
+                this.summaryTrackState.scaleFactor = 1;
               } else {
-                this.summaryTrackState.scaleMultiplier = newMultiplier;
+                this.summaryTrackState.scaleFactor = newMultiplier;
               }
               globals.rafScheduler.scheduleFullRedraw();
             }

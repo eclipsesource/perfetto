@@ -191,11 +191,11 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
-    this.supportsEnhancing =true;
+    this.supportsResizing =true;
   }
 
   getHeight(): number {
-    return MARGIN_TOP * 2 + (RECT_HEIGHT * this.trackState.scaleMultiplier);
+    return MARGIN_TOP * 2 + (RECT_HEIGHT * this.trackState.scaleFactor);
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
@@ -231,7 +231,7 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     const endIdx = rawEndIdx === -1 ? data.starts.length : rawEndIdx;
 
     const cpuTrackHeight =
-      Math.floor(RECT_HEIGHT * this.trackState.scaleMultiplier / data.maxCpu);
+      Math.floor(RECT_HEIGHT * this.trackState.scaleFactor / data.maxCpu);
 
     for (let i = startIdx; i < endIdx; i++) {
       const tStart = data.starts[i];
@@ -285,14 +285,14 @@ class ProcessSchedulingTrack extends Track<Config, Data> {
     this.mousePos = pos;
     if (data === undefined) return;
     if (pos.y < MARGIN_TOP || pos.y >
-        MARGIN_TOP + (RECT_HEIGHT* this.trackState.scaleMultiplier)) {
+        MARGIN_TOP + (RECT_HEIGHT* this.trackState.scaleFactor)) {
       this.utidHoveredInThisTrack = -1;
       globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
 
     const cpuTrackHeight =
-      Math.floor(RECT_HEIGHT * this.trackState.scaleMultiplier / data.maxCpu);
+      Math.floor(RECT_HEIGHT * this.trackState.scaleFactor / data.maxCpu);
     const cpu = Math.floor((pos.y - MARGIN_TOP) / (cpuTrackHeight + 1));
     const {visibleTimeScale} = globals.frontendLocalState;
     const t = visibleTimeScale.pxToHpTime(pos.x).toTPTime('floor');

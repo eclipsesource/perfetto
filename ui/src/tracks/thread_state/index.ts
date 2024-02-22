@@ -171,11 +171,11 @@ class ThreadStateTrack extends Track<Config, Data> {
 
   constructor(args: NewTrackArgs) {
     super(args);
-    this.supportsEnhancing = true;
+    this.supportsResizing = true;
   }
 
   getHeight(): number {
-    return 2 * MARGIN_TOP + RECT_HEIGHT * this.trackState.scaleMultiplier;
+    return 2 * MARGIN_TOP + RECT_HEIGHT * this.trackState.scaleFactor;
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D): void {
@@ -186,7 +186,7 @@ class ThreadStateTrack extends Track<Config, Data> {
     } = globals.frontendLocalState;
     const data = this.data();
     ctx.font =
-      Math.floor(RECT_HEIGHT * this.trackState.scaleMultiplier * (2 / 3)) +
+      Math.floor(RECT_HEIGHT * this.trackState.scaleFactor * 2 / 3) +
       'px Roboto Condensed';
     const charWidth = ctx.measureText('dbpqaouk').width / 8;
 
@@ -247,7 +247,7 @@ class ThreadStateTrack extends Track<Config, Data> {
         rectStart,
         MARGIN_TOP,
         rectWidth,
-        RECT_HEIGHT * this.trackState.scaleMultiplier,
+        RECT_HEIGHT * this.trackState.scaleFactor,
         );
 
       // Don't render text when we have less than 10px to play with.
@@ -258,7 +258,7 @@ class ThreadStateTrack extends Track<Config, Data> {
       ctx.fillText(
         title,
         rectXCenter,
-        MARGIN_TOP + RECT_HEIGHT * this.trackState.scaleMultiplier * (2 / 3));
+        MARGIN_TOP + RECT_HEIGHT * this.trackState.scaleFactor * 2 / 3);
 
       if (isSelected) {
         drawRectOnSelected = () => {
@@ -274,7 +274,7 @@ class ThreadStateTrack extends Track<Config, Data> {
               rectStart,
               MARGIN_TOP - 1.5,
               rectEnd - rectStart,
-              RECT_HEIGHT * this.trackState.scaleMultiplier + 3);
+              RECT_HEIGHT * this.trackState.scaleFactor + 3);
           ctx.closePath();
         };
       }

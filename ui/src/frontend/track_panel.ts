@@ -170,7 +170,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   }
 
   onmousemove(e: MouseEvent) {
-    if (this.attrs?.track.supportsEnhancing) {
+    if (this.attrs?.track.supportsResizing) {
       if (e.currentTarget instanceof HTMLElement &&
         e.offsetY >= e.currentTarget.scrollHeight - 5) {
           e.currentTarget.style.cursor = 'row-resize';
@@ -180,30 +180,30 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     }
   }
   onmouseleave(e: MouseEvent) {
-    if (this.attrs?.track.supportsEnhancing &&
+    if (this.attrs?.track.supportsResizing &&
         e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.cursor = 'unset';
     }
   }
 
   ondragstart(e: DragEvent) {
-    if (this.attrs?.track.supportsEnhancing &&
+    if (this.attrs?.track.supportsResizing &&
       e.target instanceof HTMLElement &&
       e.offsetY >= e.target.scrollHeight - 5) {
         e.stopPropagation();
         e.preventDefault();
         let y = e.offsetY;
-        let previousClientY =e.clientY;
+        let previousClientY = e.clientY;
         const mouseMoveEvent = (evMove: MouseEvent): void => {
             evMove.preventDefault();
             y += (evMove.clientY -previousClientY);
             previousClientY = evMove.clientY;
             if (this.attrs && this.initialHeight) {
               const newMultiplier = y / this.initialHeight;
-              if (newMultiplier<1) {
-                this.attrs.trackState.scaleMultiplier = 1;
+              if (newMultiplier < 1) {
+                this.attrs.trackState.scaleFactor = 1;
               } else {
-                this.attrs.trackState.scaleMultiplier = newMultiplier;
+                this.attrs.trackState.scaleFactor = newMultiplier;
               }
               globals.rafScheduler.scheduleFullRedraw();
             }
