@@ -34,7 +34,7 @@ import {
 } from './icons';
 import {Panel, PanelSize} from './panel';
 import {Track} from './track';
-import {TrackButton, TrackContent} from './track_panel';
+import {TrackButton, TrackContent, TrackContentAttrs} from './track_panel';
 import {trackRegistry} from './track_registry';
 import {
   drawVerticalLineAtTime,
@@ -55,6 +55,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
   private summaryTrack: Track|undefined;
   private dragging = false;
   private dropping: 'before'|'after'|undefined = undefined;
+  private privateCtx: CanvasRenderingContext2D | null = null;
 
   // Caches the last state.trackGroups[this.trackGroupId].
   // This is to deal with track group deletion. See comments
@@ -172,6 +173,21 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const titleStyling = indent(depth(trackGroup));
     const dragClass = this.dragging ? `drag` : '';
     const dropClass = this.dropping ? `drop-${this.dropping}` : '';
+
+    const trackContentAttrs: TrackContentAttrs | undefined = this.summaryTrack ?
+      {track: this.summaryTrack} :
+      undefined;
+
+    // Need a canvas to draw on because our positioning is relative,
+    // not static like the shared canvas, and we can stick to the top
+    // of the track scroll area
+    if (!collapsed && trackContentAttrs) {
+      trackContentAttrs.tagname = 'canvas';
+      trackContentAttrs.attrs = {
+        height: this.summaryTrack!.getHeight(),
+      };
+    }
+
     return m(
         `.track-group-panel[collapsed=${collapsed}]`,
         {
@@ -232,9 +248,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
         this.summaryTrack ?
             m(TrackContent,
-              {
-                track: this.summaryTrack,
-              },
+              trackContentAttrs!,
               (!this.trackGroupState.collapsed && child !== null) ?
                   m('span', child) :
                   null) :
@@ -358,6 +372,17 @@ export class TrackGroupPanel extends Panel<Attrs> {
     // TODO(andrewbb): move this to css_constants
     this.backgroundColor =
           getComputedStyle(dom).getPropertyValue('--collapsed-background');
+    const canvas = dom.querySelector<HTMLCanvasElement>('canvas.track-content');
+    if (!canvas) {
+      this.privateCtx = null;
+    } else {
+      this.privateCtx = canvas.getContext('2d');
+      const canvasWidth = dom.clientWidth - this.shellWidth;
+      if (canvas.width !== canvasWidth) {
+        canvas.width = canvasWidth;
+      }
+    }
+
     if (this.summaryTrack !== undefined) {
       this.summaryTrack.onFullRedraw();
     }
@@ -449,35 +474,51 @@ export class TrackGroupPanel extends Panel<Attrs> {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
+    if (this.privateCtx) {
+      // Render on our own canvas. It's already offset by the
+      // track shell width, so offset the rendering's translation
+      this.privateCtx.save();
+      this.privateCtx.translate(-this.shellWidth, 0);
+      this.doRenderOn(this.privateCtx, size);
+      this.privateCtx.restore();
+    } else {
+      // Shared canvas
+      this.doRenderOn(this.privateCtx ?? ctx, size);
+    }
+  }
+
+  protected doRenderOn(ctx: CanvasRenderingContext2D, size: PanelSize) {
     const collapsed = this.trackGroupState.collapsed;
 
     ctx.fillStyle = this.backgroundColor;
     ctx.fillRect(0, 0, size.width, size.height);
 
-    if (!collapsed) return;
+    // Only draw the grid lines, vsync highlights, and summary
+    // (like a track) when collapsed.
+    if (collapsed) {
+      // If we have vsync data, render columns under the track group
+      const vsync = getActiveVsyncData();
+      if (vsync) {
+        ctx.save();
+        ctx.translate(this.shellWidth, 0);
+        renderVsyncColumns(ctx, size.height, vsync);
+        ctx.restore();
+      }
 
-    // If we have vsync data, render columns under the track group
-    const vsync = getActiveVsyncData();
-    if (vsync) {
+      drawGridLines(
+          ctx,
+          size.width,
+          size.height);
+
       ctx.save();
       ctx.translate(this.shellWidth, 0);
-      renderVsyncColumns(ctx, size.height, vsync);
+      if (this.summaryTrack) {
+        this.summaryTrack.render(ctx);
+      }
       ctx.restore();
+
+      this.highlightIfTrackSelected(ctx, size);
     }
-
-    drawGridLines(
-        ctx,
-        size.width,
-        size.height);
-
-    ctx.save();
-    ctx.translate(this.shellWidth, 0);
-    if (this.summaryTrack) {
-      this.summaryTrack.render(ctx);
-    }
-    ctx.restore();
-
-    this.highlightIfTrackSelected(ctx, size);
 
     const {visibleTimeScale} = globals.frontendLocalState;
     // Draw vertical line when hovering on the notes panel.
@@ -498,7 +539,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
           `#344596`);
     }
 
-    if (globals.state.currentSelection !== null) {
+    if (collapsed && globals.state.currentSelection !== null) {
       if (globals.state.currentSelection.kind === 'SLICE' &&
           globals.sliceDetails.wakeupTs !== undefined) {
         drawVerticalLineAtTime(
@@ -509,6 +550,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
             getCssStr('--main-foreground-color'));
       }
     }
+
     // All marked areas should have semi-transparent vertical lines
     // marking the start and end.
     for (const note of Object.values(globals.state.notes)) {

@@ -308,7 +308,16 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   }
 }
 
-export interface TrackContentAttrs { track: Track; }
+export interface TrackContentAttrs {
+  track: Track;
+  /** Optional tag name to instantiate instead of the default `<div>`. */
+  tagname?: keyof HTMLElementTagNameMap;
+  /**
+   * Optional attributes to add to the track content element, especially
+   * when using the custom `tagname`.
+   */
+  attrs?: m.Attributes;
+}
 export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
   private mouseDownX?: number;
   private mouseDownY?: number;
@@ -317,8 +326,9 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
   view(node: m.CVnode<TrackContentAttrs>) {
     const attrs = node.attrs;
     return m(
-        '.track-content',
+        `${attrs.tagname ?? ''}.track-content`,
         {
+          ...(attrs.attrs ?? {}),
           onmousemove: (e: PerfettoMouseEvent) => {
             attrs.track.onMouseMove(
                 {x: e.layerX - TRACK_SHELL_WIDTH, y: e.layerY});
