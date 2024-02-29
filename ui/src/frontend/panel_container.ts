@@ -35,7 +35,6 @@ import {
   runningStatStr,
 } from './perf';
 import {TrackGroupAttrs} from './viewer_page';
-import {TrackState, TrackGroupState} from '../common/state';
 
 // If the panel container scrolls, the backing canvas height is
 // SCROLLING_CANVAS_OVERDRAW_FACTOR * parent container height.
@@ -394,7 +393,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     const flowEventsRendererArgs =
         new FlowEventsRendererArgs(this.parentWidth, this.canvasHeight);
 
-    const panelsToReconsider: {
+    const stickyPanels: {
       panel: AnyAttrsVnode & m.Vnode<{ trackGroupId: string }>;
       yOffset: number;
     }[] = [];
@@ -415,12 +414,13 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
 
         // If it's a sticky header for a track-group that is expanded, it
         // will be stuck showing as long as any of its member tracks is
-        // in view, so keep track of it in case it needs a redraw
+        // in view, so keep track of it to redraw it later when we find
+        // overlapping panels
         if (panel.attrs.trackGroupId !== undefined) {
           const trackGroup =
             globals.state.trackGroups[panel.attrs.trackGroupId];
           if (!trackGroup.collapsed) {
-            panelsToReconsider.push({panel, yOffset: yStartOnCanvas});
+            stickyPanels.push({panel, yOffset: yStartOnCanvas});
           }
         }
 
@@ -448,17 +448,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
 
       panelYStart += panelHeight;
 
-      // Are we drawing a member of a group that may be sticky?
-      // If so, draw the group panel.
-      for (
-        let group = panelsToReconsider.shift();
-        group;
-        group = panelsToReconsider.shift()
-      ) {
-        if (this.isInGroup(panel, group.panel)) {
-          totalOnCanvas++;
-          draw(this.ctx, group.panel, group.yOffset);
-        }
+      // Draw all of the sticky panels encountered so far
+      for (const sticky of stickyPanels) {
+        totalOnCanvas++;
+        draw(this.ctx, sticky.panel, sticky.yOffset);
       }
 
       draw(this.ctx, panel, yStartOnCanvas);
@@ -564,47 +557,5 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   private getCanvasOverdrawHeightPerSide() {
     const overdrawHeight = (this.canvasOverdrawFactor - 1) * this.parentHeight;
     return overdrawHeight / 2;
-  }
-
-  private isInGroup(panel: AnyAttrsVnode, group: AnyAttrsVnode): boolean {
-    const track = panel.attrs.id ?
-      globals.state.tracks[panel.attrs.id] :
-      undefined;
-    const subgroup = panel.attrs.trackGroupId ?
-      globals.state.trackGroups[panel.attrs.trackGroupId] :
-      undefined;
-    const trackGroup = group.attrs.trackGroupId ?
-      globals.state.trackGroups[group.attrs.trackGroupId] :
-      undefined;
-    return track && trackGroup ?
-      this.isTrackInGroup(track, trackGroup) :
-      subgroup && trackGroup ?
-      this.isGroupInGroup(subgroup, trackGroup) :
-      false;
-  }
-
-  private isTrackInGroup(track: TrackState, group: TrackGroupState): boolean {
-    if (group.id === track.trackGroup) {
-      return true;
-    }
-    if (track.trackGroup) {
-      const trackGroup = globals.state.trackGroups[track.trackGroup];
-      return trackGroup && this.isGroupInGroup(trackGroup, group);
-    }
-    return false;
-  }
-
-  private isGroupInGroup(
-    subgroup: TrackGroupState,
-    group: TrackGroupState,
-  ): boolean {
-    if (group.id === subgroup.parentGroup) {
-      return true;
-    }
-    if (subgroup.parentGroup) {
-      const parentGroup = globals.state.trackGroups[subgroup.parentGroup];
-      return parentGroup && this.isGroupInGroup(parentGroup, group);
-    }
-    return false;
   }
 }
