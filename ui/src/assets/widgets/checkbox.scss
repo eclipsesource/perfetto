@@ -46,7 +46,7 @@
   position: relative; // Turns this container into a positioned element
   font-family: $pf-font;
   font-size: inherit;
-  color: var(--main-foreground-color);
+  color: $pf-minimal-foreground;
   user-select: none;
   cursor: pointer;
   padding-left: $box-size + $box-label-padding;
