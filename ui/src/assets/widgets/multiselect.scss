@@ -42,10 +42,9 @@
     position: sticky;
     top: 0;
     font-size: 1em;
-    background-color: white;
     z-index: 1;
     font-size: 0.75em;
-    border-bottom: solid 1px $pf-minimal-foreground;
+    border-bottom: solid 1px var(--main-foreground-color);
     padding-bottom: 2px;
     min-width: max-content;
     & > span {
