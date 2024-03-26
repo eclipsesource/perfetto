@@ -270,6 +270,7 @@ class Globals {
   private _router?: Router = undefined;
   private _embeddedMode?: boolean = undefined;
   private _hideSidebar?: boolean = undefined;
+  private _hideOverview?: boolean = undefined;
   private _ftraceCounters?: FtraceStat[] = undefined;
   private _ftracePanelData?: FtracePanelData = undefined;
 
@@ -611,6 +612,14 @@ class Globals {
 
   set hideSidebar(value: boolean) {
     this._hideSidebar = value;
+  }
+
+  get hideOverview(): boolean {
+    return !!this._hideOverview;
+  }
+
+  set hideOverview(value: boolean) {
+    this._hideOverview = value;
   }
 
   setBufferUsage(bufferUsage: number) {

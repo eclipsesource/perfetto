@@ -287,8 +287,8 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
     );
 
     const overviewPanel = [];
-    if (OVERVIEW_PANEL_FLAG.get()) {
-      overviewPanel.push(m(OverviewTimelinePanel, {key: 'overview'}));
+    if (OVERVIEW_PANEL_FLAG.get() && !globals.hideOverview) {
+        overviewPanel.push(m(OverviewTimelinePanel, {key: 'overview'}));
     }
 
     return m(
