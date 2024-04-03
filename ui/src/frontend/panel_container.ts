@@ -392,6 +392,12 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     let totalOnCanvas = 0;
     const flowEventsRendererArgs =
         new FlowEventsRendererArgs(this.parentWidth, this.canvasHeight);
+
+    const stickyPanels: {
+      panel: AnyAttrsVnode & m.Vnode<{ trackGroupId: string }>;
+      yOffset: number;
+    }[] = [];
+
     for (let i = 0; i < this.panelInfos.length; i++) {
       const panel = this.panelInfos[i].vnode;
       const panelHeight = this.panelInfos[i].height;
@@ -405,23 +411,50 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
 
       if (!this.overlapsCanvas(yStartOnCanvas, yStartOnCanvas + panelHeight)) {
         panelYStart += panelHeight;
+
+        // If it's a sticky header for a track-group that is expanded, it
+        // will be stuck showing as long as any of its member tracks is
+        // in view, so keep track of it to redraw it later when we find
+        // overlapping panels
+        if (panel.attrs.trackGroupId !== undefined) {
+          const trackGroup =
+            globals.state.trackGroups[panel.attrs.trackGroupId];
+          if (!trackGroup.collapsed) {
+            stickyPanels.push({panel, yOffset: yStartOnCanvas});
+          }
+        }
+
         continue;
       }
 
       totalOnCanvas++;
 
-      this.ctx.save();
-      this.ctx.translate(0, yStartOnCanvas);
-      const clipRect = new Path2D();
-      const size = {width: this.parentWidth, height: panelHeight};
-      clipRect.rect(0, 0, size.width, size.height);
-      this.ctx.clip(clipRect);
-      const beforeRender = debugNow();
-      panel.state.renderCanvas(this.ctx, size, panel);
-      this.updatePanelStats(
-          i, panel.state, debugNow() - beforeRender, this.ctx, size);
-      this.ctx.restore();
+      const draw = (
+          ctx: CanvasRenderingContext2D,
+          panel: AnyAttrsVnode,
+          yOffset: number): void => {
+        ctx.save();
+        ctx.translate(0, yOffset);
+        const clipRect = new Path2D();
+        const size = {width: this.parentWidth, height: panelHeight};
+        clipRect.rect(0, 0, size.width, size.height);
+        ctx.clip(clipRect);
+        const beforeRender = debugNow();
+        panel.state.renderCanvas(this.ctx, size, panel);
+        this.updatePanelStats(
+            i, panel.state, debugNow() - beforeRender, ctx, size);
+        ctx.restore();
+      };
+
       panelYStart += panelHeight;
+
+      // Draw all of the sticky panels encountered so far
+      for (const sticky of stickyPanels) {
+        totalOnCanvas++;
+        draw(this.ctx, sticky.panel, sticky.yOffset);
+      }
+
+      draw(this.ctx, panel, yStartOnCanvas);
     }
 
     this.drawTopLayerOnCanvas();
