@@ -141,7 +141,18 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
           ...this.getTrackShellButtons(attrs),
           attrs.track.getContextMenu(),
           m(TrackButton, {
-            action: () => {
+            action: (e) => {
+              // Scroll timeline by height of toggledPinnedTrack
+              if (e.currentTarget && e.currentTarget instanceof Element) {
+                const trackShell = e.currentTarget.closest('.track-shell');
+                if (trackShell) {
+                  const parentScrollPanel = trackShell.closest('.scrolling-panel-container');
+                  if (parentScrollPanel) {
+                    parentScrollPanel.scroll(0,
+                      parentScrollPanel.scrollTop + trackShell.clientHeight);
+                  }
+                }
+              }
               globals.dispatch(
                   Actions.toggleTrackPinned({trackId: attrs.trackState.id}));
             },
