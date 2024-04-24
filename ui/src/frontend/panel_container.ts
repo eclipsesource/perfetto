@@ -266,7 +266,6 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         });
         const height = summaryTrackElement.getHeight();
         return this.getHeightOfParent(trackGroup?.parentGroup) + height;
-        // How do I get the height from a trackGroup's ID
       }
     }
     return 0;
