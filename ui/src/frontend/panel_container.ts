@@ -275,11 +275,14 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   // Render a tree of panels into one vnode. Argument `path` is used to build
   // `key` attribute for intermediate tree vnodes: otherwise Mithril internals
   // will complain about keyed and non-keyed vnodes mixed together.
-  renderTree(node: AnyAttrsVnode, path: string): m.Vnode {
+  renderTree(
+      node: AnyAttrsVnode,
+      path: string,
+      depthObject: { depth:number } = {depth: 0}): m.Vnode {
     if (this.isTrackGroupAttrs(node.attrs)) {
-      // Set the top property to the recursive height of its parents
-      // *sarcasticlly* easy
       const top = this.getHeightOfParent(node.attrs.header.attrs.trackGroupId);
+      const children = node.attrs.childTracks.map(
+        (child, index) => this.renderTree(child, `${path}-${index}`, depthObject));
       return m(
         'div',
         {key: path},
@@ -288,9 +291,8 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
             `${path}-header`, !node.attrs.collapsed ?{
               'position': ' sticky',
               'top': top + 'px',
-              'z-index': '3',
-            }: {}), ...node.attrs.childTracks.map(
-              (child, index) => this.renderTree(child, `${path}-${index}`)));
+              'z-index': (++depthObject.depth) + 2,
+            }: {}), ...children);
       ;
     }
     return this.renderPanel(node, assertExists(node.key) as string);
