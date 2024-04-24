@@ -35,6 +35,8 @@ import {
   runningStatStr,
 } from './perf';
 import {TrackGroupAttrs} from './viewer_page';
+import {trackRegistry} from './track_registry';
+import {SCROLLING_TRACK_GROUP} from '../common/state';
 
 // If the panel container scrolls, the backing canvas height is
 // SCROLLING_CANVAS_OVERDRAW_FACTOR * parent container height.
@@ -237,32 +239,59 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     return (attrs as {collapsed?: boolean}).collapsed !== undefined;
   }
 
-  renderPanel(node: AnyAttrsVnode, key: string, extraClass = ''): m.Vnode {
+  renderPanel(node: AnyAttrsVnode, key: string, style?: object): m.Vnode {
     assertFalse(this.panelByKey.has(key));
     this.panelByKey.set(key, node);
 
     return m(
-        `.panel${extraClass}`,
-        {key, 'data-key': key},
+        `.panel`,
+        {key, 'data-key': key, style},
         perfDebug() ?
             [node, m('.debug-panel-border', {key: 'debug-panel-border'})] :
             node);
   }
+  getHeightOfParent(id?: string):number {
+    if (id && id !== SCROLLING_TRACK_GROUP) {
+      const trackGroup = globals.state.trackGroups[id];
+      if (trackGroup &&
+          trackGroup.parentGroup &&
+          trackGroup.parentGroup !== SCROLLING_TRACK_GROUP) {
+        const parentGroup = globals.state.trackGroups[trackGroup.parentGroup];
+        const summaryTrack =
+          globals.state.tracks[parentGroup.tracks[0]];
+        const summaryTrackElement =
+          trackRegistry.get(summaryTrack.kind).create({
+            trackId: summaryTrack.id,
+            engine: globals.engines.get(summaryTrack.engineId)!,
+        });
+        const height = summaryTrackElement.getHeight();
+        return this.getHeightOfParent(trackGroup?.parentGroup) + height;
+        // How do I get the height from a trackGroup's ID
+      }
+    }
+    return 0;
+  };
 
   // Render a tree of panels into one vnode. Argument `path` is used to build
   // `key` attribute for intermediate tree vnodes: otherwise Mithril internals
   // will complain about keyed and non-keyed vnodes mixed together.
   renderTree(node: AnyAttrsVnode, path: string): m.Vnode {
     if (this.isTrackGroupAttrs(node.attrs)) {
+      // Set the top property to the recursive height of its parents
+      // *sarcasticlly* easy
+      const top = this.getHeightOfParent(node.attrs.header.attrs.trackGroupId);
       return m(
-          'div',
-          {key: path},
-          this.renderPanel(
-              node.attrs.header,
-              `${path}-header`,
-              node.attrs.collapsed ? '' : '.sticky'),
-          ...node.attrs.childTracks.map(
+        'div',
+        {key: path},
+        this.renderPanel(
+            node.attrs.header,
+            `${path}-header`, !node.attrs.collapsed ?{
+              'position': ' sticky',
+              'top': top + 'px',
+              'z-index': '3',
+            }: {}), ...node.attrs.childTracks.map(
               (child, index) => this.renderTree(child, `${path}-${index}`)));
+      ;
     }
     return this.renderPanel(node, assertExists(node.key) as string);
   }
