@@ -239,7 +239,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     return (attrs as {collapsed?: boolean}).collapsed !== undefined;
   }
 
-  renderPanel(node: AnyAttrsVnode, key: string, style?: object): m.Vnode {
+  renderPanel(
+      node: AnyAttrsVnode,
+      key: string,
+      style?: Partial<CSSStyleDeclaration> ): m.Vnode {
     assertFalse(this.panelByKey.has(key));
     this.panelByKey.set(key, node);
 
@@ -250,6 +253,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
             [node, m('.debug-panel-border', {key: 'debug-panel-border'})] :
             node);
   }
+
   getHeightOfParent(id?: string):number {
     if (id && id !== SCROLLING_TRACK_GROUP) {
       const trackGroup = globals.state.trackGroups[id];
@@ -288,10 +292,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         this.renderPanel(
             node.attrs.header,
             `${path}-header`, !node.attrs.collapsed ?{
-              'position': ' sticky',
+              'position': 'sticky',
               'top': top + 'px',
-              'z-index': (++depthObject.depth) + 2,
-            }: {}), ...children);
+              'zIndex': ((++depthObject.depth) + 2).toString(),
+            }: undefined), ...children);
       ;
     }
     return this.renderPanel(node, assertExists(node.key) as string);
