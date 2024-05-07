@@ -74,6 +74,35 @@ export class NotesPanel extends Panel {
     }, {passive: true});
   }
 
+  resize = (e: MouseEvent): void => {
+    e.stopPropagation();
+    e.preventDefault();
+    const mouseMoveEvent = (evMove: MouseEvent): void => {
+        evMove.preventDefault();
+        const root = document.querySelector(':root');
+        if (root && root instanceof HTMLElement &&
+            'layerX' in evMove && evMove.layerX &&
+            typeof evMove.layerX === 'number'
+        ) {
+          if (evMove.layerX < 250) {
+            root.style.setProperty('--track-shell-width', '250px');
+          } else {
+            root.style.setProperty('--track-shell-width', evMove.layerX + 'px');
+          }
+          globals.rafScheduler.scheduleFullRedraw();
+        }
+    };
+    const mouseUpEvent = (evUp : MouseEvent): void => {
+        evUp.stopPropagation();
+        evUp.preventDefault();
+        document.removeEventListener('mousemove', mouseMoveEvent);
+        document.removeEventListener('mouseup', mouseUpEvent);
+    };
+    document.addEventListener('mousemove', mouseMoveEvent);
+    document.addEventListener('mouseup', mouseUpEvent);
+    document.removeEventListener('mousedown', this.resize);
+  };
+
   view() {
     const allCollapsed = Object.values(globals.state.trackGroups)
                              .every((group) => group.collapsed);
@@ -84,6 +113,27 @@ export class NotesPanel extends Panel {
           onclick: (e: PerfettoMouseEvent) => {
             this.onClick(e.layerX - (getCssNum('--track-shell-width') || 0), e.layerY);
             e.stopPropagation();
+          },
+          onmousemove: (e: PerfettoMouseEvent)=>{
+            if (e.currentTarget instanceof HTMLElement &&
+              (
+                (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
+                (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+              )
+            ) {
+              document.addEventListener('mousedown', this.resize);
+              e.currentTarget.style.cursor = 'col-resize';
+              return;
+            } else if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.cursor = 'unset';
+            }
+            document.removeEventListener('mousedown', this.resize);
+          },
+          onmouseleave: (e: PerfettoMouseEvent) =>{
+            if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.cursor = 'unset';
+              document.removeEventListener('mousedown', this.resize);
+            }
           },
           oncontextmenu: (e: PerfettoMouseEvent)=>{
             this.onRightClick(e.layerX - (getCssNum('--track-shell-width') || 0), e.layerY);
