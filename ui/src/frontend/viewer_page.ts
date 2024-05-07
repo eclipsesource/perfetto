@@ -19,7 +19,7 @@ import {clamp} from '../base/math_utils';
 import {Actions} from '../common/actions';
 import {featureFlags} from '../common/feature_flags';
 
-import {TOPBAR_HEIGHT, TRACK_SHELL_WIDTH} from './css_constants';
+import {TOPBAR_HEIGHT, getCssNum} from './css_constants';
 import {DetailsPanel} from './details_panel';
 import {globals} from './globals';
 import {NotesPanel} from './notes_panel';
@@ -57,7 +57,7 @@ function onTimeRangeBoundary(mousePos: number): 'START'|'END'|null {
     const {visibleTimeScale} = globals.frontendLocalState;
     const start = visibleTimeScale.tpTimeToPx(area.start);
     const end = visibleTimeScale.tpTimeToPx(area.end);
-    const startDrag = mousePos - TRACK_SHELL_WIDTH;
+    const startDrag = mousePos - (getCssNum('--track-shell-width') || 0);
     const startDistance = Math.abs(start - startDrag);
     const endDistance = Math.abs(end - startDrag);
     const range = 3 * window.devicePixelRatio;
@@ -104,7 +104,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
       const rect = vnode.dom.getBoundingClientRect();
       frontendLocalState.updateLocalLimits(
           0,
-          rect.width - TRACK_SHELL_WIDTH -
+          rect.width - (getCssNum('--track-shell-width') || 0) -
               frontendLocalState.getScrollbarWidth());
     };
 
@@ -143,9 +143,10 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
       onZoomed: (zoomedPositionPx: number, zoomRatio: number) => {
         // TODO(hjd): Avoid hardcoding TRACK_SHELL_WIDTH.
         // TODO(hjd): Improve support for zooming in overview timeline.
-        const zoomPx = zoomedPositionPx - TRACK_SHELL_WIDTH;
+        const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+        const zoomPx = zoomedPositionPx - trackShellWidth;
         const rect = vnode.dom.getBoundingClientRect();
-        const centerPoint = zoomPx / (rect.width - TRACK_SHELL_WIDTH);
+        const centerPoint = zoomPx / (rect.width - trackShellWidth);
         frontendLocalState.zoomVisibleWindow(1 - zoomRatio, centerPoint);
         globals.rafScheduler.scheduleRedraw();
       },
@@ -162,6 +163,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
         const traceTime = globals.state.traceTime;
         const {visibleTimeScale} = frontendLocalState;
         this.keepCurrentSelection = true;
+        const trackShellWidth = (getCssNum('--track-shell-width') || 0);
         if (editing) {
           const selection = globals.state.currentSelection;
           if (selection !== null && selection.kind === 'AREA') {
@@ -169,7 +171,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 globals.frontendLocalState.selectedArea :
                 globals.state.areas[selection.areaId];
             const newTime =
-                visibleTimeScale.pxToHpTime(currentX - TRACK_SHELL_WIDTH)
+                visibleTimeScale.pxToHpTime(currentX - trackShellWidth)
                     .toTPTime();
             // Have to check again for when one boundary crosses over the other.
             const curBoundary = onTimeRangeBoundary(prevX);
@@ -185,8 +187,8 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 globals.state.areas[selection.areaId].tracks);
           }
         } else {
-          let startPx = Math.min(dragStartX, currentX) - TRACK_SHELL_WIDTH;
-          let endPx = Math.max(dragStartX, currentX) - TRACK_SHELL_WIDTH;
+          let startPx = Math.min(dragStartX, currentX) - trackShellWidth;
+          let endPx = Math.max(dragStartX, currentX) - trackShellWidth;
           if (startPx < 0 && endPx < 0) return;
           const {pxSpan} = visibleTimeScale;
           startPx = clamp(startPx, pxSpan.start, pxSpan.end);

@@ -22,8 +22,8 @@ import {
 } from '../common/time';
 
 import {
+  getCssNum,
   getCssStr,
-  TRACK_SHELL_WIDTH,
 } from './css_constants';
 import {globals} from './globals';
 import {
@@ -133,17 +133,18 @@ export class TimeSelectionPanel extends Panel {
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     ctx.fillStyle = getCssStr('--main-foreground-color');
-    ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
+    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+    ctx.fillRect(trackShellWidth - 2, 0, 2, size.height);
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
+    ctx.rect(trackShellWidth, 0, size.width - trackShellWidth, size.height);
     ctx.clip();
 
     const span = globals.frontendLocalState.visibleWindow.timestampSpan;
-    if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
-      const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
-      const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+    if (size.width > trackShellWidth && span.duration > 0n) {
+      const maxMajorTicks = getMaxMajorTicks(size.width - trackShellWidth);
+      const map = timeScaleForVisibleWindow(trackShellWidth, size.width);
       for (const {type, time} of new TickGenerator(
                span, maxMajorTicks, globals.state.traceTime.start)) {
         const px = Math.floor(map.tpTimeToPx(time));
@@ -152,7 +153,7 @@ export class TimeSelectionPanel extends Panel {
         }
       }
     }
-    
+
     const localArea = globals.frontendLocalState.selectedArea;
     const selection = globals.state.currentSelection;
     if (localArea !== undefined) {
@@ -165,11 +166,11 @@ export class TimeSelectionPanel extends Panel {
       const end = BigintMath.max(selectedArea.start, selectedArea.end);
       this.renderSpan(ctx, size, new TPTimeSpan(start, end));
     }
-    
+
     if (globals.state.hoverCursorTimestamp !== -1n) {
       this.renderHover(ctx, size, globals.state.hoverCursorTimestamp);
     }
-    
+
     for (const note of Object.values(globals.state.notes)) {
       const noteIsSelected = selection !== null && selection.kind === 'AREA' &&
           selection.noteId === note.id;
@@ -186,7 +187,7 @@ export class TimeSelectionPanel extends Panel {
   renderHover(ctx: CanvasRenderingContext2D, size: PanelSize, ts: TPTime) {
     const {visibleTimeScale} = globals.frontendLocalState;
     const xPos =
-        TRACK_SHELL_WIDTH + Math.floor(visibleTimeScale.tpTimeToPx(ts));
+    (getCssNum('--track-shell-width') || 0) + Math.floor(visibleTimeScale.tpTimeToPx(ts));
     const offsetTime = tpTimeToString(ts - globals.state.traceTime.start);
     const timeFromStart = tpTimeToString(ts);
     const label = `${offsetTime} (${timeFromStart})`;
@@ -202,7 +203,7 @@ export class TimeSelectionPanel extends Panel {
     drawHBar(
         ctx,
         {
-          x: TRACK_SHELL_WIDTH + xLeft,
+          x: (getCssNum('--track-shell-width') || 0) + xLeft,
           y: 0,
           width: xRight - xLeft,
           height: size.height,
@@ -212,10 +213,11 @@ export class TimeSelectionPanel extends Panel {
   }
 
   private bounds(size: PanelSize): BBox {
+    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
     return {
-      x: TRACK_SHELL_WIDTH,
+      x: trackShellWidth,
       y: 0,
-      width: size.width - TRACK_SHELL_WIDTH,
+      width: size.width - trackShellWidth,
       height: size.height,
     };
   }

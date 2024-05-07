@@ -45,7 +45,7 @@ export function getCssStr(prop: string): string {
   return window.getComputedStyle(doc).getPropertyValue(prop).trim();
 }
 
-function getCssNum(prop: string): number|undefined {
+export function getCssNum(prop: string): number|undefined {
   const str = getCssStr(prop);
   if (str === undefined) return undefined;
   const match = str.match(/^\W*(\d+)px(|\!important')$/);

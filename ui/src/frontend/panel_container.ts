@@ -18,7 +18,7 @@ import {assertExists, assertFalse, assertTrue} from '../base/logging';
 
 import {
   TOPBAR_HEIGHT,
-  TRACK_SHELL_WIDTH,
+  getCssNum,
   getCssStr,
 } from './css_constants';
 import {
@@ -326,7 +326,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       this.repositionCanvas();
       if (this.attrs.kind === 'TRACKS') {
         globals.frontendLocalState.updateLocalLimits(
-            0, this.parentWidth - TRACK_SHELL_WIDTH);
+            0, this.parentWidth - (getCssNum('--track-shell-width') || 0));
       }
       this.redrawCanvas();
     }
@@ -508,7 +508,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     this.ctx.lineWidth = 1;
     const canvasYStart =
         Math.floor(this.scrollTop - this.getCanvasOverdrawHeightPerSide());
-    this.ctx.translate(TRACK_SHELL_WIDTH, -canvasYStart);
+    this.ctx.translate((getCssNum('--track-shell-width') || 0), -canvasYStart);
     this.ctx.strokeRect(
         startX,
         selectedTracksMaxY,
