@@ -40,6 +40,10 @@ export function resizeTrackShell(e: MouseEvent): void {
       ) {
         if (evMove.layerX < 250) {
           root.style.setProperty('--track-shell-width', '250px');
+        } else if (e.target &&
+          e.target instanceof HTMLElement &&
+          evMove.layerX > (e.target.clientWidth - 100)) {
+            root.style.setProperty('--track-shell-width', e.target.clientWidth-100 + 'px');
         } else {
           root.style.setProperty('--track-shell-width', evMove.layerX + 'px');
         }
