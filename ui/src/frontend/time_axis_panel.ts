@@ -28,10 +28,35 @@ import {
   timeScaleForVisibleWindow,
 } from './gridline_helper';
 import {Panel, PanelSize} from './panel';
+import {PerfettoMouseEvent} from './events';
+import {resizeTrackShell} from './vertical_line_helper';
 
 export class TimeAxisPanel extends Panel {
   view() {
-    return m('.time-axis-panel');
+    return m('.time-axis-panel', {
+
+      onmousemove: (e: PerfettoMouseEvent)=>{
+        if (e.currentTarget instanceof HTMLElement &&
+          (
+            (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
+            (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+          )
+        ) {
+          document.addEventListener('mousedown', resizeTrackShell);
+          e.currentTarget.style.cursor = 'col-resize';
+          return;
+        } else if (e.currentTarget instanceof HTMLElement) {
+          e.currentTarget.style.cursor = 'unset';
+        }
+        document.removeEventListener('mousedown', resizeTrackShell);
+      },
+      onmouseleave: (e: PerfettoMouseEvent) =>{
+        if (e.currentTarget instanceof HTMLElement) {
+          e.currentTarget.style.cursor = 'unset';
+          document.removeEventListener('mousedown', resizeTrackShell);
+        }
+      },
+    });
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
