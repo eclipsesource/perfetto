@@ -163,8 +163,8 @@ export type ThreadTrackSortKey = {
 
 export namespace ThreadTrackSortKey {
   export function is(key: unknown): key is ThreadTrackSortKey {
-    return !!(typeof key === 'object' && key && 'utid' in key && 'priority' in key && typeof key.utid === 'number');
-}
+    return typeof key === 'object' && !!key && 'utid' in key && 'priority' in key && typeof key.utid === 'number';
+  }
 }
 
 // Sort key for all tracks: both thread-associated and non-thread associated.
