@@ -526,6 +526,7 @@ export class TraceController extends Controller<States> {
       publishFtraceCounters(counters);
     }
 
+    globals.dispatch(Actions.sortThreadTracks({}));
     globals.dispatch(Actions.maybeExpandOnlyTrackGroup({}));
 
     await this.selectFirstHeapProfile();
