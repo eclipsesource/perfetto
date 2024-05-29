@@ -733,6 +733,9 @@ button.query-ctrl {
     background-color: var(--collapsed-background);
     color: var(--main-foreground-color);
     font-weight: bold;
+    .shell {
+      overflow: hidden;
+    }
     span.chip {
       color: #121212;
     }
