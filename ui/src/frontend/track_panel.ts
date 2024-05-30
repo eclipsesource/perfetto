@@ -215,7 +215,8 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   onmousemove(e: MouseEvent) {
     if (this.attrs?.track.supportsResizing) {
       if (e.currentTarget instanceof HTMLElement &&
-        e.offsetY >= e.currentTarget.scrollHeight - 5) {
+        e.pageY - e.currentTarget.getBoundingClientRect().top >=
+          e.currentTarget.clientHeight - 5) {
             document.addEventListener('mousedown', this.resize);
           e.currentTarget.style.cursor = 'row-resize';
           return;

@@ -55,6 +55,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
   private summaryTrack: Track|undefined;
   private dragging = false;
   private dropping: 'before'|'after'|undefined = undefined;
+  // private overFlown = false;
 
   // Caches the last state.trackGroups[this.trackGroupId].
   // This is to deal with track group deletion. See comments
@@ -130,8 +131,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
   onmousemove(e: MouseEvent) {
     if (this.summaryTrack && this.summaryTrack.supportsResizing) {
       if (e.currentTarget instanceof HTMLElement &&
-          e.offsetY >=
-          e.currentTarget.scrollHeight - MOUSE_TARGETING_THRESHOLD_PX
+          e.pageY - e.currentTarget.getBoundingClientRect().top >=
+          e.currentTarget.clientHeight - MOUSE_TARGETING_THRESHOLD_PX
           ) {
             document.addEventListener('mousedown', this.resize);
           e.currentTarget.style.cursor = 'row-resize';
@@ -200,7 +201,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
       {} :
       {style: {marginLeft: `${depth/2}rem`}};
 
-    const titleStyling = indent(depth(trackGroup));
+    const marginStyling = indent(depth(trackGroup));
     const dragClass = this.dragging ? `drag` : '';
     const dropClass = this.dropping ? `drop-${this.dropping}` : '';
     return m(
@@ -234,19 +235,19 @@ export class TrackGroupPanel extends Panel<Attrs> {
           },
 
           m('.fold-button',
-            {...titleStyling},
+            {...marginStyling},
             m('i.material-icons',
               this.trackGroupState.collapsed ? CHEVRON_RIGHT : EXPAND_DOWN)),
-          m('.title-wrapper',
-            {...titleStyling},
-            m('h1.track-title',
-              {title: trackGroup.description},
-              name,
-              ('namespace' in this.summaryTrackState.config) &&
-                  m('span.chip', 'metric')),
-            (this.trackGroupState.collapsed && child !== null) ?
-              m('h2.track-subtitle', child) :
-                null),
+          m('h1.track-title',
+            {style: {
+              ...marginStyling.style,
+            }, title: trackGroup.description},
+            name,
+            ('namespace' in this.summaryTrackState.config) &&
+                m('span.chip', 'metric')),
+          (this.trackGroupState.collapsed && child !== null) ?
+            m('h2.track-subtitle', child) :
+              null,
           m('.track-buttons', ...this.getTrackGroupActionButtons(),
             selection && selection.kind === 'AREA' ?
               m('i.material-icons.track-button',
@@ -356,6 +357,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
   onupdate({dom}: m.CVnodeDOM<Attrs>) {
     const shell = assertExists(dom.querySelector('.shell'));
+    // const trackTitle = dom.querySelector('.track-title')!;
+    // this.overFlown =  trackTitle.scrollHeight >= trackTitle.clientHeight;
     this.shellWidth = shell.getBoundingClientRect().width;
     // TODO(andrewbb): move this to css_constants
     this.backgroundColor =
