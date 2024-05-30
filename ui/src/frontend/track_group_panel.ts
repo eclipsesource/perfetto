@@ -103,12 +103,13 @@ export class TrackGroupPanel extends Panel<Attrs> {
   resize = (e: MouseEvent): void => {
     e.stopPropagation();
     e.preventDefault();
-    let y = e.offsetY;
-    let previousClientY = e.clientY;
+    if(!this.summaryTrack){
+      return;
+    }
+    let y = this.summaryTrack.getHeight()
     const mouseMoveEvent = (evMove: MouseEvent): void => {
       evMove.preventDefault();
-      y += (evMove.clientY -previousClientY);
-      previousClientY = evMove.clientY;
+      y += evMove.movementY;
       if (this.attrs && this.initialHeight) {
         const newMultiplier = y / this.initialHeight;
         if (newMultiplier < 1) {
@@ -120,8 +121,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
       }
     };
     const mouseUpEvent = (): void => {
-        document.removeEventListener('mousemove', mouseMoveEvent);
-        document.removeEventListener('mouseup', mouseUpEvent);
+      document.removeEventListener('mousemove', mouseMoveEvent);
+      document.removeEventListener('mouseup', mouseUpEvent);
     };
     document.addEventListener('mousemove', mouseMoveEvent);
     document.addEventListener('mouseup', mouseUpEvent);
