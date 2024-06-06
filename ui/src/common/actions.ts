@@ -1529,6 +1529,7 @@ export const StateActions = {
       state.selectedTrackIds.delete(args.trackId);
     } else {
       state.selectedTrackIds.add(args.trackId);
+      state.lastSelectedTrackId = args.trackId;
     }
     pluginManager.onTrackSelectionChange(
       Array.from(state.selectedTrackIds),
@@ -1542,6 +1543,7 @@ export const StateActions = {
     if (state.selectedTrackGroupIds.has(args.trackGroupId)) {
       state.selectedTrackGroupIds.delete(args.trackGroupId);
     } else {
+      state.lastSelectedTrackId = undefined;
       state.selectedTrackGroupIds.add(args.trackGroupId);
     }
     pluginManager.onTrackSelectionChange(
