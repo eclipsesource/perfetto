@@ -180,9 +180,9 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
 
 
     return m(
-        `.track-shell[draggable=true] ${globals.state.selectedTrackIds.has(attrs.trackState.id)? 'selected': ''}`,
+        `.track-shell[draggable=true]`,
         {
-          class: `${highlightClass} ${dragClass} ${dropClass}`,
+          class: `${highlightClass} ${dragClass} ${dropClass} ${globals.state.selectedTrackIds.has(attrs.trackState.id)? 'selected': ''}`,
           onclick: (e: MouseEvent)=>{
             if (!e.ctrlKey) {
               globals.dispatch(

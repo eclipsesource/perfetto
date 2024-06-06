@@ -197,7 +197,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
                   {trackGroupId: attrs.trackGroupId}));
                   e.stopPropagation();
             },
-            class: `${highlightClass} ${dragClass} ${dropClass}`,
+            class: `${highlightClass} ${dragClass} ${dropClass} ${globals.state.selectedTrackGroupIds.has(attrs.trackGroupId)? 'selected': ''}`,
             ondragstart: this.ondragstart.bind(this),
             ondragenter: (e: DragEvent)=>{
               e.preventDefault();
