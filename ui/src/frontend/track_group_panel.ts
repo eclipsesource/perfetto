@@ -230,7 +230,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
               m('i.material-icons.track-button',
                 {
                   onclick: (e: MouseEvent) => {
-                    globals.dispatch(Actions.addTrackToAreaSelection(
+                    globals.dispatch(Actions.toggleTrackInAreaSelection(
                         {id: attrs.trackGroupId, isTrackGroup: true}));
                     e.stopPropagation();
                   },

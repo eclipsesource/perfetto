@@ -248,7 +248,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
                   globals.state.currentSelection.kind === 'AREA' ?
               m(TrackButton, {
                 action: (e: PerfettoMouseEvent) => {
-                  globals.dispatch(Actions.addTrackToAreaSelection(
+                  globals.dispatch(Actions.toggleTrackInAreaSelection(
                       {id: attrs.trackState.id, isTrackGroup: false}));
                   e.stopPropagation();
                 },

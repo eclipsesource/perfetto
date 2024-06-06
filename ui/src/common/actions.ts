@@ -1245,7 +1245,7 @@ export const StateActions = {
         };
       },
 
-  addTrackToAreaSelection(
+  toggleTrackInAreaSelection(
       state: StateDraft, args: {id: string, isTrackGroup: boolean}) {
     const selection = state.currentSelection;
     if (selection === null || selection.kind !== 'AREA') return;
