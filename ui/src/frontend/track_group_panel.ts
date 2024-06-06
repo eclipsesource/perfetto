@@ -189,9 +189,6 @@ export class TrackGroupPanel extends Panel<Attrs> {
         m(`.shell[draggable=true]`,
           {
             onclick: (e: MouseEvent) => {
-              globals.dispatch(Actions.toggleTrackGroupCollapsed({
-                trackGroupId: attrs.trackGroupId,
-              })),
               globals.dispatch(
                 Actions.toggleTrackGroupSelection(
                   {trackGroupId: attrs.trackGroupId}));
@@ -212,7 +209,14 @@ export class TrackGroupPanel extends Panel<Attrs> {
           },
 
           m('.fold-button',
-            {...marginStyling},
+            {...marginStyling,
+              onclick: (e: MouseEvent) => {
+                globals.dispatch(Actions.toggleTrackGroupCollapsed({
+                  trackGroupId: attrs.trackGroupId,
+                }));
+                e.stopPropagation();
+              },
+            },
             m('i.material-icons',
               this.trackGroupState.collapsed ? CHEVRON_RIGHT : EXPAND_DOWN)),
           m('h1.track-title',

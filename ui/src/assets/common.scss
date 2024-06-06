@@ -788,15 +788,13 @@ button.query-ctrl {
       position: relative;
       top: -5px;
       grid-area: fold-button;
+      &:hover{
+        cursor: pointer;
+        color: hsl(45, 100%, 48%);
+      }
     }
     .track-button {
       font-size: 20px;
-    }
-    &:hover {
-      cursor: pointer;
-      .fold-button {
-        color: hsl(45, 100%, 48%);
-      }
     }
     &.flash {
       color: yellow;
