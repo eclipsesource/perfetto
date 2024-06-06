@@ -180,9 +180,17 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
 
 
     return m(
-        `.track-shell[draggable=true]`,
+        `.track-shell[draggable=true] ${globals.state.selectedTrackIds.has(attrs.trackState.id)? 'selected': ''}`,
         {
           class: `${highlightClass} ${dragClass} ${dropClass}`,
+          onclick: (e: MouseEvent)=>{
+            if (!e.ctrlKey) {
+              globals.dispatch(
+                Actions.clearTrackAndGroupSelection({}));
+            }
+            globals.dispatch(
+              Actions.toggleTrackSelection({trackId: attrs.trackState.id}));
+          },
           ondragstart: this.ondragstart.bind(this),
           ondragenter: (e: DragEvent)=>{
             e.preventDefault();
@@ -240,7 +248,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
                   globals.state.currentSelection.kind === 'AREA' ?
               m(TrackButton, {
                 action: (e: PerfettoMouseEvent) => {
-                  globals.dispatch(Actions.toggleTrackSelection(
+                  globals.dispatch(Actions.addTrackToAreaSelection(
                       {id: attrs.trackState.id, isTrackGroup: false}));
                   e.stopPropagation();
                 },

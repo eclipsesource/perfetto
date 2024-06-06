@@ -192,6 +192,9 @@ export class TrackGroupPanel extends Panel<Attrs> {
               globals.dispatch(Actions.toggleTrackGroupCollapsed({
                 trackGroupId: attrs.trackGroupId,
               })),
+              globals.dispatch(
+                Actions.toggleTrackGroupSelection(
+                  {trackGroupId: attrs.trackGroupId}));
                   e.stopPropagation();
             },
             class: `${highlightClass} ${dragClass} ${dropClass}`,
@@ -227,7 +230,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
               m('i.material-icons.track-button',
                 {
                   onclick: (e: MouseEvent) => {
-                    globals.dispatch(Actions.toggleTrackSelection(
+                    globals.dispatch(Actions.addTrackToAreaSelection(
                         {id: attrs.trackGroupId, isTrackGroup: true}));
                     e.stopPropagation();
                   },

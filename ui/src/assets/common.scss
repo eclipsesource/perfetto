@@ -397,7 +397,7 @@ $bottom-tab-padding: 10px;
     }
 
     &.selected {
-      background-color: #ebeef9;
+      background-color: var(--track-highlight-background);
     }
 
     &.alternating-thread-track {
