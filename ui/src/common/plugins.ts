@@ -30,6 +30,7 @@ import {
 import {Registry} from './registry';
 import {Selection} from './state';
 import {CustomButton, CustomButtonArgs, customButtonRegistry} from '../frontend/button_registry';
+import {AnyAttrsVnode} from 'src/frontend/panel_container';
 
 // Every plugin gets its own PluginContext. This is how we keep track
 // what each plugin is doing and how we can blame issues on particular
@@ -37,11 +38,20 @@ import {CustomButton, CustomButtonArgs, customButtonRegistry} from '../frontend/
 export class PluginContextImpl implements PluginContext {
   readonly pluginId: string;
   onDetailsPanelSelectionChange?: (newSelection?: Selection) => void;
+  onDetailsPanelRender?:
+    (detailsPanels:
+      { key: string; name: string; vnode: AnyAttrsVnode; }[]) => void;
   private trackProviders: TrackProvider[];
 
   constructor(pluginId: string) {
     this.pluginId = pluginId;
     this.trackProviders = [];
+  }
+  detailsPanelRenderOverride(
+    onDetailsPanelHijack: (detailsPanels:
+      { key: string; name: string; vnode: AnyAttrsVnode; }[]
+    ) => void): void {
+      this.onDetailsPanelRender = onDetailsPanelHijack;
   }
 
   // ==================================================================
@@ -147,6 +157,23 @@ export class PluginManager {
     if (pluginContext.onDetailsPanelSelectionChange) {
       pluginContext.onDetailsPanelSelectionChange(newSelection);
     }
+  }
+
+  isDetailsPanelRenderOverride(): boolean {
+    const overrides = Array.from(this.contexts.values()).filter((context)=>{
+      return !!context.onDetailsPanelRender;
+    });
+    return overrides.length>0;
+  }
+
+  onDetailsPanelRender(detailsPanel?:
+    { key: string; name: string; vnode: AnyAttrsVnode; }[]) {
+    this.contexts.forEach((context)=>{
+      if (context === undefined) return;
+      if (context.onDetailsPanelRender) {
+        context.onDetailsPanelRender(detailsPanel || []);
+      }
+    });
   }
 }
 
