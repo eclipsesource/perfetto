@@ -191,9 +191,16 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     }
     let y = this.attrs.track.getHeight();
     const mouseMoveEvent = (evMove: MouseEvent): void => {
+      if (!this.attrs) {
+        return;
+      }
       evMove.preventDefault();
-      y += evMove.movementY;
-        if (this.attrs && this.initialHeight) {
+      let movementY = evMove.movementY;
+      if (isPinned(this.attrs.trackState.id)) {
+        movementY /=2;
+      }
+      y += movementY;
+        if (this.initialHeight) {
           const newMultiplier = y / this.initialHeight;
           if (newMultiplier < 1) {
             this.attrs.trackState.scaleFactor = 1;
