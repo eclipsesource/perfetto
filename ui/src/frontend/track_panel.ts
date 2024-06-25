@@ -68,7 +68,7 @@ function isSelected(id: string) {
 interface TrackShellAttrs {
   track: Track;
   trackState: TrackState;
-  pinnedGroup?: boolean;
+  pinnedCopy?: boolean;
 }
 
 class TrackShell implements m.ClassComponent<TrackShellAttrs> {
@@ -198,7 +198,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
       }
       evMove.preventDefault();
       let movementY = evMove.movementY;
-      if (this.attrs.pinnedGroup !== true &&
+      if (this.attrs.pinnedCopy !== true &&
           isPinned(this.attrs.trackState.id)) {
         movementY /=2;
       }
@@ -396,7 +396,7 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
 interface TrackComponentAttrs {
   trackState: TrackState;
   track: Track;
-  pinnedGroup?: boolean;
+  pinnedCopy?: boolean;
 }
 class TrackComponent implements m.ClassComponent<TrackComponentAttrs> {
   view({attrs}: m.CVnode<TrackComponentAttrs>) {
@@ -415,7 +415,7 @@ class TrackComponent implements m.ClassComponent<TrackComponentAttrs> {
           m(TrackShell, {
             track: attrs.track,
             trackState: attrs.trackState,
-            pinnedGroup: attrs.pinnedGroup}),
+            pinnedCopy: attrs.pinnedCopy}),
           m(TrackContent, {track: attrs.track}),
         ]);
   }
@@ -458,7 +458,7 @@ export class TrackButton implements m.ClassComponent<TrackButtonAttrs> {
 interface TrackPanelAttrs {
   id: string;
   selectable: boolean;
-  pinnedGroup?: boolean;
+  pinnedCopy?: boolean;
 }
 
 export class TrackPanel extends Panel<TrackPanelAttrs> {
@@ -467,12 +467,12 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
   // has disappeared.
   private track: Track|undefined;
   private trackState: TrackState|undefined;
-  private pinnedGroup?: boolean;
+  private pinnedCopy?: boolean;
 
   constructor(vnode: m.CVnode<TrackPanelAttrs>) {
     super();
     const trackId = vnode.attrs.id;
-    this.pinnedGroup = vnode.attrs.pinnedGroup;
+    this.pinnedCopy = vnode.attrs.pinnedCopy;
     const trackState = globals.state.tracks[trackId];
     if (trackState === undefined) {
       return;
@@ -493,7 +493,7 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
     return m(TrackComponent, {
       trackState: this.trackState,
       track: this.track,
-      pinnedGroup: this.pinnedGroup});
+      pinnedCopy: this.pinnedCopy});
   }
 
   oncreate() {
