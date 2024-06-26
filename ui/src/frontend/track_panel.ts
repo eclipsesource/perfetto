@@ -191,56 +191,77 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     if (!this.attrs) {
       return;
     }
-    let y = this.attrs.track.getHeight();
-    const mouseMoveEvent = (evMove: MouseEvent): void => {
-      if (!this.attrs) {
-        return;
-      }
-      evMove.preventDefault();
-      let movementY = evMove.movementY;
-      if (this.attrs.pinnedCopy !== true &&
-          isPinned(this.attrs.trackState.id)) {
-        movementY /=2;
-      }
-      y += movementY;
-        if (this.defaultHeight) {
-          const newMultiplier = y / this.defaultHeight;
-          if (newMultiplier < 1) {
-            this.attrs.trackState.scaleFactor = 1;
-          } else {
-            this.attrs.trackState.scaleFactor = newMultiplier;
+    if (e.currentTarget instanceof HTMLElement) {
+      const pageElement = e.currentTarget.closest('div.page');
+      if (pageElement && pageElement instanceof HTMLDivElement) {
+        let trackHeight = this.attrs.track.getHeight();
+        let mouseY = e.clientY;
+        const mouseMoveEvent = (evMove: MouseEvent): void => {
+          evMove.preventDefault();
+          if (!this.attrs) {
+            return;
           }
-          globals.rafScheduler.scheduleFullRedraw();
-        }
-    };
-    const mouseUpEvent = (): void => {
-      document.removeEventListener('mousemove', mouseMoveEvent);
-      document.removeEventListener('mouseup', mouseUpEvent);
-    };
-    document.addEventListener('mousemove', mouseMoveEvent);
-    document.addEventListener('mouseup', mouseUpEvent);
-    document.removeEventListener('mousedown', this.resize);
-    };
+          let movementY = evMove.clientY-mouseY;
+          if (this.attrs.pinnedCopy !== true &&
+            isPinned(this.attrs.trackState.id)) {
+            movementY /=2;
+          }
+          trackHeight += movementY;
+          mouseY = evMove.clientY;
+          if (this.attrs && this.defaultHeight) {
+            const newMultiplier = trackHeight / this.defaultHeight;
+            if (newMultiplier < 1) {
+              this.attrs.trackState.scaleFactor = 1;
+            } else {
+              this.attrs.trackState.scaleFactor = newMultiplier;
+            }
+            globals.rafScheduler.scheduleFullRedraw();
+          }
+        };
+        const mouseReturnEvent = () : void => {
+          pageElement.addEventListener('mousemove', mouseMoveEvent);
+          pageElement.removeEventListener('mouseenter', mouseReturnEvent);
+        };
+        const mouseLeaveEvent = () : void => {
+          pageElement.removeEventListener('mousemove', mouseMoveEvent);
+          pageElement.addEventListener('mouseenter', mouseReturnEvent);
+        };
+        const mouseUpEvent = (): void => {
+          pageElement.removeEventListener('mousemove', mouseMoveEvent);
+          pageElement.removeEventListener('mouseup', mouseUpEvent);
+          pageElement.removeEventListener('mouseenter', mouseReturnEvent);
+          pageElement.removeEventListener('mouseleave', mouseLeaveEvent);
+        };
+        pageElement.addEventListener('mousemove', mouseMoveEvent);
+        pageElement.addEventListener('mouseleave', mouseLeaveEvent);
+        pageElement.addEventListener('mouseup', mouseUpEvent);
+        pageElement.removeEventListener('mousedown', this.resize);
+      }
+    }
+  };
 
   onmousemove(e: MouseEvent) {
     if (this.attrs?.track.supportsResizing) {
       if (e.currentTarget instanceof HTMLElement &&
         e.pageY - e.currentTarget.getBoundingClientRect().top >=
           e.currentTarget.clientHeight - 5) {
-            document.addEventListener('mousedown', this.resize);
-          e.currentTarget.style.cursor = 'row-resize';
-          return;
+            const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
+            pageElement?.addEventListener('mousedown', this.resize);
+            e.currentTarget.style.cursor = 'row-resize';
+            return;
       } else if (e.currentTarget instanceof HTMLElement) {
+        const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
+        pageElement?.removeEventListener('mousedown', this.resize);
         e.currentTarget.style.cursor = 'unset';
       }
     }
-    document.removeEventListener('mousedown', this.resize);
   }
   onmouseleave(e: MouseEvent) {
     if (this.attrs?.track.supportsResizing &&
         e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.cursor = 'unset';
-      document.removeEventListener('mousedown', this.resize);
+      const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
+      pageElement?.removeEventListener('mousedown', this.resize);
     }
   }
 

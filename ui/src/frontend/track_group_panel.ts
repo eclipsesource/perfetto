@@ -101,34 +101,53 @@ export class TrackGroupPanel extends Panel<Attrs> {
   get summaryTrackState(): TrackState {
     return assertExists(globals.state.tracks[this.trackGroupState.tracks[0]]);
   }
+
   resize = (e: MouseEvent): void => {
     e.stopPropagation();
     e.preventDefault();
     if (!this.summaryTrack) {
       return;
     }
-    let y = this.summaryTrack.getHeight();
-    const mouseMoveEvent = (evMove: MouseEvent): void => {
-      evMove.preventDefault();
-      y += evMove.movementY;
-      if (this.attrs && this.defaultHeight) {
-        const newMultiplier = y / this.defaultHeight;
-        if (newMultiplier < 1) {
-          this.summaryTrackState.scaleFactor = 1;
-        } else {
-          this.summaryTrackState.scaleFactor = newMultiplier;
-        }
-        globals.rafScheduler.scheduleFullRedraw();
+    if (e.currentTarget instanceof HTMLElement) {
+      const pageElement = e.currentTarget.closest('div.page');
+      if (pageElement && pageElement instanceof HTMLDivElement) {
+        let trackHeight = this.summaryTrack.getHeight();
+        let mouseY = e.clientY;
+        const mouseMoveEvent = (evMove: MouseEvent): void => {
+          evMove.preventDefault();
+          trackHeight += evMove.clientY-mouseY;
+          mouseY = evMove.clientY;
+          if (this.attrs && this.defaultHeight) {
+            const newMultiplier = trackHeight / this.defaultHeight;
+            if (newMultiplier < 1) {
+              this.summaryTrackState.scaleFactor = 1;
+            } else {
+              this.summaryTrackState.scaleFactor = newMultiplier;
+            }
+            globals.rafScheduler.scheduleFullRedraw();
+          }
+        };
+        const mouseReturnEvent = () : void => {
+          pageElement.addEventListener('mousemove', mouseMoveEvent);
+          pageElement.removeEventListener('mouseenter', mouseReturnEvent);
+        };
+        const mouseLeaveEvent = () : void => {
+          pageElement.removeEventListener('mousemove', mouseMoveEvent);
+          pageElement.addEventListener('mouseenter', mouseReturnEvent);
+        };
+        const mouseUpEvent = (): void => {
+          pageElement.removeEventListener('mousemove', mouseMoveEvent);
+          pageElement.removeEventListener('mouseup', mouseUpEvent);
+          pageElement.removeEventListener('mouseenter', mouseReturnEvent);
+          pageElement.removeEventListener('mouseleave', mouseLeaveEvent);
+        };
+        pageElement.addEventListener('mousemove', mouseMoveEvent);
+        pageElement.addEventListener('mouseleave', mouseLeaveEvent);
+        pageElement.addEventListener('mouseup', mouseUpEvent);
+        pageElement.removeEventListener('mousedown', this.resize);
       }
-    };
-    const mouseUpEvent = (): void => {
-      document.removeEventListener('mousemove', mouseMoveEvent);
-      document.removeEventListener('mouseup', mouseUpEvent);
-    };
-    document.addEventListener('mousemove', mouseMoveEvent);
-    document.addEventListener('mouseup', mouseUpEvent);
-    document.removeEventListener('mousedown', this.resize);
-    };
+    }
+  };
 
   onmousemove(e: MouseEvent) {
     if (this.summaryTrack && this.summaryTrack.supportsResizing) {
@@ -136,20 +155,23 @@ export class TrackGroupPanel extends Panel<Attrs> {
           e.pageY - e.currentTarget.getBoundingClientRect().top >=
           e.currentTarget.clientHeight - MOUSE_TARGETING_THRESHOLD_PX
           ) {
-            document.addEventListener('mousedown', this.resize);
+          const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
+          pageElement?.addEventListener('mousedown', this.resize);
           e.currentTarget.style.cursor = 'row-resize';
           return;
       } else if (e.currentTarget instanceof HTMLElement) {
+        const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
+        pageElement?.removeEventListener('mousedown', this.resize);
         e.currentTarget.style.cursor = 'unset';
       }
     }
-    document.removeEventListener('mousedown', this.resize);
   }
   onmouseleave(e: MouseEvent) {
     if (this.summaryTrack && this.summaryTrack.supportsResizing &&
         e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.cursor = 'unset';
-      document.removeEventListener('mousedown', this.resize);
+      const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
+      pageElement?.removeEventListener('mousedown', this.resize);
     }
   }
 
