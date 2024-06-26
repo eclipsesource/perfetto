@@ -192,8 +192,8 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
       return;
     }
     if (e.currentTarget instanceof HTMLElement) {
-      const pageElement = e.currentTarget.closest('div.page');
-      if (pageElement && pageElement instanceof HTMLDivElement) {
+      const timelineElement = e.currentTarget.closest('div.pan-and-zoom-content');
+      if (timelineElement && timelineElement instanceof HTMLDivElement) {
         let trackHeight = this.attrs.track.getHeight();
         let mouseY = e.clientY;
         const mouseMoveEvent = (evMove: MouseEvent): void => {
@@ -219,23 +219,23 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
           }
         };
         const mouseReturnEvent = () : void => {
-          pageElement.addEventListener('mousemove', mouseMoveEvent);
-          pageElement.removeEventListener('mouseenter', mouseReturnEvent);
+          timelineElement.addEventListener('mousemove', mouseMoveEvent);
+          timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
         };
         const mouseLeaveEvent = () : void => {
-          pageElement.removeEventListener('mousemove', mouseMoveEvent);
-          pageElement.addEventListener('mouseenter', mouseReturnEvent);
+          timelineElement.removeEventListener('mousemove', mouseMoveEvent);
+          timelineElement.addEventListener('mouseenter', mouseReturnEvent);
         };
         const mouseUpEvent = (): void => {
-          pageElement.removeEventListener('mousemove', mouseMoveEvent);
-          pageElement.removeEventListener('mouseup', mouseUpEvent);
-          pageElement.removeEventListener('mouseenter', mouseReturnEvent);
-          pageElement.removeEventListener('mouseleave', mouseLeaveEvent);
+          timelineElement.removeEventListener('mousemove', mouseMoveEvent);
+          document.removeEventListener('mouseup', mouseUpEvent);
+          timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
+          timelineElement.removeEventListener('mouseleave', mouseLeaveEvent);
         };
-        pageElement.addEventListener('mousemove', mouseMoveEvent);
-        pageElement.addEventListener('mouseleave', mouseLeaveEvent);
-        pageElement.addEventListener('mouseup', mouseUpEvent);
-        pageElement.removeEventListener('mousedown', this.resize);
+        timelineElement.addEventListener('mousemove', mouseMoveEvent);
+        timelineElement.addEventListener('mouseleave', mouseLeaveEvent);
+        document.addEventListener('mouseup', mouseUpEvent);
+        timelineElement.removeEventListener('mousedown', this.resize);
       }
     }
   };
@@ -245,13 +245,13 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
       if (e.currentTarget instanceof HTMLElement &&
         e.pageY - e.currentTarget.getBoundingClientRect().top >=
           e.currentTarget.clientHeight - 5) {
-            const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
-            pageElement?.addEventListener('mousedown', this.resize);
+            const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
+            timelineElement?.addEventListener('mousedown', this.resize);
             e.currentTarget.style.cursor = 'row-resize';
             return;
       } else if (e.currentTarget instanceof HTMLElement) {
-        const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
-        pageElement?.removeEventListener('mousedown', this.resize);
+        const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
+        timelineElement?.removeEventListener('mousedown', this.resize);
         e.currentTarget.style.cursor = 'unset';
       }
     }
@@ -260,8 +260,8 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     if (this.attrs?.track.supportsResizing &&
         e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.cursor = 'unset';
-      const pageElement: HTMLDivElement | null = e.currentTarget.closest('div.page');
-      pageElement?.removeEventListener('mousedown', this.resize);
+      const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
+      timelineElement?.removeEventListener('mousedown', this.resize);
     }
   }
 
