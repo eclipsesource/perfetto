@@ -34,7 +34,7 @@ import {
 } from './icons';
 import {Panel, PanelSize} from './panel';
 import {Track} from './track';
-import {TrackButton, TrackContent} from './track_panel';
+import {TrackButton, TrackContent, checkTrackForResizability, resizeTrack} from './track_panel';
 import {trackRegistry} from './track_registry';
 import {
   drawVerticalLineAtTime,
@@ -47,7 +47,6 @@ interface Attrs {
   selectable: boolean;
 }
 
-const MOUSE_TARGETING_THRESHOLD_PX = 5;
 export class TrackGroupPanel extends Panel<Attrs> {
   private readonly trackGroupId: string;
   private shellWidth = 0;
@@ -105,73 +104,24 @@ export class TrackGroupPanel extends Panel<Attrs> {
   resize = (e: MouseEvent): void => {
     e.stopPropagation();
     e.preventDefault();
-    if (!this.summaryTrack) {
+    if (!this.summaryTrack || !this.defaultHeight) {
       return;
     }
-    if (e.currentTarget instanceof HTMLElement) {
-      const timelineElement = e.currentTarget.closest('div.pan-and-zoom-content');
-      if (timelineElement && timelineElement instanceof HTMLDivElement) {
-        let trackHeight = this.summaryTrack.getHeight();
-        let mouseY = e.clientY;
-        const mouseMoveEvent = (evMove: MouseEvent): void => {
-          evMove.preventDefault();
-          trackHeight += evMove.clientY-mouseY;
-          mouseY = evMove.clientY;
-          if (this.attrs && this.defaultHeight) {
-            const newMultiplier = trackHeight / this.defaultHeight;
-            if (newMultiplier < 1) {
-              this.summaryTrackState.scaleFactor = 1;
-            } else {
-              this.summaryTrackState.scaleFactor = newMultiplier;
-            }
-            globals.rafScheduler.scheduleFullRedraw();
-          }
-        };
-        const mouseReturnEvent = () : void => {
-          timelineElement.addEventListener('mousemove', mouseMoveEvent);
-          timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
-        };
-        const mouseLeaveEvent = () : void => {
-          timelineElement.removeEventListener('mousemove', mouseMoveEvent);
-          timelineElement.addEventListener('mouseenter', mouseReturnEvent);
-        };
-        const mouseUpEvent = (): void => {
-          timelineElement.removeEventListener('mousemove', mouseMoveEvent);
-          document.removeEventListener('mouseup', mouseUpEvent);
-          timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
-          timelineElement.removeEventListener('mouseleave', mouseLeaveEvent);
-        };
-        timelineElement.addEventListener('mousemove', mouseMoveEvent);
-        timelineElement.addEventListener('mouseleave', mouseLeaveEvent);
-        document.addEventListener('mouseup', mouseUpEvent);
-        timelineElement.removeEventListener('mousedown', this.resize);
-      }
-    }
-  };
+    resizeTrack(
+      e,
+      this.summaryTrack,
+      this.summaryTrackState,
+      this.defaultHeight);
+    };
 
   onmousemove(e: MouseEvent) {
-    if (this.summaryTrack && this.summaryTrack.supportsResizing) {
-      if (e.currentTarget instanceof HTMLElement &&
-          e.pageY - e.currentTarget.getBoundingClientRect().top >=
-          e.currentTarget.clientHeight - MOUSE_TARGETING_THRESHOLD_PX
-          ) {
-          const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
-          timelineElement?.addEventListener('mousedown', this.resize);
-          e.currentTarget.style.cursor = 'row-resize';
-          return;
-      } else if (e.currentTarget instanceof HTMLElement) {
-        const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
-        timelineElement?.removeEventListener('mousedown', this.resize);
-        e.currentTarget.style.cursor = 'unset';
-      }
+    if (this.summaryTrack) {
+      checkTrackForResizability(e, this.summaryTrack, this.resize);
     }
   }
   onmouseleave(e: MouseEvent) {
-    if (this.summaryTrack && this.summaryTrack.supportsResizing &&
-        e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.cursor = 'unset';
-      const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
-      timelineElement?.removeEventListener('mousedown', this.resize);
+    if (this.summaryTrack) {
+      checkTrackForResizability(e, this.summaryTrack, this.resize);
     }
   }
 

@@ -65,6 +65,77 @@ function isSelected(id: string) {
   return selectedArea.tracks.includes(id);
 }
 
+const RESIZING_HEIGHT_PX = 5;
+export function checkTrackForResizability(
+  e: MouseEvent,
+  track: Track,
+  resize: (e: MouseEvent) => void): void {
+    if (track.supportsResizing) {
+      if (e.currentTarget instanceof HTMLElement &&
+          e.type !== 'mouseleave' &&
+          e.pageY - e.currentTarget.getBoundingClientRect().top >=
+          e.currentTarget.clientHeight - RESIZING_HEIGHT_PX
+          ) {
+          const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
+          timelineElement?.addEventListener('mousedown', resize);
+          e.currentTarget.style.cursor = 'row-resize';
+          return;
+      } else if (e.currentTarget instanceof HTMLElement) {
+        const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
+        timelineElement?.removeEventListener('mousedown', resize);
+        e.currentTarget.style.cursor = 'unset';
+      }
+    }
+}
+export function resizeTrack(
+  e: MouseEvent,
+  track: Track,
+  trackState: TrackState,
+  defaultHeight: number,
+  pinnedCopy?: boolean ): void {
+  if (e.currentTarget instanceof HTMLElement) {
+    const timelineElement = e.currentTarget.closest('div.pan-and-zoom-content');
+    if (timelineElement && timelineElement instanceof HTMLDivElement) {
+      let trackHeight = track.getHeight();
+      let mouseY = e.clientY;
+      const mouseMoveEvent = (evMove: MouseEvent): void => {
+        evMove.preventDefault();
+        let movementY = evMove.clientY-mouseY;
+        if (pinnedCopy !== true &&
+          isPinned(trackState.id)) {
+          movementY /=2;
+        }
+        trackHeight += movementY;
+        mouseY = evMove.clientY;
+        const newMultiplier = trackHeight / defaultHeight;
+        if (newMultiplier < 1) {
+          trackState.scaleFactor = 1;
+        } else {
+          trackState.scaleFactor = newMultiplier;
+        }
+        globals.rafScheduler.scheduleFullRedraw();
+      };
+      const mouseReturnEvent = () : void => {
+        timelineElement.addEventListener('mousemove', mouseMoveEvent);
+        timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
+      };
+      const mouseLeaveEvent = () : void => {
+        timelineElement.removeEventListener('mousemove', mouseMoveEvent);
+        timelineElement.addEventListener('mouseenter', mouseReturnEvent);
+      };
+      const mouseUpEvent = (): void => {
+        timelineElement.removeEventListener('mousemove', mouseMoveEvent);
+        document.removeEventListener('mouseup', mouseUpEvent);
+        timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
+        timelineElement.removeEventListener('mouseleave', mouseLeaveEvent);
+      };
+      timelineElement.addEventListener('mousemove', mouseMoveEvent);
+      timelineElement.addEventListener('mouseleave', mouseLeaveEvent);
+      document.addEventListener('mouseup', mouseUpEvent);
+    }
+  }
+};
+
 interface TrackShellAttrs {
   track: Track;
   trackState: TrackState;
@@ -185,83 +256,29 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
               }) :
               ''));
   }
+
   resize = (e: MouseEvent): void => {
     e.stopPropagation();
     e.preventDefault();
-    if (!this.attrs) {
+    if (!this.attrs || !this.defaultHeight) {
       return;
     }
-    if (e.currentTarget instanceof HTMLElement) {
-      const timelineElement = e.currentTarget.closest('div.pan-and-zoom-content');
-      if (timelineElement && timelineElement instanceof HTMLDivElement) {
-        let trackHeight = this.attrs.track.getHeight();
-        let mouseY = e.clientY;
-        const mouseMoveEvent = (evMove: MouseEvent): void => {
-          evMove.preventDefault();
-          if (!this.attrs) {
-            return;
-          }
-          let movementY = evMove.clientY-mouseY;
-          if (this.attrs.pinnedCopy !== true &&
-            isPinned(this.attrs.trackState.id)) {
-            movementY /=2;
-          }
-          trackHeight += movementY;
-          mouseY = evMove.clientY;
-          if (this.attrs && this.defaultHeight) {
-            const newMultiplier = trackHeight / this.defaultHeight;
-            if (newMultiplier < 1) {
-              this.attrs.trackState.scaleFactor = 1;
-            } else {
-              this.attrs.trackState.scaleFactor = newMultiplier;
-            }
-            globals.rafScheduler.scheduleFullRedraw();
-          }
-        };
-        const mouseReturnEvent = () : void => {
-          timelineElement.addEventListener('mousemove', mouseMoveEvent);
-          timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
-        };
-        const mouseLeaveEvent = () : void => {
-          timelineElement.removeEventListener('mousemove', mouseMoveEvent);
-          timelineElement.addEventListener('mouseenter', mouseReturnEvent);
-        };
-        const mouseUpEvent = (): void => {
-          timelineElement.removeEventListener('mousemove', mouseMoveEvent);
-          document.removeEventListener('mouseup', mouseUpEvent);
-          timelineElement.removeEventListener('mouseenter', mouseReturnEvent);
-          timelineElement.removeEventListener('mouseleave', mouseLeaveEvent);
-        };
-        timelineElement.addEventListener('mousemove', mouseMoveEvent);
-        timelineElement.addEventListener('mouseleave', mouseLeaveEvent);
-        document.addEventListener('mouseup', mouseUpEvent);
-        timelineElement.removeEventListener('mousedown', this.resize);
-      }
-    }
+    resizeTrack(
+      e,
+      this.attrs.track,
+      this.attrs.trackState,
+      this.defaultHeight,
+      this.attrs.pinnedCopy);
   };
 
   onmousemove(e: MouseEvent) {
-    if (this.attrs?.track.supportsResizing) {
-      if (e.currentTarget instanceof HTMLElement &&
-        e.pageY - e.currentTarget.getBoundingClientRect().top >=
-          e.currentTarget.clientHeight - 5) {
-            const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
-            timelineElement?.addEventListener('mousedown', this.resize);
-            e.currentTarget.style.cursor = 'row-resize';
-            return;
-      } else if (e.currentTarget instanceof HTMLElement) {
-        const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
-        timelineElement?.removeEventListener('mousedown', this.resize);
-        e.currentTarget.style.cursor = 'unset';
-      }
+    if (this.attrs?.track) {
+      checkTrackForResizability(e, this.attrs.track, this.resize);
     }
   }
   onmouseleave(e: MouseEvent) {
-    if (this.attrs?.track.supportsResizing &&
-        e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.cursor = 'unset';
-      const timelineElement: HTMLDivElement | null = e.currentTarget.closest('div.pan-and-zoom-content');
-      timelineElement?.removeEventListener('mousedown', this.resize);
+    if (this.attrs?.track) {
+      checkTrackForResizability(e, this.attrs.track, this.resize);
     }
   }
 
