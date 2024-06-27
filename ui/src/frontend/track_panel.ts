@@ -108,11 +108,7 @@ export function resizeTrack(
         trackHeight += movementY;
         mouseY = evMove.clientY;
         const newMultiplier = trackHeight / defaultHeight;
-        if (newMultiplier < 1) {
-          trackState.scaleFactor = 1;
-        } else {
-          trackState.scaleFactor = newMultiplier;
-        }
+        trackState.scaleFactor = Math.min(1, newMultiplier);
         globals.rafScheduler.scheduleFullRedraw();
       };
       const mouseReturnEvent = () : void => {
