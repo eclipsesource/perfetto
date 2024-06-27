@@ -18,6 +18,7 @@ import {TrackControllerFactory} from '../controller/track_controller';
 import {TrackCreator} from '../frontend/track';
 import {Selection} from './state';
 import {CustomButtonArgs} from '../frontend/button_registry';
+import {AnyAttrsVnode} from '../frontend/panel_container';
 
 export {EngineProxy} from '../common/engine';
 export {
@@ -116,6 +117,14 @@ export interface PluginContext {
       onDetailsPanelSelectionChange: (newSelection?: Selection) => void): void;
   // Register a custom button on the timeline
   registerCustomButton(button: CustomButtonArgs): void;
+
+  detailsPanelRenderOverride(
+    onDetailsPanelRender:
+      (detailsPanels: {
+        key: string;
+        name: string;
+        vnode: AnyAttrsVnode;
+      }[]) => void): void;
 }
 
 export interface PluginInfo {

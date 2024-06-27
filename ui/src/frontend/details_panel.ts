@@ -57,9 +57,9 @@ function getDetailsHeight() {
 }
 
 function getFullScreenHeight(dom?: Element) {
-  for(const selector of globals.frontendLocalState.detailsFullScreenSelectors) {
+  for (const selector of globals.frontendLocalState.detailsFullScreenSelectors) {
     const element = dom?.closest(selector) || document.querySelector(selector);
-    if(element != null) {
+    if (element != null) {
       return element.clientHeight;
     }
   }
@@ -393,7 +393,10 @@ export class DetailsPanel implements m.ClassComponent {
 
     const panel = currentTabDetails?.vnode;
     const panels = panel ? [panel] : [];
-
+    if (pluginManager.isDetailsPanelRenderOverride()) {
+      pluginManager.onDetailsPanelRender(detailsPanels);
+      return;
+    }
     return m(
         '.details-content',
         {
