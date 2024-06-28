@@ -22,7 +22,7 @@ import {
   drawDoubleHeadedArrow,
   drawIncompleteSlice,
 } from '../../common/canvas_utils';
-import {colorForThread} from '../../common/colorizer';
+import {GRAY_COLOR, colorForThread} from '../../common/colorizer';
 import {PluginContext} from '../../common/plugin_api';
 import {LONG, NUM, NUM_NULL} from '../../common/query_result';
 import {
@@ -37,6 +37,7 @@ import {
 import {checkerboardExcept} from '../../frontend/checkerboard';
 import {globals} from '../../frontend/globals';
 import {NewTrackArgs, Track} from '../../frontend/track';
+import {hash} from '../../common/hash';
 
 export const CPU_SLICE_TRACK_KIND = 'CpuSliceTrack';
 
@@ -205,8 +206,8 @@ class CpuSliceTrackController extends TrackController<Config, Data> {
   }
 }
 
-const MARGIN_TOP = 3;
-const RECT_HEIGHT = 24;
+const MARGIN_TOP = 1;
+const RECT_HEIGHT = 28;
 
 class CpuSliceTrack extends Track<Config, Data> {
   static readonly kind = CPU_SLICE_TRACK_KIND;
@@ -297,27 +298,54 @@ class CpuSliceTrack extends Track<Config, Data> {
       const isThreadHovered = globals.state.hoveredUtid === utid;
       const isProcessHovered = globals.state.hoveredPid === pid;
       const color = colorForThread(threadInfo);
-      if (isHovering && !isThreadHovered) {
-        if (!isProcessHovered) {
-          color.l = 90;
-          color.s = 0;
-        } else {
-          color.l = Math.min(color.l + 30, 80);
-          color.s -= 20;
-        }
-      } else {
-        color.l = Math.min(color.l + 10, 60);
-        color.s -= 20;
+      const greyIdx = hash(pid.toString(), 6)+1;
+      const greyl = 55 - (5 * greyIdx);
+      const isHovered = (): boolean =>{
+        return isHovering && isThreadHovered && isProcessHovered;
+      };
+      const isSelected = (): boolean=>{
+        const selection = globals.state.currentSelection;
+        return selection !== null && selection.kind === 'SLICE' &&
+          data.ids[i] ===selection.id;
+      };
+
+      ctx.fillStyle = `hsl(${GRAY_COLOR.h}, ${GRAY_COLOR.s}%, ${greyl}%)`;
+      if (isSelected()) {
+        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
+      } else if (isHovering && (isProcessHovered || isThreadHovered) &&
+        globals.state.currentSelection !== null &&
+        globals.state.currentSelection.kind === 'SLICE'
+      ) {
+        // LikeCase
+        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, 30%)`;
       }
-      ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
+
+      const right = Math.min(visWindowEndPx, rectEnd);
+      const left = Math.max(rectStart, 0);
+      const visibleWidth = Math.max(right - left, 1);
+      // Draw the Rectangle
       if (data.isIncomplete[i]) {
-        drawIncompleteSlice(ctx, rectStart, MARGIN_TOP, rectWidth,
+        drawIncompleteSlice(ctx, left, MARGIN_TOP, visibleWidth,
           (RECT_HEIGHT * this.trackState.scaleFactor));
       } else {
-        ctx.fillRect(rectStart, MARGIN_TOP, rectWidth,
+        ctx.fillRect(left, MARGIN_TOP, visibleWidth,
           (RECT_HEIGHT * this.trackState.scaleFactor));
       }
 
+      //  Extras
+      if (isHovered()) {
+        // Draw a rectangle around the slice that is currently selected.
+        ctx.strokeStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
+        ctx.beginPath();
+        ctx.lineWidth = 3;
+        ctx.strokeRect(left+1.5, MARGIN_TOP + 1.5, visibleWidth-3,
+          (RECT_HEIGHT * this.trackState.scaleFactor) -3);
+        ctx.closePath();
+      } else {
+        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
+        ctx.fillRect(left, MARGIN_TOP, visibleWidth,
+          (3));
+      }
       // Don't render text when we have less than 5px to play with.
       if (rectWidth < 5) continue;
 
@@ -337,9 +365,6 @@ class CpuSliceTrack extends Track<Config, Data> {
           title = `${threadInfo.threadName} [${threadInfo.tid}]`;
         }
       }
-      const right = Math.min(visWindowEndPx, rectEnd);
-      const left = Math.max(rectStart, 0);
-      const visibleWidth = Math.max(right - left, 1);
 
       const rectXCenter = left + visibleWidth / 2;
       ctx.fillStyle = '#fff';
@@ -366,20 +391,7 @@ class CpuSliceTrack extends Track<Config, Data> {
       const [startIndex, endIndex] = searchEq(data.ids, selection.id);
       if (startIndex !== endIndex) {
         const tStart = data.starts[startIndex];
-        const tEnd = data.ends[startIndex];
-        const utid = data.utids[startIndex];
-        const color = colorForThread(globals.threads.get(utid));
         const rectStart = visibleTimeScale.tpTimeToPx(tStart);
-        const rectEnd = visibleTimeScale.tpTimeToPx(tEnd);
-        const rectWidth = Math.max(1, rectEnd - rectStart);
-
-        // Draw a rectangle around the slice that is currently selected.
-        ctx.strokeStyle = `hsl(${color.h}, ${color.s}%, 30%)`;
-        ctx.beginPath();
-        ctx.lineWidth = 3;
-        ctx.strokeRect(rectStart, MARGIN_TOP - 1.5, rectWidth,
-          (RECT_HEIGHT * this.trackState.scaleFactor) + 3);
-        ctx.closePath();
         // Draw arrow from wakeup time of current slice.
         if (details.wakeupTs) {
           const wakeupPos = visibleTimeScale.tpTimeToPx(details.wakeupTs);
