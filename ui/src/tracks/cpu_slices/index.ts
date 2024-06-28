@@ -309,15 +309,18 @@ class CpuSliceTrack extends Track<Config, Data> {
           data.ids[i] ===selection.id;
       };
 
+      ctx.strokeStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
       ctx.fillStyle = `hsl(${GRAY_COLOR.h}, ${GRAY_COLOR.s}%, ${greyl}%)`;
       if (isSelected()) {
+        color.l = 60;
         ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
       } else if (isHovering && (isProcessHovered || isThreadHovered) &&
         globals.state.currentSelection !== null &&
         globals.state.currentSelection.kind === 'SLICE'
       ) {
         // LikeCase
-        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, 30%)`;
+        color.l = 30;
+        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
       }
 
       const right = Math.min(visWindowEndPx, rectEnd);
@@ -335,7 +338,6 @@ class CpuSliceTrack extends Track<Config, Data> {
       //  Extras
       if (isHovered()) {
         // Draw a rectangle around the slice that is currently selected.
-        ctx.strokeStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
         ctx.beginPath();
         ctx.lineWidth = 3;
         ctx.strokeRect(left+1.5, MARGIN_TOP + 1.5, visibleWidth-3,

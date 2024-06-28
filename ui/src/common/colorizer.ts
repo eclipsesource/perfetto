@@ -26,13 +26,13 @@ export interface Color {
 }
 
 const MD_PALETTE: Color[] = [
-  {c: 'teal', h: 173, s: 43, l: 56},
-  {c: 'purple', h: 267, s: 72, l: 73},
-  {c: 'peach', h: 23, s: 79, l: 72},
-  {c: 'red', h: 4, s: 70, l: 74},
-  {c: 'yellow', h: 46, s: 88, l: 76},
-  {c: 'green', h: 125, s: 40, l: 67},
-  {c: 'blue', h: 220, s: 91, l: 65},
+  {c: 'teal', h: 173, s: 43, l: 70},
+  {c: 'purple', h: 267, s: 72, l: 70},
+  {c: 'peach', h: 23, s: 79, l: 70},
+  {c: 'red', h: 4, s: 70, l: 70},
+  {c: 'yellow', h: 46, s: 88, l: 70},
+  {c: 'green', h: 125, s: 40, l: 70},
+  {c: 'blue', h: 220, s: 91, l: 70},
 ];
 
 export const GRAY_COLOR: Color = {
