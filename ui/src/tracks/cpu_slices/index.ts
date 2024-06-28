@@ -217,6 +217,7 @@ class CpuSliceTrack extends Track<Config, Data> {
 
   private mousePos?: {x: number, y: number};
   private utidHoveredInThisTrack = -1;
+  private hoveredSlice: number | undefined;
 
   constructor(args: NewTrackArgs) {
     super(args);
@@ -300,8 +301,8 @@ class CpuSliceTrack extends Track<Config, Data> {
       const color = colorForThread(threadInfo);
       const greyIdx = hash(pid.toString(), 6)+1;
       const greyl = 55 - (5 * greyIdx);
-      const isHovered = (): boolean =>{
-        return isHovering && isThreadHovered && isProcessHovered;
+      const isHovered = (index: number): boolean =>{
+        return isHovering && index === this.hoveredSlice;
       };
       const isSelected = (): boolean=>{
         const selection = globals.state.currentSelection;
@@ -336,7 +337,7 @@ class CpuSliceTrack extends Track<Config, Data> {
       }
 
       //  Extras
-      if (isHovered()) {
+      if (isHovered(i)) {
         // Draw a rectangle around the slice that is currently selected.
         ctx.beginPath();
         ctx.lineWidth = 3;
@@ -474,13 +475,14 @@ class CpuSliceTrack extends Track<Config, Data> {
     }
     const t = visibleTimeScale.pxToHpTime(pos.x);
     let hoveredUtid = -1;
-
+    this.hoveredSlice=undefined;
     for (let i = 0; i < data.starts.length; i++) {
       const tStart = data.starts[i];
       const tEnd = data.ends[i];
       const utid = data.utids[i];
       if (t.gte(tStart) && t.lt(tEnd)) {
         hoveredUtid = utid;
+        this.hoveredSlice =i;
         break;
       }
     }
@@ -493,6 +495,7 @@ class CpuSliceTrack extends Track<Config, Data> {
 
   onMouseOut() {
     this.utidHoveredInThisTrack = -1;
+    this.hoveredSlice = undefined;
     globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
     this.mousePos = undefined;
   }
