@@ -215,8 +215,6 @@ class CpuSliceTrack extends Track<Config, Data> {
     return new CpuSliceTrack(args);
   }
 
-  private mousePos?: {x: number, y: number};
-  private utidHoveredInThisTrack = -1;
   private hoveredSlice: number | undefined;
 
   constructor(args: NewTrackArgs) {
@@ -295,14 +293,13 @@ class CpuSliceTrack extends Track<Config, Data> {
       const threadInfo = globals.threads.get(utid);
       const pid = threadInfo && threadInfo.pid ? threadInfo.pid : -1;
 
-      const isHovering = globals.state.hoveredUtid !== -1;
-      const isThreadHovered = globals.state.hoveredUtid === utid;
-      const isProcessHovered = globals.state.hoveredPid === pid;
+      const isThreadSelected = globals.state.selectedUtid === utid;
+      const isProcessSelected = globals.state.selectedPid === pid;
       const color = colorForThread(threadInfo);
       const greyIdx = hash(pid.toString(), 6)+1;
       const greyl = 55 - (5 * greyIdx);
       const isHovered = (index: number): boolean =>{
-        return isHovering && index === this.hoveredSlice;
+        return index === this.hoveredSlice;
       };
       const isSelected = (): boolean=>{
         const selection = globals.state.currentSelection;
@@ -315,7 +312,7 @@ class CpuSliceTrack extends Track<Config, Data> {
       if (isSelected()) {
         color.l = 60;
         ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
-      } else if (isHovering && (isProcessHovered || isThreadHovered) &&
+      } else if ((isProcessSelected || isThreadSelected) &&
         globals.state.currentSelection !== null &&
         globals.state.currentSelection.kind === 'SLICE'
       ) {
@@ -449,65 +446,50 @@ class CpuSliceTrack extends Track<Config, Data> {
         ctx.closePath();
       }
     }
-
-    const hoveredThread = globals.threads.get(this.utidHoveredInThisTrack);
-    if (hoveredThread !== undefined && this.mousePos !== undefined) {
-      const tidText = `T: ${hoveredThread.threadName} [${hoveredThread.tid}]`;
-      if (hoveredThread.pid) {
-        const pidText = `P: ${hoveredThread.procName} [${hoveredThread.pid}]`;
-        this.drawTrackHoverTooltip(ctx, this.mousePos, pidText, tidText);
-      } else {
-        this.drawTrackHoverTooltip(ctx, this.mousePos, tidText);
-      }
-    }
   }
 
   onMouseMove(pos: {x: number, y: number}) {
     const data = this.data();
-    this.mousePos = pos;
     if (data === undefined) return;
     const {visibleTimeScale} = globals.frontendLocalState;
     if (pos.y < MARGIN_TOP ||
         pos.y > MARGIN_TOP + (RECT_HEIGHT * this.trackState.scaleFactor)) {
-      this.utidHoveredInThisTrack = -1;
-      globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
       return;
     }
     const t = visibleTimeScale.pxToHpTime(pos.x);
-    let hoveredUtid = -1;
     this.hoveredSlice=undefined;
     for (let i = 0; i < data.starts.length; i++) {
       const tStart = data.starts[i];
       const tEnd = data.ends[i];
-      const utid = data.utids[i];
       if (t.gte(tStart) && t.lt(tEnd)) {
-        hoveredUtid = utid;
         this.hoveredSlice =i;
         break;
       }
     }
-    this.utidHoveredInThisTrack = hoveredUtid;
-    const threadInfo = globals.threads.get(hoveredUtid);
-    const hoveredPid = threadInfo ? (threadInfo.pid ? threadInfo.pid : -1) : -1;
-    globals.dispatch(
-        Actions.setHoveredUtidAndPid({utid: hoveredUtid, pid: hoveredPid}));
   }
 
   onMouseOut() {
-    this.utidHoveredInThisTrack = -1;
     this.hoveredSlice = undefined;
-    globals.dispatch(Actions.setHoveredUtidAndPid({utid: -1, pid: -1}));
-    this.mousePos = undefined;
   }
 
   onMouseClick({x}: {x: number}) {
     const data = this.data();
-    if (data === undefined) return false;
+    if (data === undefined) {
+      globals.dispatch(Actions.setSelectedUtidAndPid({utid: -1, pid: -1}));
+      return false;
+    }
     const {visibleTimeScale} = globals.frontendLocalState;
     const time = visibleTimeScale.pxToHpTime(x);
     const index = search(data.starts, time.toTPTime());
     const id = index === -1 ? undefined : data.ids[index];
-    if (!id || this.utidHoveredInThisTrack === -1) return false;
+    if (!id) {
+      globals.dispatch(Actions.setSelectedUtidAndPid({utid: -1, pid: -1}));
+      return false;
+    }
+    const utid = data.utids[index];
+    const threadInfo = globals.threads.get(utid);
+    const pid = threadInfo ? (threadInfo.pid ? threadInfo.pid : -1) : -1;
+    globals.dispatch(Actions.setSelectedUtidAndPid({utid, pid}));
     globals.makeSelection(
         Actions.selectSlice({id, trackId: this.trackState.id}));
     return true;

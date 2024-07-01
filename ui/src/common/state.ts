@@ -595,6 +595,8 @@ export interface State {
   // Hovered and focused events
   hoveredUtid: number;
   hoveredPid: number;
+  selectedUtid: number;
+  selectedPid: number;
   hoverCursorTimestamp: TPTime;
   hoveredNoteTimestamp: TPTime;
   highlightedSliceId: number;
