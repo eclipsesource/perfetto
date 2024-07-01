@@ -317,8 +317,7 @@ class CpuSliceTrack extends Track<Config, Data> {
         globals.state.currentSelection.kind === 'SLICE'
       ) {
         // LikeCase
-        color.l = 30;
-        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
+        ctx.fillStyle = `hsl(${color.h}, ${color.s}%, 30%)`;
       }
 
       const right = Math.min(visWindowEndPx, rectEnd);
