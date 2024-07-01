@@ -330,8 +330,6 @@ export class TrackGroupPanel extends Panel<Attrs> {
 
   onupdate({dom}: m.CVnodeDOM<Attrs>) {
     const shell = assertExists(dom.querySelector('.shell'));
-    // const trackTitle = dom.querySelector('.track-title')!;
-    // this.overFlown =  trackTitle.scrollHeight >= trackTitle.clientHeight;
     this.shellWidth = shell.getBoundingClientRect().width;
     if (this.summaryTrack !== undefined) {
       this.summaryTrack.onFullRedraw();
@@ -413,7 +411,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
     if (!selection || selection.kind !== 'AREA') return;
     const selectedArea = globals.state.areas[selection.areaId];
     const selectedAreaDuration = selectedArea.end - selectedArea.start;
-    if (selectedArea.tracks.includes(this.trackGroupId)) {
+    if (selectedArea.tracks.includes(this.trackGroupId) ||
+      selectedArea.tracks.includes(this.summaryTrackState.id)) {
       ctx.fillStyle = getCssStr('--selection-fill-color');
       ctx.fillRect(
           visibleTimeScale.tpTimeToPx(selectedArea.start) + this.shellWidth,

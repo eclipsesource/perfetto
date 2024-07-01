@@ -167,11 +167,12 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
       if (panel.attrs.trackGroupId !== undefined) {
         const trackGroup = globals.state.trackGroups[panel.attrs.trackGroupId];
         // Only select a track group and all child tracks if it is closed.
-        if (trackGroup.collapsed) {
-          tracks.push(panel.attrs.trackGroupId);
-          for (const track of trackGroup.tracks) {
-            tracks.push(track);
-          }
+        tracks.push(panel.attrs.trackGroupId);
+        for (const track of trackGroup.tracks) {
+          tracks.push(track);
+        }
+        for (const group of trackGroup.subgroups) {
+          tracks.push(group);
         }
       }
     }
