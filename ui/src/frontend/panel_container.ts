@@ -165,15 +165,19 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         continue;
       }
       if (panel.attrs.trackGroupId !== undefined) {
-        const trackGroup = globals.state.trackGroups[panel.attrs.trackGroupId];
-        // Only select a track group and all child tracks if it is closed.
-        tracks.push(panel.attrs.trackGroupId);
-        for (const track of trackGroup.tracks) {
-          tracks.push(track);
-        }
-        for (const group of trackGroup.subgroups) {
-          tracks.push(group);
-        }
+        const addTracks = (trackGroupId: string)=>{
+          const trackGroup =
+            globals.state.trackGroups[trackGroupId];
+          // Only select a track group and all child tracks if it is closed.
+          tracks.push(trackGroupId);
+          for (const track of trackGroup.tracks) {
+            tracks.push(track);
+          }
+          for (const group of trackGroup.subgroups) {
+            addTracks(group);
+          }
+        };
+        addTracks(panel.attrs.trackGroupId);
       }
     }
     globals.frontendLocalState.selectArea(area.start, area.end, tracks);
