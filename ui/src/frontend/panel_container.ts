@@ -158,10 +158,10 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         startY,
         endY);
     // Get the track ids from the panels.
-    const tracks = [];
+    const tracks = new Set<string>();
     for (const panel of panels) {
       if (panel.attrs.id !== undefined) {
-        tracks.push(panel.attrs.id);
+        tracks.add(panel.attrs.id);
         continue;
       }
       if (panel.attrs.trackGroupId !== undefined) {
@@ -169,9 +169,9 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
           const trackGroup =
             globals.state.trackGroups[trackGroupId];
           // Only select a track group and all child tracks if it is closed.
-          tracks.push(trackGroupId);
+          tracks.add(trackGroupId);
           for (const track of trackGroup.tracks) {
-            tracks.push(track);
+            tracks.add(track);
           }
           for (const group of trackGroup.subgroups) {
             addTracks(group);
@@ -180,7 +180,8 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
         addTracks(panel.attrs.trackGroupId);
       }
     }
-    globals.frontendLocalState.selectArea(area.start, area.end, tracks);
+    globals.frontendLocalState.selectArea(
+      area.start, area.end, Array.from(tracks.values()));
   }
 
   constructor(vnode: m.CVnode<Attrs>) {
