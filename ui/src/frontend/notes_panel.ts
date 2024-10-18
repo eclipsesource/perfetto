@@ -26,7 +26,7 @@ import {
   bottomTabRegistry,
   NewBottomTabArgs,
 } from './bottom_tab';
-import {getCssStr, TRACK_SHELL_WIDTH} from './css_constants';
+import {getCssNum, getCssStr} from './css_constants';
 import {PerfettoMouseEvent} from './events';
 import {globals} from './globals';
 import {
@@ -38,6 +38,7 @@ import {
 import {Panel, PanelSize} from './panel';
 import {isTraceLoaded} from './sidebar';
 import {customButtonRegistry} from './button_registry';
+import {resizeTrackShell} from './vertical_line_helper';
 
 const FLAG_WIDTH = 16;
 const AREA_TRIANGLE_WIDTH = 10;
@@ -61,11 +62,11 @@ export class NotesPanel extends Panel {
 
   oncreate({dom}: m.CVnodeDOM) {
     dom.addEventListener('mousemove', (e: Event) => {
-      this.hoveredX = (e as PerfettoMouseEvent).layerX - TRACK_SHELL_WIDTH;
+      this.hoveredX = (e as PerfettoMouseEvent).layerX - (getCssNum('--track-shell-width') || 0);
       globals.rafScheduler.scheduleRedraw();
     }, {passive: true});
     dom.addEventListener('mouseenter', (e: Event) => {
-      this.hoveredX = (e as PerfettoMouseEvent).layerX - TRACK_SHELL_WIDTH;
+      this.hoveredX = (e as PerfettoMouseEvent).layerX - (getCssNum('--track-shell-width') || 0);
       globals.rafScheduler.scheduleRedraw();
     });
     dom.addEventListener('mouseout', () => {
@@ -82,11 +83,32 @@ export class NotesPanel extends Panel {
         '.notes-panel',
         {
           onclick: (e: PerfettoMouseEvent) => {
-            this.onClick(e.layerX - TRACK_SHELL_WIDTH, e.layerY);
+            this.onClick(e.layerX - (getCssNum('--track-shell-width') || 0), e.layerY);
             e.stopPropagation();
           },
+          onmousemove: (e: PerfettoMouseEvent)=>{
+            if (e.currentTarget instanceof HTMLElement &&
+              (
+                (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
+                (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+              )
+            ) {
+              document.addEventListener('mousedown', resizeTrackShell);
+              e.currentTarget.style.cursor = 'col-resize';
+              return;
+            } else if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.cursor = 'unset';
+            }
+            document.removeEventListener('mousedown', resizeTrackShell);
+          },
+          onmouseleave: (e: PerfettoMouseEvent) =>{
+            if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.cursor = 'unset';
+              document.removeEventListener('mousedown', resizeTrackShell);
+            }
+          },
           oncontextmenu: (e: PerfettoMouseEvent)=>{
-            this.onRightClick(e.layerX - TRACK_SHELL_WIDTH, e.layerY);
+            this.onRightClick(e.layerX - (getCssNum('--track-shell-width') || 0), e.layerY);
             e.stopPropagation();
           },
         },
@@ -143,20 +165,20 @@ export class NotesPanel extends Panel {
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     let aNoteIsHovered = false;
-
+    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
     ctx.fillStyle = getCssStr('--main-foreground-color');
-    ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
+    ctx.fillRect(trackShellWidth - 2, 0, 2, size.height);
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
+    ctx.rect(trackShellWidth, 0, size.width - trackShellWidth, size.height);
     ctx.clip();
 
     const span = globals.frontendLocalState.visibleWindow.timestampSpan;
     const {visibleTimeScale} = globals.frontendLocalState;
-    if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
-      const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
-      const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+    if (size.width > trackShellWidth && span.duration > 0n) {
+      const maxMajorTicks = getMaxMajorTicks(size.width - trackShellWidth);
+      const map = timeScaleForVisibleWindow(trackShellWidth, size.width);
       for (const {type, time} of new TickGenerator(
                span, maxMajorTicks, globals.state.traceTime.start)) {
         const px = Math.floor(map.tpTimeToPx(time));
@@ -188,7 +210,7 @@ export class NotesPanel extends Panel {
           ((selection.kind === 'NOTE' && selection.id === note.id) ||
            (selection.kind === 'AREA' && selection.noteId === note.id));
       const x = visibleTimeScale.tpTimeToPx(timestamp);
-      const left = Math.floor(x + TRACK_SHELL_WIDTH);
+      const left = Math.floor(x + trackShellWidth);
 
       // Draw flag or marker.
       if (note.noteType === 'AREA') {
@@ -197,7 +219,7 @@ export class NotesPanel extends Panel {
             ctx,
             left,
             Math.floor(
-                visibleTimeScale.tpTimeToPx(area.end) + TRACK_SHELL_WIDTH),
+                visibleTimeScale.tpTimeToPx(area.end) + trackShellWidth),
             note.color,
             isSelected);
       } else {
@@ -228,7 +250,7 @@ export class NotesPanel extends Panel {
       if (span.contains(timestamp)) {
         globals.dispatch(Actions.setHoveredNoteTimestamp({ts: timestamp}));
         const x = visibleTimeScale.tpTimeToPx(timestamp);
-        const left = Math.floor(x + TRACK_SHELL_WIDTH);
+        const left = Math.floor(x + trackShellWidth);
         this.drawFlag(ctx, left, size.height, '#aaa', /* fill */ true);
       }
     }
@@ -243,7 +265,7 @@ export class NotesPanel extends Panel {
     ctx.strokeStyle = color;
     const topOffset = 10;
     // Don't draw in the track shell section.
-    if (x >= globals.frontendLocalState.windowSpan.start + TRACK_SHELL_WIDTH) {
+    if (x >= globals.frontendLocalState.windowSpan.start + (getCssNum('--track-shell-width') || 0)) {
       // Draw left triangle.
       ctx.beginPath();
       ctx.moveTo(x, topOffset);
@@ -264,7 +286,7 @@ export class NotesPanel extends Panel {
 
     // Start line after track shell section, join triangles.
     const startDraw = Math.max(
-        x, globals.frontendLocalState.windowSpan.start + TRACK_SHELL_WIDTH);
+        x, globals.frontendLocalState.windowSpan.start + (getCssNum('--track-shell-width') || 0));
     ctx.beginPath();
     ctx.moveTo(startDraw, topOffset);
     ctx.lineTo(xEnd, topOffset);

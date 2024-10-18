@@ -23,7 +23,7 @@ import {
 
 import {
   OVERVIEW_TIMELINE_NON_VISIBLE_COLOR,
-  TRACK_SHELL_WIDTH,
+  getCssNum,
   getCssStr,
 } from './css_constants';
 import {BorderDragStrategy} from './drag/border_drag_strategy';
@@ -59,7 +59,7 @@ export class OverviewTimelinePanel extends Panel {
     this.width = newWidth;
     this.traceTime = globals.stateTraceTimeTP();
     const traceTime = globals.stateTraceTime();
-    const pxSpan = new PxSpan(TRACK_SHELL_WIDTH, this.width);
+    const pxSpan = new PxSpan((getCssNum('--track-shell-width') || 0), this.width);
     this.timeScale = TimeScale.fromHPTimeSpan(traceTime, pxSpan);
     if (this.gesture === undefined) {
       this.gesture = new DragGestureHandler(
@@ -92,12 +92,12 @@ export class OverviewTimelinePanel extends Panel {
     const headerHeight = 20;
     const tracksHeight = size.height - headerHeight;
 
-    if (size.width > TRACK_SHELL_WIDTH && this.traceTime.duration > 0n) {
-      const maxMajorTicks = getMaxMajorTicks(this.width - TRACK_SHELL_WIDTH);
+    if (size.width > (getCssNum('--track-shell-width') || 0) && this.traceTime.duration > 0n) {
+      const maxMajorTicks = getMaxMajorTicks(this.width - (getCssNum('--track-shell-width') || 0));
       const tickGen = new TickGenerator(
           this.traceTime, maxMajorTicks, globals.state.traceTime.start);
       ctx.fillStyle = getCssStr('--overview-background-color');
-      ctx.fillRect(TRACK_SHELL_WIDTH, headerHeight, this.width, size.height - headerHeight);
+      ctx.fillRect((getCssNum('--track-shell-width') || 0), headerHeight, this.width, size.height - headerHeight);
       // Draw time labels on the top header.
       ctx.font = '10px Roboto Condensed';
       ctx.fillStyle = getCssStr('--main-foreground-color');
@@ -146,9 +146,9 @@ export class OverviewTimelinePanel extends Panel {
 
     ctx.fillStyle = OVERVIEW_TIMELINE_NON_VISIBLE_COLOR;
     ctx.fillRect(
-        TRACK_SHELL_WIDTH - 1,
+        (getCssNum('--track-shell-width') || 0) - 1,
         headerHeight,
-        vizStartPx - TRACK_SHELL_WIDTH,
+        vizStartPx - (getCssNum('--track-shell-width') || 0),
         tracksHeight);
     ctx.fillRect(vizEndPx, headerHeight, this.width - vizEndPx, tracksHeight);
 
@@ -186,7 +186,7 @@ export class OverviewTimelinePanel extends Panel {
     if (OverviewTimelinePanel.inBorderRange(x, startBound) ||
         OverviewTimelinePanel.inBorderRange(x, endBound)) {
       return 'ew-resize';
-    } else if (x < TRACK_SHELL_WIDTH) {
+    } else if (x < (getCssNum('--track-shell-width') || 0)) {
       return 'default';
     } else if (x < startBound || endBound < x) {
       return 'crosshair';

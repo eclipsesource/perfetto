@@ -19,7 +19,7 @@ import {
   tpTimeToString,
 } from '../common/time';
 
-import {getCssStr, TRACK_SHELL_WIDTH} from './css_constants';
+import {getCssNum, getCssStr} from './css_constants';
 import {globals} from './globals';
 import {
   getMaxMajorTicks,
@@ -28,10 +28,35 @@ import {
   timeScaleForVisibleWindow,
 } from './gridline_helper';
 import {Panel, PanelSize} from './panel';
+import {PerfettoMouseEvent} from './events';
+import {resizeTrackShell} from './vertical_line_helper';
 
 export class TimeAxisPanel extends Panel {
   view() {
-    return m('.time-axis-panel');
+    return m('.time-axis-panel', {
+
+      onmousemove: (e: PerfettoMouseEvent)=>{
+        if (e.currentTarget instanceof HTMLElement &&
+          (
+            (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
+            (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+          )
+        ) {
+          document.addEventListener('mousedown', resizeTrackShell);
+          e.currentTarget.style.cursor = 'col-resize';
+          return;
+        } else if (e.currentTarget instanceof HTMLElement) {
+          e.currentTarget.style.cursor = 'unset';
+        }
+        document.removeEventListener('mousedown', resizeTrackShell);
+      },
+      onmouseleave: (e: PerfettoMouseEvent) =>{
+        if (e.currentTarget instanceof HTMLElement) {
+          e.currentTarget.style.cursor = 'unset';
+          document.removeEventListener('mousedown', resizeTrackShell);
+        }
+      },
+    });
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
@@ -41,17 +66,17 @@ export class TimeAxisPanel extends Panel {
 
     const startTime = tpTimeToString(globals.state.traceTime.start);
     ctx.fillText(startTime + ' +', 6, 11);
-
+    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
     ctx.save();
     ctx.beginPath();
-    ctx.rect(TRACK_SHELL_WIDTH, 0, size.width - TRACK_SHELL_WIDTH, size.height);
+    ctx.rect(trackShellWidth, 0, size.width - trackShellWidth, size.height);
     ctx.clip();
 
     // Draw time axis.
     const span = globals.frontendLocalState.visibleWindow.timestampSpan;
-    if (size.width > TRACK_SHELL_WIDTH && span.duration > 0n) {
-      const maxMajorTicks = getMaxMajorTicks(size.width - TRACK_SHELL_WIDTH);
-      const map = timeScaleForVisibleWindow(TRACK_SHELL_WIDTH, size.width);
+    if (size.width > trackShellWidth && span.duration > 0n) {
+      const maxMajorTicks = getMaxMajorTicks(size.width - trackShellWidth);
+      const map = timeScaleForVisibleWindow(trackShellWidth, size.width);
       const tickGen =
           new TickGenerator(span, maxMajorTicks, globals.state.traceTime.start);
       for (const {type, time} of tickGen) {
@@ -66,6 +91,6 @@ export class TimeAxisPanel extends Panel {
 
     ctx.restore();
 
-    ctx.fillRect(TRACK_SHELL_WIDTH - 2, 0, 2, size.height);
+    ctx.fillRect(trackShellWidth - 2, 0, 2, size.height);
   }
 }

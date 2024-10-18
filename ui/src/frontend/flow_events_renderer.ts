@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {TPTime} from '../common/time';
-import {TRACK_SHELL_WIDTH} from './css_constants';
+import {getCssNum} from './css_constants';
 import {ALL_CATEGORIES, getFlowCategories} from './flow_events_panel';
 import {Flow, FlowPoint, globals} from './globals';
 import {PanelVNode} from './panel';
@@ -156,8 +156,9 @@ export class FlowEventsRenderer {
 
   render(ctx: CanvasRenderingContext2D, args: FlowEventsRendererArgs) {
     ctx.save();
-    ctx.translate(TRACK_SHELL_WIDTH, 0);
-    ctx.rect(0, 0, args.canvasWidth - TRACK_SHELL_WIDTH, args.canvasHeight);
+    const trackShellWidth = getCssNum('--track-shell-width') || 0;
+    ctx.translate(trackShellWidth, 0);
+    ctx.rect(0, 0, args.canvasWidth - trackShellWidth, args.canvasHeight);
     ctx.clip();
 
     globals.connectedFlows.forEach((flow) => {

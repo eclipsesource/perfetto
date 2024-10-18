@@ -13,7 +13,8 @@
 // limitations under the License.
 
 import {TPTime} from '../common/time';
-import {TRACK_SHELL_WIDTH} from './css_constants';
+import {getCssNum} from './css_constants';
+import {globals} from './globals';
 import {TimeScale} from './time_scale';
 
 export function drawVerticalLineAtTime(
@@ -23,9 +24,42 @@ export function drawVerticalLineAtTime(
     height: number,
     color: string,
     lineWidth = 2) {
-  const xPos = TRACK_SHELL_WIDTH + Math.floor(timeScale.tpTimeToPx(time));
+  const xPos = (getCssNum('--track-shell-width') || 0) + Math.floor(timeScale.tpTimeToPx(time));
   drawVerticalLine(ctx, xPos, height, color, lineWidth);
 }
+
+export function resizeTrackShell(e: MouseEvent): void {
+  e.stopPropagation();
+  e.preventDefault();
+  const mouseMoveEvent = (evMove: MouseEvent): void => {
+      evMove.preventDefault();
+      const root = document.querySelector(':root');
+      if (root && root instanceof HTMLElement &&
+          'layerX' in evMove && evMove.layerX &&
+          typeof evMove.layerX === 'number'
+      ) {
+        if (evMove.layerX < 250) {
+          root.style.setProperty('--track-shell-width', '250px');
+        } else if (e.target &&
+          e.target instanceof HTMLElement &&
+          evMove.layerX > (e.target.clientWidth - 100)) {
+            root.style.setProperty('--track-shell-width', e.target.clientWidth-100 + 'px');
+        } else {
+          root.style.setProperty('--track-shell-width', evMove.layerX + 'px');
+        }
+        globals.rafScheduler.scheduleFullRedraw();
+      }
+  };
+  const mouseUpEvent = (evUp : MouseEvent): void => {
+      evUp.stopPropagation();
+      evUp.preventDefault();
+      document.removeEventListener('mousemove', mouseMoveEvent);
+      document.removeEventListener('mouseup', mouseUpEvent);
+  };
+  document.addEventListener('mousemove', mouseMoveEvent);
+  document.addEventListener('mouseup', mouseUpEvent);
+  document.removeEventListener('mousedown', resizeTrackShell);
+};
 
 function drawVerticalLine(ctx: CanvasRenderingContext2D,
                           xPos: number,
