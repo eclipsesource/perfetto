@@ -142,6 +142,31 @@ class CounterTrackController extends TrackController<Config, Data> {
       this.setup = true;
     }
 
+    const emptyBigInts = BigInt64Array.of();
+    const emptyFloats = Float64Array.of();
+
+    // Default to an empty data in case the query fails,
+    // e.g. on the track being filtered out
+    const data: Data = {
+      start,
+      end,
+      length: 0,
+      maximumValue: this.maximumValue(),
+      minimumValue: this.minimumValue(),
+      maximumDelta: this.maximumDeltaSeen,
+      minimumDelta: this.minimumDeltaSeen,
+      maximumRate: 0,
+      minimumRate: 0,
+      resolution,
+      timestamps: emptyBigInts,
+      lastIds: emptyFloats,
+      minValues: emptyFloats,
+      maxValues: emptyFloats,
+      lastValues: emptyFloats,
+      totalDeltas: emptyFloats,
+      rate: emptyFloats,
+    };
+
     const result = await this.counterView.query((counterView) => `
         select
           (ts + ${resolution / 2n}) / ${resolution} * ${resolution} as tsq,
@@ -158,17 +183,9 @@ class CounterTrackController extends TrackController<Config, Data> {
       (queryRes) => {
         const numRows = queryRes.numRows();
 
-        const data: Data = {
-          start,
-          end,
+        // Fill in the data from the query results
+        Object.assign(data, {
           length: numRows,
-          maximumValue: this.maximumValue(),
-          minimumValue: this.minimumValue(),
-          maximumDelta: this.maximumDeltaSeen,
-          minimumDelta: this.minimumDeltaSeen,
-          maximumRate: 0,
-          minimumRate: 0,
-          resolution,
           timestamps: new BigInt64Array(numRows),
           lastIds: new Float64Array(numRows),
           minValues: new Float64Array(numRows),
@@ -176,9 +193,9 @@ class CounterTrackController extends TrackController<Config, Data> {
           lastValues: new Float64Array(numRows),
           totalDeltas: new Float64Array(numRows),
           rate: new Float64Array(numRows),
-        };
+        });
 
-        const it = queryRes.iter({
+       const it = queryRes.iter({
           'tsq': LONG,
           'lastId': NUM,
           'minValue': NUM,
@@ -211,7 +228,7 @@ class CounterTrackController extends TrackController<Config, Data> {
 
         return data;
       },
-      () => this.cancelData(),
+      () => data,
     );
 
     return result;

@@ -35,8 +35,6 @@ interface TrackConfig {}
 
 type TrackConfigWithNamespace = TrackConfig&{namespace: string};
 
-const cancelToken = Symbol('cancelled');
-
 // Helper type that asserts that two vararg parameters have the same length
 type SameLength<T extends unknown[], U extends unknown[]> =
 T extends { length: U['length'] } ? T : never;
@@ -360,7 +358,7 @@ export abstract class TrackController<
                   resolution);
             })
             .then((data) => {
-              if (this.isData(data)) {
+              if (data) {
                 this.publish(data);
               }
             })
@@ -373,20 +371,6 @@ export abstract class TrackController<
             });
       }
     }
-  }
-
-  /**
-   * Provide a non-viable Data serving as a token of cancellation of
-   * the bounds-change calculation.
-   *
-   * @return {Data} a token track-data object signalling cancellation
-   */
-  protected cancelData(): Data {
-    return {[cancelToken]: cancelToken} as unknown as Data;
-  }
-
-  private isData(data: Data | undefined): data is Data {
-    return !!data && !(cancelToken in data);
   }
 }
 

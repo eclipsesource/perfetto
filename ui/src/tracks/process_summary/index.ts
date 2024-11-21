@@ -115,15 +115,23 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
       group by quantum_ts
       limit ${LIMIT}`;
 
+    // Default to an empty summary in case the query fails,
+    // e.g. on the track being filtered out
+    const summary: Data = {
+      start,
+      end,
+      resolution,
+      length: 0,
+      bucketSize,
+      utilizations: Float64Array.of(),
+    };
+
     const result = await this.span.query(sql, (queryRes) => {
-      const summary: Data = {
-        start,
-        end,
-        resolution,
+      // Fill in the summary from the query results
+      Object.assign(summary, {
         length: numBuckets,
-        bucketSize,
         utilizations: new Float64Array(numBuckets),
-      };
+      });
 
       const it = queryRes.iter({bucket: NUM, utilization: NUM});
       for (; it.valid(); it.next()) {
@@ -135,7 +143,7 @@ class ProcessSummaryTrackController extends TrackController<Config, Data> {
       }
 
       return summary;
-    }, () => this.cancelData());
+    }, () => summary);
 
     return result;
   }
