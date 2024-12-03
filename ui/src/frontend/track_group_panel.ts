@@ -188,7 +188,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
         m(`.shell[draggable=true]`,
           {
             onclick: (e: MouseEvent) => {
-              if (!e.ctrlKey) {
+              if (!(navigator.userAgent.includes('Mac')? e.metaKey : e.ctrlKey)) {
                 globals.dispatch(
                   Actions.clearTrackAndGroupSelection({}));
               }
