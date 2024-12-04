@@ -318,7 +318,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
           '.scroll-limiter',
           m('canvas.main-canvas'),
           ),
-      m('.panels', children),
+      m('.panels', {ondragstart: (e: DragEvent) => e.preventDefault()}, children),
     ];
   }
 
