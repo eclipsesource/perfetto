@@ -433,6 +433,7 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
             globals.rafScheduler.scheduleRedraw();
           },
           onmousedown: (e: PerfettoMouseEvent) => {
+            e.preventDefault();
             this.mouseDownX = e.layerX;
             this.mouseDownY = e.layerY;
           },
