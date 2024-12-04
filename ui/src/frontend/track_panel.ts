@@ -445,9 +445,6 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
             this.mouseDownX = e.layerX;
             this.mouseDownY = e.layerY;
           },
-          ondragstart: (e:DragEvent) => {
-            e.preventDefault();
-          },
           onmouseup: (e: PerfettoMouseEvent) => {
             if (this.mouseDownX === undefined ||
                 this.mouseDownY === undefined) {
