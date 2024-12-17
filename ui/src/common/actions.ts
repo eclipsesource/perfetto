@@ -1543,6 +1543,11 @@ export const StateActions = {
     state.filteredTracks = [...args.filteredTracks];
   },
 
+  togglePinnedGroupCollapsed(
+    state: StateDraft,
+    _: {}) {
+      state.pinnedGroupCollapsed = !state.pinnedGroupCollapsed;
+  },
   clearTrackAndGroupSelection(
     state: StateDraft,
     _: {},
