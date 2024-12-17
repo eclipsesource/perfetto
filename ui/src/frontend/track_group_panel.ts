@@ -605,6 +605,9 @@ export class MinimalTrackGroup extends Panel<MinimalGroupAttrs> {
         m(`.shell`,
           m('.fold-button',
             {
+              style: {
+                marginLeft: '.5rem',
+              },
               onclick: (e: MouseEvent) => {
                 // Toggle Collapsing
                 e.stopPropagation();
@@ -615,6 +618,9 @@ export class MinimalTrackGroup extends Panel<MinimalGroupAttrs> {
               globals.state.pinnedGroupCollapsed ?
             CHEVRON_RIGHT : EXPAND_DOWN)),
           m('h1.track-title',
+            {style: {
+              marginLeft: '.5rem',
+            }},
             name,
           ),
 
