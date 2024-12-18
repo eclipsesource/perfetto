@@ -254,6 +254,17 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
               }
               globals.dispatch(
                   Actions.toggleTrackPinned({trackId: attrs.trackState.id}));
+                  // Scroll the pinned track into view after the redraw
+                  if (
+                    isPinned(attrs.trackState.id) &&
+                    e.currentTarget &&
+                    e.currentTarget instanceof HTMLElement) {
+                      const panZoom = e.currentTarget.closest('.pan-and-zoom-content');
+                      setTimeout(() => {
+                        const pinnedTrack = panZoom?.querySelector(`.scrolling-panel-container.pinned-group #track_${attrs.trackState.id}`);
+                        pinnedTrack?.scrollIntoView();
+                      }, 0);
+                  }
             },
             i: PIN,
             filledIcon: isPinned(attrs.trackState.id),
@@ -339,8 +350,11 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     const trackLike : TrackState | TrackGroupState =
       globals.state.trackGroups[trackLikeId] ??
         globals.state.tracks[trackLikeId];
-    if (('trackGroup' in trackLike && this.attrs!.trackState.trackGroup === trackLike.trackGroup) ||
-    'parentGroup' in trackLike && this.attrs!.trackState.trackGroup === trackLike.parentGroup) {
+    if (
+      ('trackGroup' in trackLike && this.attrs!.trackState.trackGroup === trackLike.trackGroup) ||
+      'parentGroup' in trackLike && this.attrs!.trackState.trackGroup === trackLike.parentGroup ||
+      (globals.state.pinnedTracks.includes(this.attrs!.trackState.id) &&
+        trackLike.id)) {
       // Apply some hysteresis to the drop logic so that the lightened border
       // changes only when we get close enough to the border.
       if (e.offsetY < e.target.scrollHeight / 3) {
