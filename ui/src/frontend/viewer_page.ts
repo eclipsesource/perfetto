@@ -290,13 +290,14 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
     if (OVERVIEW_PANEL_FLAG.get()) {
       overviewPanel.push(m(OverviewTimelinePanel, {key: 'overview'}));
     }
-    const pinnedPanels: AnyAttrsVnode[] = [
+    const overviewPanels: AnyAttrsVnode[] = [
       ...overviewPanel,
       m(TimeAxisPanel, {key: 'timeaxis'}),
       m(TimeSelectionPanel, {key: 'timeselection'}),
       m(NotesPanel, {key: 'notes'}),
       m(TickmarkPanel, {key: 'searchTickmarks'}),
     ];
+    const pinnedPanels: AnyAttrsVnode[] = [];
     if (globals.state.pinnedTracks.length > 0) {
       pinnedPanels.push(m(TrackGroup, {
         header: m(MinimalTrackGroup, {
@@ -328,11 +329,19 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 globals.makeSelection(Actions.deselect({}));
               },
             },
-            m('.pinned-panel-container', m(PanelContainer, {
+            m('.overview-panel-container', m(PanelContainer, {
                 doesScroll: false,
-                panels: pinnedPanels,
+                panels: overviewPanels,
                 kind: 'OVERVIEW',
               })),
+            m('.scrolling-panel-container pinned-group', m(PanelContainer, {
+              doesScroll: true,
+              panels: pinnedPanels,
+              kind: 'TRACKS',
+            })),
+            m('hr', {style: {
+              width: '100%',
+            }}),
             m('.scrolling-panel-container', m(PanelContainer, {
                 doesScroll: true,
                 panels: rootNode,
