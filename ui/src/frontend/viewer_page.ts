@@ -385,14 +385,14 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 panels: overviewPanels,
                 kind: 'OVERVIEW',
               })),
-            m('.scrolling-panel-container pinned-group', {style: {
+            globals.state.pinnedTracks.length > 0 ?  m('.scrolling-panel-container pinned-group', {style: {
               minHeight: !globals.state.pinnedGroupCollapsed?globals.state.pinnedPanelHeight+ 'px': '18px',
               height: !globals.state.pinnedGroupCollapsed?globals.state.pinnedPanelHeight+ 'px': '18px',
             }}, m(PanelContainer, {
               doesScroll: true,
               panels: pinnedPanels,
               kind: 'TRACKS',
-            })),
+            })): '',
             m('hr', {
               style: {
                 width: '100%',
