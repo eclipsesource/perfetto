@@ -348,11 +348,10 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
       m(TickmarkPanel, {key: 'searchTickmarks'}),
     ];
     const pinnedPanels: AnyAttrsVnode[] = [];
-    if (globals.state.pinnedTracks.length > 0) {
       pinnedPanels.push(m(TrackGroup, {
         header: m(MinimalTrackGroup, {
           name: 'Pinned Tracks',
-          key: 'trackgroup-something',
+          key: 'pinned-trackgroup',
         }),
         collapsed: globals.state.pinnedGroupCollapsed,
         childTracks: !globals.state.pinnedGroupCollapsed ?
@@ -363,7 +362,6 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
             selectable: true,
             pinnedCopy: true})): [],
       } as TrackGroupAttrs));
-    }
 
 
     return m(
@@ -385,23 +383,27 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 panels: overviewPanels,
                 kind: 'OVERVIEW',
               })),
-            globals.state.pinnedTracks.length > 0 ?  m('.scrolling-panel-container pinned-group', {style: {
-              minHeight: !globals.state.pinnedGroupCollapsed?globals.state.pinnedPanelHeight+ 'px': '18px',
-              height: !globals.state.pinnedGroupCollapsed?globals.state.pinnedPanelHeight+ 'px': '18px',
-            }}, m(PanelContainer, {
-              doesScroll: true,
-              panels: pinnedPanels,
-              kind: 'TRACKS',
-            })): '',
-            m('hr', {
-              style: {
-                width: '100%',
-                margin: '0',
-                cursor: 'row-resize',
-              },
-              onmousemove: this.checkPinnedResize,
-              onmouseleave: this.checkPinnedResize,
-            }),
+            ...(globals.state.pinnedTracks.length > 0 ?  
+              [m('.scrolling-panel-container pinned-group', {
+                style: {
+                  minHeight: !globals.state.pinnedGroupCollapsed?globals.state.pinnedPanelHeight+ 'px': '18px',
+                  height: !globals.state.pinnedGroupCollapsed?globals.state.pinnedPanelHeight+ 'px': '18px',
+                }}, 
+                m(PanelContainer, {
+                  doesScroll: true,
+                  panels: pinnedPanels,
+                  kind: 'TRACKS',
+                })),
+                m('hr', {
+                  style: {
+                    width: '100%',
+                    margin: '0',
+                    cursor: 'row-resize',
+                  },
+                  onmousemove: this.checkPinnedResize,
+                  onmouseleave: this.checkPinnedResize,
+                })
+            ]: []),
             m('.scrolling-panel-container', m(PanelContainer, {
                 doesScroll: true,
                 panels: rootNode,
