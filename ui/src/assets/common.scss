@@ -524,6 +524,17 @@ canvas.main-canvas {
   user-select: none;
 }
 
+.scrolling-panel-container.pinned-group {
+  display: block;
+  max-height: 60%;
+  height: max-content;
+  flex: none;
+}
+
+.scrolling-panel-container.pinned-group .scroll-limiter{
+  position: absolute;
+}
+
 .scrolling-panel-container:not(.pinned-group) > .panels > *:last-child {
   margin-bottom: 500px;
 }
