@@ -339,6 +339,12 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
               panels: pinnedPanels,
               kind: 'TRACKS',
             })),
+            m('hr', {
+              style: {
+                width: '100%',
+                margin: '0',
+              },
+            }),
             m('.scrolling-panel-container', m(PanelContainer, {
                 doesScroll: true,
                 panels: rootNode,
