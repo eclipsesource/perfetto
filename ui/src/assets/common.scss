@@ -533,10 +533,11 @@ canvas.main-canvas {
 
 .scrolling-panel-container.pinned-group .scroll-limiter{
   position: absolute;
+  height: 100%;
 }
 
 .scrolling-panel-container:not(.pinned-group) > .panels > *:last-child {
-  margin-bottom: 500px;
+  margin-bottom: 25%;
 }
 
 .panel {
