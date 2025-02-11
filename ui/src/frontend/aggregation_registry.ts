@@ -18,9 +18,9 @@ import {Registry} from '../common/registry';
 import {ControllerFactory} from '../controller/controller';
 import {AggregationControllerArgs} from '../controller/aggregation/aggregation_controller';
 
-export interface CustomAggregateControllerArgs {
+export interface AggregateControllerArgs {
     kind: string,
     controllerFactory: ControllerFactory<AggregationControllerArgs>;
 }
-export const customAggregateControllerRegistry =
- Registry.kindRegistry<CustomAggregateControllerArgs>();
+export const aggregateControllerRegistry =
+ Registry.kindRegistry<AggregateControllerArgs>();

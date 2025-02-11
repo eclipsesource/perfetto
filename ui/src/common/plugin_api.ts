@@ -18,7 +18,7 @@ import {TrackControllerFactory} from '../controller/track_controller';
 import {TrackCreator} from '../frontend/track';
 import {Selection} from './state';
 import {CustomButtonArgs} from '../frontend/button_registry';
-import {CustomAggregateControllerArgs} from '../frontend/aggregation_registry';
+import {AggregateControllerArgs} from '../frontend/aggregation_registry';
 
 export {EngineProxy} from '../common/engine';
 export {
@@ -122,8 +122,8 @@ export interface PluginContext {
     onTrackSelectionChange:
       (trackIds: string[], trackGroupIds: string[]) => void): void;
 
-  registerAggregateController(
-    aggControlArgs: CustomAggregateControllerArgs):void;
+  registerAggregationController(
+    aggControlArgs: AggregateControllerArgs):void;
 }
 
 export interface PluginInfo {

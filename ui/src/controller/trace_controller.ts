@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {customAggregateControllerRegistry} from '../frontend/aggregation_registry';
+import {aggregateControllerRegistry} from '../frontend/aggregation_registry';
 import {BigintMath} from '../base/bigint_math';
 import {assertExists, assertTrue} from '../base/logging';
 import {
@@ -313,7 +313,7 @@ export class TraceController extends Controller<States> {
           FrameAggregationController,
           {engine, kind: 'frame_aggregation'}));
           for (const customController of
-            customAggregateControllerRegistry.values()) {
+            aggregateControllerRegistry.values()) {
               childControllers.push(Child(
                 customController.kind,
                 customController.controllerFactory,
