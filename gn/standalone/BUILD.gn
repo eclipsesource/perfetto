@@ -280,8 +280,8 @@ config("default") {
     cflags += [ "-fno-omit-frame-pointer" ]  # For perf profiling.
 
     if (is_mac && is_clang && enable_perfetto_trace_processor_sqlite && !is_wasm) {
-      cflags += [ "--target=x64-apple-darwin" ]
-      ldflags += [ "--target=x64-apple-darwin" ]
+      cflags += [ "--target=x86_64-apple-darwin" ]
+      ldflags += [ "--target=x86_64-apple-darwin" ]
     }
 
     if (enable_perfetto_x64_cpu_opt) {
