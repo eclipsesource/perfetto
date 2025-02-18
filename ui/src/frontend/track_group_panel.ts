@@ -34,7 +34,7 @@ import {
 } from './icons';
 import {Panel, PanelSize} from './panel';
 import {Track} from './track';
-import {TrackButton, TrackContent, checkTrackForResizability, resizeTrack} from './track_panel';
+import {EMPTY_IMAGE_DATA, TrackButton, TrackContent, checkTrackForResizability, resizeTrack} from './track_panel';
 import {trackRegistry} from './track_registry';
 import {drawVerticalLineAtTime} from './vertical_line_helper';
 import {getActiveVsyncData, renderVsyncColumns} from './vsync_helper';
@@ -65,7 +65,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     super();
 
     this.transparentImage =new Image();
-    this.transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+    this.transparentImage.src = EMPTY_IMAGE_DATA;
     this.trackGroupId = attrs.attrs.trackGroupId;
     const trackCreator = trackRegistry.get(this.summaryTrackState.kind);
     const engineId = this.summaryTrackState.engineId;

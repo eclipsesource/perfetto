@@ -32,6 +32,8 @@ import {drawVerticalLineAtTime} from './vertical_line_helper';
 import {getActiveVsyncData, renderVsyncColumns} from './vsync_helper';
 import {SCROLLING_TRACK_GROUP, getContainingTrackIds} from '../common/state';
 
+
+export const EMPTY_IMAGE_DATA = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
 function isPinned(id: string) {
   return globals.state.pinnedTracks.indexOf(id) !== -1;
 }
@@ -129,7 +131,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     this.attrs = vnode.attrs;
 
     this.transparentImage =new Image();
-    this.transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+    this.transparentImage.src = EMPTY_IMAGE_DATA;
     if (this.attrs) {
       this.defaultHeight =
         this.attrs.track.getHeight() / this.attrs.trackState.scaleFactor;
