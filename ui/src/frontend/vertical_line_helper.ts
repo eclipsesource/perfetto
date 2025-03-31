@@ -28,34 +28,41 @@ export function drawVerticalLineAtTime(
   drawVerticalLine(ctx, xPos, height, color, lineWidth);
 }
 
+
 export function resizeTrackShell(e: MouseEvent): void {
   e.stopPropagation();
   e.preventDefault();
+  const preventClickEvent = (evClick: MouseEvent): void=>{
+    evClick.stopPropagation();
+    evClick.preventDefault();
+    document.removeEventListener('click', preventClickEvent, true); // useCapture = true
+  };
   const mouseMoveEvent = (evMove: MouseEvent): void => {
-      evMove.preventDefault();
-      const root = document.querySelector(':root');
-      if (root && root instanceof HTMLElement &&
-          'layerX' in evMove && evMove.layerX &&
-          typeof evMove.layerX === 'number'
-      ) {
-        if (evMove.layerX < 250) {
-          root.style.setProperty('--track-shell-width', '250px');
-        } else if (e.target &&
-          e.target instanceof HTMLElement &&
-          evMove.layerX > (e.target.clientWidth - 100)) {
-            root.style.setProperty('--track-shell-width', e.target.clientWidth-100 + 'px');
-        } else {
-          root.style.setProperty('--track-shell-width', evMove.layerX + 'px');
-        }
-        globals.rafScheduler.scheduleFullRedraw();
+    evMove.preventDefault();
+    const root = document.querySelector(':root');
+    if (root && root instanceof HTMLElement &&
+      'layerX' in evMove && evMove.layerX &&
+      typeof evMove.layerX === 'number'
+    ) {
+      if (evMove.layerX < 250) {
+        root.style.setProperty('--track-shell-width', '250px');
+      } else if (e.target &&
+        e.target instanceof HTMLElement &&
+        evMove.layerX > (e.target.clientWidth - 100)) {
+          root.style.setProperty('--track-shell-width', e.target.clientWidth-100 + 'px');
+      } else {
+        root.style.setProperty('--track-shell-width', evMove.layerX + 'px');
       }
+      globals.rafScheduler.scheduleFullRedraw();
+    }
   };
   const mouseUpEvent = (evUp : MouseEvent): void => {
-      evUp.stopPropagation();
-      evUp.preventDefault();
-      document.removeEventListener('mousemove', mouseMoveEvent);
-      document.removeEventListener('mouseup', mouseUpEvent);
+    evUp.stopPropagation();
+    evUp.preventDefault();
+    document.removeEventListener('mousemove', mouseMoveEvent);
+    document.removeEventListener('mouseup', mouseUpEvent);
   };
+  document.addEventListener('click', preventClickEvent, true); // useCapture = true
   document.addEventListener('mousemove', mouseMoveEvent);
   document.addEventListener('mouseup', mouseUpEvent);
   document.removeEventListener('mousedown', resizeTrackShell);
