@@ -37,22 +37,23 @@ export function resizeTrackShell(e: MouseEvent): void {
     evClick.preventDefault();
     document.removeEventListener('click', preventClickEvent, true); // useCapture = true
   };
+  let trackShellWidth = (getCssNum('--track-shell-width') || 0);
   const mouseMoveEvent = (evMove: MouseEvent): void => {
     evMove.preventDefault();
     const root = document.querySelector(':root');
-    if (root && root instanceof HTMLElement &&
-      'layerX' in evMove && evMove.layerX &&
-      typeof evMove.layerX === 'number'
+    const newWidth = trackShellWidth + evMove.movementX;
+    if (root && root instanceof HTMLElement
     ) {
-      if (evMove.layerX < 250) {
+      if (newWidth < 250) {
         root.style.setProperty('--track-shell-width', '250px');
       } else if (e.target &&
         e.target instanceof HTMLElement &&
-        evMove.layerX > (e.target.clientWidth - 100)) {
+        newWidth > (e.target.clientWidth - 100)) {
           root.style.setProperty('--track-shell-width', e.target.clientWidth-100 + 'px');
       } else {
-        root.style.setProperty('--track-shell-width', evMove.layerX + 'px');
+        root.style.setProperty('--track-shell-width', newWidth + 'px');
       }
+      trackShellWidth = newWidth;
       globals.rafScheduler.scheduleFullRedraw();
     }
   };
