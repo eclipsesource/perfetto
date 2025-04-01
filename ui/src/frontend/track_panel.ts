@@ -130,7 +130,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   oninit(vnode: m.Vnode<TrackShellAttrs>) {
     this.attrs = vnode.attrs;
 
-    this.transparentImage =new Image();
+    this.transparentImage = new Image();
     this.transparentImage.src = EMPTY_IMAGE_DATA;
     if (this.attrs) {
       this.defaultHeight =
