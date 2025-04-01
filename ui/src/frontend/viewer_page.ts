@@ -370,7 +370,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 }
                 globals.makeSelection(Actions.deselect({}));
               },
-              ondragstart: (e :DragEvent)=>{
+              ondragstart: (e: DragEvent)=>{
                 if (!(e.dataTransfer && e.dataTransfer.types.find((format)=>format.startsWith('perfetto/')))) {
                   e.preventDefault();
                 }
