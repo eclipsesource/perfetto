@@ -72,6 +72,7 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   private panelByKey = new Map<string, AnyAttrsVnode>();
   private totalPanelHeight = 0;
   private canvasHeight = 0;
+  private trackShellWidth = 0;
 
   private flowEventsRenderer: FlowEventsRenderer;
 
@@ -325,8 +326,12 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
   onupdate(vnodeDom: m.CVnodeDOM<Attrs>) {
     const totalPanelHeightChanged = this.readPanelHeightsFromDom(vnodeDom.dom);
     const parentSizeChanged = this.readParentSizeFromDom(vnodeDom.dom);
+    const trackShellWidthChanged = this.checkTrackShellWidthChanged();
     const canvasSizeShouldChange =
-        parentSizeChanged || !this.attrs.doesScroll && totalPanelHeightChanged;
+        parentSizeChanged ||
+        trackShellWidthChanged ||
+        !this.attrs.doesScroll &&
+        totalPanelHeightChanged;
     if (canvasSizeShouldChange) {
       this.updateCanvasDimensions();
       this.repositionCanvas();
@@ -373,6 +378,16 @@ export class PanelContainer implements m.ClassComponent<Attrs> {
     const canvasYStart =
         Math.floor(this.scrollTop - this.getCanvasOverdrawHeightPerSide());
     canvas.style.transform = `translateY(${canvasYStart}px)`;
+  }
+
+  private checkTrackShellWidthChanged(): boolean {
+    const oldWidth = this.trackShellWidth;
+    const newWidth = getCssNum('--track-shell-width') || 0;
+    if (oldWidth !== newWidth) {
+      this.trackShellWidth = newWidth;
+      return true;
+    }
+    return false;
   }
 
   // Reads dimensions of parent node. Returns true if read dimensions are
