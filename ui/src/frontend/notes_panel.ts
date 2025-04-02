@@ -38,7 +38,6 @@ import {
 import {Panel, PanelSize} from './panel';
 import {isTraceLoaded} from './sidebar';
 import {customButtonRegistry} from './button_registry';
-import {resizeTrackShell} from './vertical_line_helper';
 
 const FLAG_WIDTH = 16;
 const AREA_TRIANGLE_WIDTH = 10;
@@ -87,27 +86,6 @@ export class NotesPanel extends Panel {
           onclick: (e: PerfettoMouseEvent) => {
             this.onClick(e.layerX - globals.state.trackShellWidth, e.layerY);
             e.stopPropagation();
-          },
-          onmousemove: (e: PerfettoMouseEvent)=>{
-            if (e.currentTarget instanceof HTMLElement &&
-              (
-                (e.layerX +2) >= globals.state.trackShellWidth &&
-                (e.layerX -2) <= globals.state.trackShellWidth
-              )
-            ) {
-              document.addEventListener('mousedown', resizeTrackShell);
-              e.currentTarget.style.cursor = 'col-resize';
-              return;
-            } else if (e.currentTarget instanceof HTMLElement) {
-              e.currentTarget.style.cursor = 'unset';
-            }
-            document.removeEventListener('mousedown', resizeTrackShell);
-          },
-          onmouseleave: (e: PerfettoMouseEvent) =>{
-            if (e.currentTarget instanceof HTMLElement) {
-              e.currentTarget.style.cursor = 'unset';
-              document.removeEventListener('mousedown', resizeTrackShell);
-            }
           },
           oncontextmenu: (e: PerfettoMouseEvent)=>{
             this.onRightClick(

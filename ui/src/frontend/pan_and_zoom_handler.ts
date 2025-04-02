@@ -265,7 +265,7 @@ export class PanAndZoomHandler {
       if (this.editSelection(this.mousePositionX)) {
         this.element.style.cursor = EDITING_RANGE_CURSOR;
       } else {
-        this.element.style.cursor = this.shiftDown ? PAN_CURSOR : DRAG_CURSOR;
+        this.element.style.cursor = this.shiftDown ? PAN_CURSOR : 'unset';
       }
     }
   }

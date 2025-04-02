@@ -29,7 +29,6 @@ export function drawVerticalLineAtTime(
   drawVerticalLine(ctx, xPos, height, color, lineWidth);
 }
 
-
 export function resizeTrackShell(e: MouseEvent): void {
   e.stopPropagation();
   e.preventDefault();

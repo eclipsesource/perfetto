@@ -34,6 +34,8 @@ import {DISMISSED_PANNING_HINT_KEY} from './topbar';
 import {MinimalTrackGroup, TrackGroupPanel} from './track_group_panel';
 import {TrackPanel} from './track_panel';
 import {TrackGroupState, TrackState} from '../common/state';
+import {PerfettoMouseEvent} from './events';
+import {resizeTrackShell} from './vertical_line_helper';
 
 const SIDEBAR_WIDTH = 256;
 
@@ -97,6 +99,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
   private zoomContent?: PanAndZoomHandler;
   // Used to prevent global deselection if a pan/drag select occurred.
   private keepCurrentSelection = false;
+  private TRACK_SHELL_GRAB_WIDTH = 4;
 
   oncreate(vnode: m.CVnodeDOM<TraceViewerAttrs>) {
     const frontendLocalState = globals.frontendLocalState;
@@ -319,6 +322,35 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
 
     return m(
         '.page',
+        {
+          onmousemove: (e: PerfettoMouseEvent)=>{
+            if (e.currentTarget instanceof HTMLElement) {
+              const posX =
+                e.clientX - e.currentTarget.getBoundingClientRect().left;
+              if (posX <=
+                globals.state.trackShellWidth +
+                (this.TRACK_SHELL_GRAB_WIDTH / 2) &&
+                posX >=
+                globals.state.trackShellWidth -
+                (this.TRACK_SHELL_GRAB_WIDTH / 2)
+              ) {
+                  document.addEventListener('mousedown', resizeTrackShell);
+                  e.currentTarget.style.cursor = 'ew-resize';
+                  return;
+              }
+            }
+            if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.cursor = 'unset';
+            }
+            document.removeEventListener('mousedown', resizeTrackShell);
+          },
+          onmouseleave: (e: PerfettoMouseEvent) =>{
+            if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.cursor = 'unset';
+              document.removeEventListener('mousedown', resizeTrackShell);
+            }
+          },
+        },
         m('.split-panel',
           m('.pan-and-zoom-content',
             {

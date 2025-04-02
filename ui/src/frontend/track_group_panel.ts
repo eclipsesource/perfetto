@@ -36,10 +36,7 @@ import {Panel, PanelSize} from './panel';
 import {Track} from './track';
 import {TrackButton, TrackContent, checkTrackForResizability, resizeTrack} from './track_panel';
 import {trackRegistry} from './track_registry';
-import {
-  drawVerticalLineAtTime,
-  resizeTrackShell,
-} from './vertical_line_helper';
+import {drawVerticalLineAtTime} from './vertical_line_helper';
 import {getActiveVsyncData, renderVsyncColumns} from './vsync_helper';
 import {getCssStr} from './css_constants';
 import {PerfettoMouseEvent} from './events';
@@ -114,30 +111,13 @@ export class TrackGroupPanel extends Panel<Attrs> {
       this.defaultHeight);
     };
 
-  onmousemove(e: MouseEvent) {
-    // Track Shell Width Resizing
-    if (e.currentTarget instanceof HTMLElement &&
-      (((e as PerfettoMouseEvent).layerX -4) <= globals.state.trackShellWidth)
-    ) {
-      document.addEventListener('mousedown', resizeTrackShell);
-      e.currentTarget.style.cursor = 'col-resize';
-      return;
-    } else if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.cursor = 'unset';
-    }
-    document.removeEventListener('mousedown', resizeTrackShell);
-
+  onmousemove(e: PerfettoMouseEvent) {
     // Vertical Resizing
     if (this.summaryTrack) {
       checkTrackForResizability(e, this.summaryTrack, this.resize);
     }
   }
   onmouseleave(e: MouseEvent) {
-    // Track Shell Width Resizing
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.cursor = 'unset';
-      document.removeEventListener('mousedown', resizeTrackShell);
-    }
     // Vertical Resizing
     if (this.summaryTrack) {
       checkTrackForResizability(e, this.summaryTrack, this.resize);
@@ -635,27 +615,6 @@ export class MinimalTrackGroup extends Panel<MinimalGroupAttrs> {
         },
         m(`.shell`, {
           style: {width: `${globals.state.trackShellWidth}px`},
-          onmousemove: (e: PerfettoMouseEvent)=>{
-            if (e.currentTarget instanceof HTMLElement &&
-              (
-                (e.layerX +2) >= globals.state.trackShellWidth &&
-                (e.layerX -2) <= globals.state.trackShellWidth
-              )
-            ) {
-              document.addEventListener('mousedown', resizeTrackShell);
-              e.currentTarget.style.cursor = 'col-resize';
-              return;
-            } else if (e.currentTarget instanceof HTMLElement) {
-              e.currentTarget.style.cursor = 'unset';
-            }
-            document.removeEventListener('mousedown', resizeTrackShell);
-          },
-          onmouseleave: (e: PerfettoMouseEvent) =>{
-            if (e.currentTarget instanceof HTMLElement) {
-              e.currentTarget.style.cursor = 'unset';
-              document.removeEventListener('mousedown', resizeTrackShell);
-            }
-          },
         },
           m('.fold-button',
             {
