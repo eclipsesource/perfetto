@@ -30,6 +30,7 @@ import {SliceRect, Track} from './track';
 import {trackRegistry} from './track_registry';
 import {
   drawVerticalLineAtTime,
+  resizeTrackShell,
 } from './vertical_line_helper';
 import {getActiveVsyncData, renderVsyncColumns} from './vsync_helper';
 import {SCROLLING_TRACK_GROUP, getContainingTrackIds} from '../common/state';
@@ -305,11 +306,30 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
   };
 
   onmousemove(e: MouseEvent) {
+    // Track Shell Width Resizing
+    if (e.currentTarget instanceof HTMLElement &&
+      (((e as PerfettoMouseEvent).layerX -4) <= globals.state.trackShellWidth)
+    ) {
+      document.addEventListener('mousedown', resizeTrackShell);
+      e.currentTarget.style.cursor = 'col-resize';
+      return;
+    } else if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.cursor = 'unset';
+    }
+    document.removeEventListener('mousedown', resizeTrackShell);
+
+    // Vertical Resizing
     if (this.attrs?.track) {
       checkTrackForResizability(e, this.attrs.track, this.resize);
     }
   }
   onmouseleave(e: MouseEvent) {
+    // Track Shell Width Resizing
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.cursor = 'unset';
+      document.removeEventListener('mousedown', resizeTrackShell);
+    }
+    // Vertical Resizing
     if (this.attrs?.track) {
       checkTrackForResizability(e, this.attrs.track, this.resize);
     }

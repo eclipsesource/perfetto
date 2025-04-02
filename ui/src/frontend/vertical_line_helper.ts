@@ -42,17 +42,16 @@ export function resizeTrackShell(e: MouseEvent): void {
   let currentWidth = globals.state.trackShellWidth;
   const mouseMoveEvent = (evMove: MouseEvent): void => {
     evMove.preventDefault();
-    const root = document.querySelector(':root');
+    const container = document.querySelector('.pan-and-zoom-content');
     const newWidth = currentWidth + evMove.movementX;
-    if (root && root instanceof HTMLElement
+    if (container && container instanceof HTMLElement
     ) {
       if (newWidth < 250) {
         globals.dispatch(Actions.setTrackShellWidth({newWidth: 250}));
       } else if (e.target &&
-        e.target instanceof HTMLElement &&
-        newWidth > (e.target.clientWidth - 100)) {
+        newWidth > (container.clientWidth - 100)) {
           globals.dispatch(
-            Actions.setTrackShellWidth({newWidth: e.target.clientWidth-100}));
+            Actions.setTrackShellWidth({newWidth: container.clientWidth-100}));
       } else {
         globals.dispatch(Actions.setTrackShellWidth({newWidth}));
       }
