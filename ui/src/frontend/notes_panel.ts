@@ -26,7 +26,7 @@ import {
   bottomTabRegistry,
   NewBottomTabArgs,
 } from './bottom_tab';
-import {getCssNum, getCssStr} from './css_constants';
+import {getCssStr} from './css_constants';
 import {PerfettoMouseEvent} from './events';
 import {globals} from './globals';
 import {
@@ -62,11 +62,13 @@ export class NotesPanel extends Panel {
 
   oncreate({dom}: m.CVnodeDOM) {
     dom.addEventListener('mousemove', (e: Event) => {
-      this.hoveredX = (e as PerfettoMouseEvent).layerX - (getCssNum('--track-shell-width') || 0);
+      this.hoveredX =
+        (e as PerfettoMouseEvent).layerX - globals.state.trackShellWidth;
       globals.rafScheduler.scheduleRedraw();
     }, {passive: true});
     dom.addEventListener('mouseenter', (e: Event) => {
-      this.hoveredX = (e as PerfettoMouseEvent).layerX - (getCssNum('--track-shell-width') || 0);
+      this.hoveredX =
+        (e as PerfettoMouseEvent).layerX - globals.state.trackShellWidth;
       globals.rafScheduler.scheduleRedraw();
     });
     dom.addEventListener('mouseout', () => {
@@ -83,14 +85,14 @@ export class NotesPanel extends Panel {
         '.notes-panel',
         {
           onclick: (e: PerfettoMouseEvent) => {
-            this.onClick(e.layerX - (getCssNum('--track-shell-width') || 0), e.layerY);
+            this.onClick(e.layerX - globals.state.trackShellWidth, e.layerY);
             e.stopPropagation();
           },
           onmousemove: (e: PerfettoMouseEvent)=>{
             if (e.currentTarget instanceof HTMLElement &&
               (
-                (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
-                (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+                (e.layerX +2) >= globals.state.trackShellWidth &&
+                (e.layerX -2) <= globals.state.trackShellWidth
               )
             ) {
               document.addEventListener('mousedown', resizeTrackShell);
@@ -108,7 +110,8 @@ export class NotesPanel extends Panel {
             }
           },
           oncontextmenu: (e: PerfettoMouseEvent)=>{
-            this.onRightClick(e.layerX - (getCssNum('--track-shell-width') || 0), e.layerY);
+            this.onRightClick(
+              e.layerX - globals.state.trackShellWidth, e.layerY);
             e.stopPropagation();
           },
         },
@@ -165,7 +168,7 @@ export class NotesPanel extends Panel {
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     let aNoteIsHovered = false;
-    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+    const trackShellWidth = globals.state.trackShellWidth;
     ctx.fillStyle = getCssStr('--main-foreground-color');
     ctx.fillRect(trackShellWidth - 2, 0, 2, size.height);
 
@@ -265,7 +268,9 @@ export class NotesPanel extends Panel {
     ctx.strokeStyle = color;
     const topOffset = 10;
     // Don't draw in the track shell section.
-    if (x >= globals.frontendLocalState.windowSpan.start + (getCssNum('--track-shell-width') || 0)) {
+    if (x >=
+      globals.frontendLocalState.windowSpan.start +
+      globals.state.trackShellWidth) {
       // Draw left triangle.
       ctx.beginPath();
       ctx.moveTo(x, topOffset);
@@ -286,7 +291,8 @@ export class NotesPanel extends Panel {
 
     // Start line after track shell section, join triangles.
     const startDraw = Math.max(
-        x, globals.frontendLocalState.windowSpan.start + (getCssNum('--track-shell-width') || 0));
+        x, globals.frontendLocalState.windowSpan.start +
+        globals.state.trackShellWidth);
     ctx.beginPath();
     ctx.moveTo(startDraw, topOffset);
     ctx.lineTo(xEnd, topOffset);

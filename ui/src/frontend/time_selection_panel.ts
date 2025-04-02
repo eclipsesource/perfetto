@@ -22,7 +22,6 @@ import {
 } from '../common/time';
 
 import {
-  getCssNum,
   getCssStr,
 } from './css_constants';
 import {globals} from './globals';
@@ -135,8 +134,8 @@ export class TimeSelectionPanel extends Panel {
       onmousemove: (e: PerfettoMouseEvent)=>{
         if (e.currentTarget instanceof HTMLElement &&
           (
-            (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
-            (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+            (e.layerX +2) >= (globals.state.trackShellWidth) &&
+            (e.layerX -2) <= (globals.state.trackShellWidth)
           )
         ) {
           document.addEventListener('mousedown', resizeTrackShell);
@@ -158,7 +157,7 @@ export class TimeSelectionPanel extends Panel {
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     ctx.fillStyle = getCssStr('--main-foreground-color');
-    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+    const trackShellWidth = (globals.state.trackShellWidth);
     ctx.fillRect(trackShellWidth - 2, 0, 2, size.height);
 
     ctx.save();
@@ -212,7 +211,8 @@ export class TimeSelectionPanel extends Panel {
   renderHover(ctx: CanvasRenderingContext2D, size: PanelSize, ts: TPTime) {
     const {visibleTimeScale} = globals.frontendLocalState;
     const xPos =
-    (getCssNum('--track-shell-width') || 0) + Math.floor(visibleTimeScale.tpTimeToPx(ts));
+    (globals.state.trackShellWidth) +
+      Math.floor(visibleTimeScale.tpTimeToPx(ts));
     const offsetTime = tpTimeToString(ts - globals.state.traceTime.start);
     const timeFromStart = tpTimeToString(ts);
     const label = `${offsetTime} (${timeFromStart})`;
@@ -228,7 +228,7 @@ export class TimeSelectionPanel extends Panel {
     drawHBar(
         ctx,
         {
-          x: (getCssNum('--track-shell-width') || 0) + xLeft,
+          x: (globals.state.trackShellWidth) + xLeft,
           y: 0,
           width: xRight - xLeft,
           height: size.height,
@@ -238,7 +238,7 @@ export class TimeSelectionPanel extends Panel {
   }
 
   private bounds(size: PanelSize): BBox {
-    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+    const trackShellWidth = (globals.state.trackShellWidth);
     return {
       x: trackShellWidth,
       y: 0,

@@ -49,7 +49,6 @@ interface Attrs {
 
 export class TrackGroupPanel extends Panel<Attrs> {
   private readonly trackGroupId: string;
-  private shellWidth = 0;
   private summaryTrack: Track|undefined;
   private dragging = false;
   private dropping: 'before'|'after'|undefined = undefined;
@@ -187,6 +186,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
       },
         m(`.shell[draggable=true]`,
           {
+            style: {width: `${globals.state.trackShellWidth}px`},
             onclick: (e: MouseEvent) => {
               if (!(navigator.userAgent.includes('Mac')? e.metaKey : e.ctrlKey)) {
                 globals.dispatch(
@@ -326,7 +326,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     this.dropping = undefined;
   }
   oncreate(vnode: m.CVnodeDOM<Attrs>) {
-    this.onupdate(vnode);
+    this.onupdate();
     const trackGroupId = vnode.attrs.trackGroupId;
     if (globals.frontendLocalState.expandTrackGroupIds.has(trackGroupId)) {
       // An attempt to scroll to reveal a track that is contained within
@@ -339,9 +339,7 @@ export class TrackGroupPanel extends Panel<Attrs> {
     }
   }
 
-  onupdate({dom}: m.CVnodeDOM<Attrs>) {
-    const shell = assertExists(dom.querySelector('.shell'));
-    this.shellWidth = shell.getBoundingClientRect().width;
+  onupdate() {
     if (this.summaryTrack !== undefined) {
       this.summaryTrack.onFullRedraw();
     }
@@ -426,7 +424,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
       selectedArea.tracks.includes(this.summaryTrackState.id)) {
       ctx.fillStyle = getCssStr('--selection-fill-color');
       ctx.fillRect(
-          visibleTimeScale.tpTimeToPx(selectedArea.start) + this.shellWidth,
+          visibleTimeScale.tpTimeToPx(selectedArea.start) +
+            globals.state.trackShellWidth,
           0,
           visibleTimeScale.durationToPx(selectedAreaDuration),
           size.height);
@@ -438,7 +437,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
     const vsync = getActiveVsyncData();
     if (vsync) {
       ctx.save();
-      ctx.translate(this.shellWidth, 0);
+      // Use shell Width from state
+      ctx.translate(globals.state.trackShellWidth, 0);
       renderVsyncColumns(ctx, size.height, vsync);
       ctx.restore();
     }
@@ -449,7 +449,8 @@ export class TrackGroupPanel extends Panel<Attrs> {
         size.height);
 
     ctx.save();
-    ctx.translate(this.shellWidth, 0);
+    // Use shell Width from state
+    ctx.translate(globals.state.trackShellWidth, 0);
     if (this.summaryTrack) {
       this.summaryTrack.render(ctx);
     }
@@ -519,12 +520,14 @@ interface MinimalGroupAttrs {
   name: string;
 }
 export class MinimalTrackGroup extends Panel<MinimalGroupAttrs> {
+  // Remove this
   private shellWidth = 0;
   renderCanvas(ctx: CanvasRenderingContext2D, size: PanelSize) {
     // If we have vsync data, render columns under the track group
     const vsync = getActiveVsyncData();
     if (vsync) {
       ctx.save();
+      // Use shell Width from state
       ctx.translate(this.shellWidth, 0);
       renderVsyncColumns(ctx, size.height, vsync);
       ctx.restore();
@@ -536,6 +539,7 @@ export class MinimalTrackGroup extends Panel<MinimalGroupAttrs> {
         size.height);
 
     ctx.save();
+    // Use shell Width from state
     ctx.translate(this.shellWidth, 0);
     ctx.restore();
 
@@ -606,7 +610,7 @@ export class MinimalTrackGroup extends Panel<MinimalGroupAttrs> {
         {style: {
           height: '18px',
         }},
-        m(`.shell`,
+        m(`.shell`, {style: {width: `${globals.state.trackShellWidth}px`}},
           m('.fold-button',
             {
               style: {

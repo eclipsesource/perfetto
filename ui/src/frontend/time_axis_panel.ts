@@ -19,7 +19,7 @@ import {
   tpTimeToString,
 } from '../common/time';
 
-import {getCssNum, getCssStr} from './css_constants';
+import {getCssStr} from './css_constants';
 import {globals} from './globals';
 import {
   getMaxMajorTicks,
@@ -38,8 +38,8 @@ export class TimeAxisPanel extends Panel {
       onmousemove: (e: PerfettoMouseEvent)=>{
         if (e.currentTarget instanceof HTMLElement &&
           (
-            (e.layerX +2) >= (getCssNum('--track-shell-width') || 0) &&
-            (e.layerX -2) <= (getCssNum('--track-shell-width') || 0)
+            (e.layerX +2) >= (globals.state.trackShellWidth) &&
+            (e.layerX -2) <= (globals.state.trackShellWidth)
           )
         ) {
           document.addEventListener('mousedown', resizeTrackShell);
@@ -66,7 +66,7 @@ export class TimeAxisPanel extends Panel {
 
     const startTime = tpTimeToString(globals.state.traceTime.start);
     ctx.fillText(startTime + ' +', 6, 11);
-    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+    const trackShellWidth = (globals.state.trackShellWidth);
     ctx.save();
     ctx.beginPath();
     ctx.rect(trackShellWidth, 0, size.width - trackShellWidth, size.height);

@@ -19,7 +19,7 @@ import {clamp} from '../base/math_utils';
 import {Actions} from '../common/actions';
 import {featureFlags} from '../common/feature_flags';
 
-import {TOPBAR_HEIGHT, getCssNum} from './css_constants';
+import {TOPBAR_HEIGHT} from './css_constants';
 import {DetailsPanel} from './details_panel';
 import {globals} from './globals';
 import {NotesPanel} from './notes_panel';
@@ -57,7 +57,7 @@ function onTimeRangeBoundary(mousePos: number): 'START'|'END'|null {
     const {visibleTimeScale} = globals.frontendLocalState;
     const start = visibleTimeScale.tpTimeToPx(area.start);
     const end = visibleTimeScale.tpTimeToPx(area.end);
-    const startDrag = mousePos - (getCssNum('--track-shell-width') || 0);
+    const startDrag = mousePos - (globals.state.trackShellWidth);
     const startDistance = Math.abs(start - startDrag);
     const endDistance = Math.abs(end - startDrag);
     const range = 3 * window.devicePixelRatio;
@@ -104,7 +104,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
       const rect = vnode.dom.getBoundingClientRect();
       frontendLocalState.updateLocalLimits(
           0,
-          rect.width - (getCssNum('--track-shell-width') || 0) -
+          rect.width - (globals.state.trackShellWidth) -
               frontendLocalState.getScrollbarWidth());
     };
 
@@ -143,7 +143,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
       onZoomed: (zoomedPositionPx: number, zoomRatio: number) => {
         // TODO(hjd): Avoid hardcoding TRACK_SHELL_WIDTH.
         // TODO(hjd): Improve support for zooming in overview timeline.
-        const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+        const trackShellWidth = (globals.state.trackShellWidth);
         const zoomPx = zoomedPositionPx - trackShellWidth;
         const rect = vnode.dom.getBoundingClientRect();
         const centerPoint = zoomPx / (rect.width - trackShellWidth);
@@ -163,7 +163,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
         const traceTime = globals.state.traceTime;
         const {visibleTimeScale} = frontendLocalState;
         this.keepCurrentSelection = true;
-        const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+        const trackShellWidth = (globals.state.trackShellWidth);
         if (editing) {
           const selection = globals.state.currentSelection;
           if (selection !== null && selection.kind === 'AREA') {

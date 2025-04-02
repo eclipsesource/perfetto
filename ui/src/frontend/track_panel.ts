@@ -19,7 +19,7 @@ import {Actions, DeferredAction} from '../common/actions';
 import {TrackGroupState, TrackState} from '../common/state';
 import {TPTime} from '../common/time';
 
-import {getCssNum, getCssStr} from './css_constants';
+import {getCssStr} from './css_constants';
 import {PerfettoMouseEvent} from './events';
 import {globals} from './globals';
 import {drawGridLines} from './gridline_helper';
@@ -160,6 +160,7 @@ class TrackShell implements m.ClassComponent<TrackShellAttrs> {
     return m(
         `.track-shell[draggable=true]`,
         {
+          style: {width: `${globals.state.trackShellWidth}px`},
           class: `${highlightClass} ${dragClass} ${dropClass} ${globals.state.selectedTrackIds.has(attrs.trackState.id)? 'selected': ''}`,
           onclick: (e: MouseEvent)=>{
             if (!(navigator.userAgent.includes('Mac')? e.metaKey : e.ctrlKey)) {
@@ -423,7 +424,7 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
         {
           onmousemove: (e: PerfettoMouseEvent) => {
             attrs.track.onMouseMove(
-                {x: e.layerX - (getCssNum('--track-shell-width') || 0), y: e.layerY});
+                {x: e.layerX - (globals.state.trackShellWidth), y: e.layerY});
             globals.rafScheduler.scheduleRedraw();
           },
           onmouseout: () => {
@@ -456,7 +457,7 @@ export class TrackContent implements m.ClassComponent<TrackContentAttrs> {
             }
             // Returns true if something was selected, so stop propagation.
             if (attrs.track.onMouseClick(
-                    {x: e.layerX - (getCssNum('--track-shell-width') || 0), y: e.layerY})) {
+                {x: e.layerX - (globals.state.trackShellWidth), y: e.layerY})) {
               e.stopPropagation();
             }
             globals.rafScheduler.scheduleRedraw();
@@ -600,7 +601,8 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
     if (selectedArea.tracks.includes(trackState.id)) {
       ctx.fillStyle = getCssStr('--selection-fill-color');
       ctx.fillRect(
-          visibleTimeScale.tpTimeToPx(selectedArea.start) + (getCssNum('--track-shell-width') || 0),
+          visibleTimeScale.tpTimeToPx(selectedArea.start) +
+            (globals.state.trackShellWidth),
           0,
           visibleTimeScale.durationToPx(selectedAreaDuration),
           size.height);
@@ -613,7 +615,7 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
     // If we have vsync data, render columns under the track and
     // under the grid lines painted next
     const vsync = getActiveVsyncData();
-    const trackShellWidth = (getCssNum('--track-shell-width') || 0);
+    const trackShellWidth = (globals.state.trackShellWidth);
     if (vsync) {
       ctx.save();
       ctx.translate(trackShellWidth, 0);
@@ -625,7 +627,6 @@ export class TrackPanel extends Panel<TrackPanelAttrs> {
         ctx,
         size.width,
         size.height);
-
     ctx.translate(trackShellWidth, 0);
     if (this.track !== undefined) {
       this.track.render(ctx);

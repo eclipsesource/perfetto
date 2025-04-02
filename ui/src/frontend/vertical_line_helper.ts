@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {Actions} from '../common';
 import {TPTime} from '../common/time';
-import {getCssNum} from './css_constants';
 import {globals} from './globals';
 import {TimeScale} from './time_scale';
 
@@ -24,7 +24,8 @@ export function drawVerticalLineAtTime(
     height: number,
     color: string,
     lineWidth = 2) {
-  const xPos = (getCssNum('--track-shell-width') || 0) + Math.floor(timeScale.tpTimeToPx(time));
+  const xPos =
+    (globals.state.trackShellWidth) + Math.floor(timeScale.tpTimeToPx(time));
   drawVerticalLine(ctx, xPos, height, color, lineWidth);
 }
 
@@ -37,24 +38,25 @@ export function resizeTrackShell(e: MouseEvent): void {
     evClick.preventDefault();
     document.removeEventListener('click', preventClickEvent, true); // useCapture = true
   };
-  let trackShellWidth = (getCssNum('--track-shell-width') || 0);
+  // Use shell Width from state
+  let currentWidth = globals.state.trackShellWidth;
   const mouseMoveEvent = (evMove: MouseEvent): void => {
     evMove.preventDefault();
     const root = document.querySelector(':root');
-    const newWidth = trackShellWidth + evMove.movementX;
+    const newWidth = currentWidth + evMove.movementX;
     if (root && root instanceof HTMLElement
     ) {
       if (newWidth < 250) {
-        root.style.setProperty('--track-shell-width', '250px');
+        globals.dispatch(Actions.setTrackShellWidth({newWidth: 250}));
       } else if (e.target &&
         e.target instanceof HTMLElement &&
         newWidth > (e.target.clientWidth - 100)) {
-          root.style.setProperty('--track-shell-width', e.target.clientWidth-100 + 'px');
+          globals.dispatch(
+            Actions.setTrackShellWidth({newWidth: e.target.clientWidth-100}));
       } else {
-        root.style.setProperty('--track-shell-width', newWidth + 'px');
+        globals.dispatch(Actions.setTrackShellWidth({newWidth}));
       }
-      trackShellWidth = newWidth;
-      globals.rafScheduler.scheduleFullRedraw();
+      currentWidth = newWidth;
     }
   };
   const mouseUpEvent = (evUp : MouseEvent): void => {
