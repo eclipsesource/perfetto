@@ -336,11 +336,17 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
               ) {
                   document.addEventListener('mousedown', resizeTrackShell);
                   e.currentTarget.style.cursor = 'ew-resize';
+                  if (this.zoomContent) {
+                    this.zoomContent.dragEnabled = false;
+                  }
                   return;
               }
             }
             if (e.currentTarget instanceof HTMLElement) {
               e.currentTarget.style.cursor = 'unset';
+              if (this.zoomContent) {
+                this.zoomContent.dragEnabled = true;
+              }
             }
             document.removeEventListener('mousedown', resizeTrackShell);
           },
@@ -348,6 +354,9 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
             if (e.currentTarget instanceof HTMLElement) {
               e.currentTarget.style.cursor = 'unset';
               document.removeEventListener('mousedown', resizeTrackShell);
+            }
+            if (this.zoomContent) {
+              this.zoomContent.dragEnabled = true;
             }
           },
         },

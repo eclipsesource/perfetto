@@ -1602,7 +1602,7 @@ export const StateActions = {
     args:{newWidth: number},
   ) {
     if (isFinite(args.newWidth)) {
-      state.trackShellWidth = args.newWidth;
+      state.trackShellWidth = Math.max(250, args.newWidth);
       globals.rafScheduler.scheduleFullRedraw();
     }
   },
