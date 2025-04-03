@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {clamp} from '../base/math_utils';
 import {Actions} from '../common';
 import {TPTime} from '../common/time';
 import {globals} from './globals';
@@ -37,24 +38,15 @@ export function resizeTrackShell(e: MouseEvent): void {
     evClick.preventDefault();
     document.removeEventListener('click', preventClickEvent, true); // useCapture = true
   };
-  // Use shell Width from state
-  let currentWidth = globals.state.trackShellWidth;
   const mouseMoveEvent = (evMove: MouseEvent): void => {
     evMove.preventDefault();
     const container = document.querySelector('.pan-and-zoom-content');
-    const newWidth = currentWidth + evMove.movementX;
     if (container && container instanceof HTMLElement
     ) {
-      if (newWidth < 250) {
-        globals.dispatch(Actions.setTrackShellWidth({newWidth: 250}));
-      } else if (e.target &&
-        newWidth > (container.clientWidth - 100)) {
-          globals.dispatch(
-            Actions.setTrackShellWidth({newWidth: container.clientWidth-100}));
-      } else {
-        globals.dispatch(Actions.setTrackShellWidth({newWidth}));
-      }
-      currentWidth = newWidth;
+      let newWidth =
+        evMove.clientX - container.getBoundingClientRect().left;
+      newWidth = clamp(newWidth, 250, container.clientWidth - 100);
+      globals.dispatch(Actions.setTrackShellWidth({newWidth}));
     }
   };
   const mouseUpEvent = (evUp : MouseEvent): void => {
