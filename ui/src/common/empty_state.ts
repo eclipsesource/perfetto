@@ -164,7 +164,7 @@ export function createEmptyState(): State {
 
     logFilteringCriteria: {
       // The first two log priorities are ignored.
-      minimumLevel: 2,
+      minimumLevel: 0,
       tags: [],
       textEntry: '',
       hideNonMatching: true,

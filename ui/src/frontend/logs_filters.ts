@@ -18,8 +18,7 @@ import {Actions} from '../common/actions';
 import {globals} from './globals';
 
 export const LOG_PRIORITIES =
-    ['-', '-', 'Verbose', 'Debug', 'Info', 'Warn', 'Error', 'Fatal'];
-const IGNORED_STATES = 2;
+    ['Verbose', '', '', 'Debug', 'Info', 'Warn', 'Error', 'Fatal'];
 
 interface LogPriorityWidgetAttrs {
   options: string[];
@@ -44,10 +43,12 @@ class LogPriorityWidget implements m.ClassComponent<LogPriorityWidgetAttrs> {
   view(vnode: m.Vnode<LogPriorityWidgetAttrs>) {
     const attrs = vnode.attrs;
     const optionComponents = [];
-    for (let i = IGNORED_STATES; i < attrs.options.length; i++) {
+    for (let i = 0; i < attrs.options.length; i++) {
       const selected = i === attrs.selectedIndex;
-      optionComponents.push(
-          m('option', {value: i, selected}, attrs.options[i]));
+      if (attrs.options[i]) {
+        optionComponents.push(
+            m('option', {value: i, selected}, attrs.options[i]));
+      }
     }
     return m(
         'select',
