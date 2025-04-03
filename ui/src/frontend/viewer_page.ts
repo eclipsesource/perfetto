@@ -35,7 +35,6 @@ import {MinimalTrackGroup, TrackGroupPanel} from './track_group_panel';
 import {TrackPanel} from './track_panel';
 import {TrackGroupState, TrackState} from '../common/state';
 import {PerfettoMouseEvent} from './events';
-import {resizeTrackShell} from './vertical_line_helper';
 
 const SIDEBAR_WIDTH = 256;
 
@@ -334,7 +333,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
                 globals.state.trackShellWidth -
                 (this.TRACK_SHELL_GRAB_WIDTH / 2)
               ) {
-                  document.addEventListener('mousedown', resizeTrackShell);
+                  e.currentTarget.addEventListener('mousedown', this.resizeTrackShell);
                   e.currentTarget.style.cursor = 'ew-resize';
                   if (this.zoomContent) {
                     this.zoomContent.dragEnabled = false;
@@ -346,14 +345,14 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
               e.currentTarget.style.cursor = 'unset';
               if (this.zoomContent) {
                 this.zoomContent.dragEnabled = true;
-              }
+              e.currentTarget.style.cursor = 'unset';
             }
-            document.removeEventListener('mousedown', resizeTrackShell);
+            }
           },
           onmouseleave: (e: PerfettoMouseEvent) =>{
             if (e.currentTarget instanceof HTMLElement) {
               e.currentTarget.style.cursor = 'unset';
-              document.removeEventListener('mousedown', resizeTrackShell);
+              e.currentTarget.removeEventListener('mousedown', this.resizeTrackShell);
             }
             if (this.zoomContent) {
               this.zoomContent.dragEnabled = true;
@@ -395,6 +394,38 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
               })))),
         m(DetailsPanel));
   }
+
+  resizeTrackShell(e: MouseEvent): void {
+    if (!e.currentTarget || !(e.currentTarget instanceof HTMLElement)) {
+      return;
+    }
+    const element = e.currentTarget;
+    e.stopPropagation();
+    e.preventDefault();
+    const preventClickEvent = (evClick: MouseEvent): void=>{
+      evClick.stopPropagation();
+      evClick.preventDefault();
+      document.removeEventListener('click', preventClickEvent, true); // useCapture = true
+    };
+    const mouseMoveEvent = (evMove: MouseEvent): void => {
+      evMove.preventDefault();
+      let newWidth =
+        evMove.clientX - element.getBoundingClientRect().left;
+      newWidth =
+        clamp(newWidth, 250, element.clientWidth - 100);
+      globals.dispatch(Actions.setTrackShellWidth({newWidth}));
+    };
+    const mouseUpEvent = (evUp : MouseEvent): void => {
+      evUp.stopPropagation();
+      evUp.preventDefault();
+      document.removeEventListener('mousemove', mouseMoveEvent);
+      document.removeEventListener('mouseup', mouseUpEvent);
+    };
+    document.addEventListener('click', preventClickEvent, true); // useCapture = true
+    document.addEventListener('mousemove', mouseMoveEvent);
+    document.addEventListener('mouseup', mouseUpEvent);
+    e.currentTarget.removeEventListener('mousedown', this.resizeTrackShell);
+  };
 }
 
 export const ViewerPage = createPage({

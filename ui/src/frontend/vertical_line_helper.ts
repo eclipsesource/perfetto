@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {clamp} from '../base/math_utils';
-import {Actions} from '../common';
 import {TPTime} from '../common/time';
 import {globals} from './globals';
 import {TimeScale} from './time_scale';
@@ -29,37 +27,6 @@ export function drawVerticalLineAtTime(
     (globals.state.trackShellWidth) + Math.floor(timeScale.tpTimeToPx(time));
   drawVerticalLine(ctx, xPos, height, color, lineWidth);
 }
-
-export function resizeTrackShell(e: MouseEvent): void {
-  e.stopPropagation();
-  e.preventDefault();
-  const preventClickEvent = (evClick: MouseEvent): void=>{
-    evClick.stopPropagation();
-    evClick.preventDefault();
-    document.removeEventListener('click', preventClickEvent, true); // useCapture = true
-  };
-  const mouseMoveEvent = (evMove: MouseEvent): void => {
-    evMove.preventDefault();
-    const container = document.querySelector('.pan-and-zoom-content');
-    if (container && container instanceof HTMLElement
-    ) {
-      let newWidth =
-        evMove.clientX - container.getBoundingClientRect().left;
-      newWidth = clamp(newWidth, 250, container.clientWidth - 100);
-      globals.dispatch(Actions.setTrackShellWidth({newWidth}));
-    }
-  };
-  const mouseUpEvent = (evUp : MouseEvent): void => {
-    evUp.stopPropagation();
-    evUp.preventDefault();
-    document.removeEventListener('mousemove', mouseMoveEvent);
-    document.removeEventListener('mouseup', mouseUpEvent);
-  };
-  document.addEventListener('click', preventClickEvent, true); // useCapture = true
-  document.addEventListener('mousemove', mouseMoveEvent);
-  document.addEventListener('mouseup', mouseUpEvent);
-  document.removeEventListener('mousedown', resizeTrackShell);
-};
 
 function drawVerticalLine(ctx: CanvasRenderingContext2D,
                           xPos: number,
