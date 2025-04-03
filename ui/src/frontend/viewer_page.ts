@@ -343,10 +343,10 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
             }
             if (e.currentTarget instanceof HTMLElement) {
               e.currentTarget.style.cursor = 'unset';
+              e.currentTarget.removeEventListener('mousedown', this.resizeTrackShell);
               if (this.zoomContent) {
                 this.zoomContent.dragEnabled = true;
-              e.currentTarget.style.cursor = 'unset';
-            }
+              }
             }
           },
           onmouseleave: (e: PerfettoMouseEvent) =>{
