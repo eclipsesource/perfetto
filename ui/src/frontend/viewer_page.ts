@@ -395,7 +395,7 @@ class TraceViewer implements m.ClassComponent<TraceViewerAttrs> {
         m(DetailsPanel));
   }
 
-  resizeTrackShell(e: MouseEvent): void {
+  private resizeTrackShell(e: MouseEvent): void {
     if (!e.currentTarget || !(e.currentTarget instanceof HTMLElement)) {
       return;
     }
