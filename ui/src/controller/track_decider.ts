@@ -308,15 +308,15 @@ class TrackDecider {
   // trace database or hard-coded in software.
   static decorateTrackDescription(description: string | undefined,
       args: Partial<{
-        upid: number|null,
+        pid: number|null,
         processName: string|null,
         totalThreads: number|null,
         idleThreads: number|null,
         nullThreads: number|null,
       }>): string | undefined {
-    const {upid, processName, totalThreads, idleThreads, nullThreads} = args;
+    const {pid, processName, totalThreads, idleThreads, nullThreads} = args;
 
-    const hasProcessName = !!processName && upid !== undefined && upid !== null;
+    const hasProcessName = !!processName && pid !== undefined && pid !== null;
     const hasTotalThreads = totalThreads !== undefined && totalThreads !== null;
     const hasIdleThreads = idleThreads !== undefined && idleThreads !== null &&
       idleThreads > 0;
@@ -325,7 +325,7 @@ class TrackDecider {
 
     let suffix = '';
     if (hasProcessName) {
-      suffix = `Process: ${processName} [${upid}]`;
+      suffix = `Process: ${processName} [${pid}]`;
     } else if (hasIdleThreads && hasTotalThreads) {
       const allIdle = idleThreads + (nullThreads ?? 0);
       suffix = `${count(totalThreads, 'thread')} of which ${count(allIdle, 'is', 'are')} idle.`;
@@ -1201,6 +1201,7 @@ class TrackDecider {
       const utid = it.utid;
       const tid = it.tid;
       const upid = it.upid;
+      const pid = it.pid;
       const processName = it.processName;
       const threadName = it.threadName;
       const uuid = this.getThreadProcessGroupUnchecked(utid, upid);
@@ -1217,7 +1218,7 @@ class TrackDecider {
         name: TrackDecider.getTrackName({utid, tid, threadName, kind}),
         description: TrackDecider.decorateTrackDescription(
           'Scheduling state of the thread.',
-          {processName, upid}),
+          {processName, pid}),
         trackGroup: uuid,
         trackSortKey: {
           utid,
@@ -1276,6 +1277,7 @@ class TrackDecider {
       thread_counter_track.description as description,
       utid,
       upid,
+      pid,
       process.name as processName,
       tid,
       thread.name as threadName,
@@ -1293,6 +1295,7 @@ class TrackDecider {
       description: STR_NULL,
       utid: NUM,
       upid: NUM_NULL,
+      pid: NUM_NULL,
       processName: STR_NULL,
       tid: NUM_NULL,
       threadName: STR_NULL,
@@ -1304,6 +1307,7 @@ class TrackDecider {
       const utid = it.utid;
       const tid = it.tid;
       const upid = it.upid;
+      const pid = it.pid;
       const processName = it.processName;
       const trackId = it.trackId;
       const trackName = it.trackName;
@@ -1321,7 +1325,7 @@ class TrackDecider {
         name,
         description: TrackDecider.decorateTrackDescription(
           description,
-          {processName, upid}),
+          {processName, pid}),
         trackSortKey: {
           utid,
           priority: InThreadTrackSortKey.ORDINARY,
@@ -1530,6 +1534,7 @@ class TrackDecider {
           thread.name as threadName,
           max(slice.depth) as maxDepth,
           process.upid as upid,
+          process.pid as pid,
           process.name as processName
         from slice
         join thread_track on slice.track_id = thread_track.id
@@ -1547,6 +1552,7 @@ class TrackDecider {
       threadName: STR_NULL,
       maxDepth: NUM,
       upid: NUM_NULL,
+      pid: NUM_NULL,
       processName: STR_NULL,
     });
     for (; it.valid(); it.next()) {
@@ -1558,6 +1564,7 @@ class TrackDecider {
       const tid = it.tid;
       const threadName = it.threadName;
       const upid = it.upid;
+      const pid = it.pid;
       const processName = it.processName;
       const maxDepth = it.maxDepth;
 
@@ -1572,7 +1579,7 @@ class TrackDecider {
         name,
         description: TrackDecider.decorateTrackDescription(
           'Slices from userspace that explain what the thread was doing during the trace',
-          {processName, upid}),
+          {processName, pid}),
         trackGroup: group,
         trackSortKey: {
           utid,
@@ -1669,7 +1676,7 @@ class TrackDecider {
         name: TrackDecider.labelProcessCounter({trackName}),
         description: TrackDecider.decorateTrackDescription(
           description ?? TrackDecider.describeProcessCounter({trackName}),
-          {processName, upid}),
+          {processName, pid}),
         trackSortKey: await this.resolveTrackSortKeyForProcessCounterTrack(
             upid, trackName || undefined),
         trackGroup,
