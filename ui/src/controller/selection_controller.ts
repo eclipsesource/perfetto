@@ -181,6 +181,9 @@ export class SelectionController extends Controller<'main'> {
 
     for (const k of details.columns()) {
       const v = rowIter.get(k);
+      if (v === null) {
+        continue;
+      }
       switch (k) {
         case 'id':
           break;
