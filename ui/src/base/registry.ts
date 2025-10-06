@@ -26,6 +26,7 @@ export class RegistryError extends Error {
 export class Registry<T> {
   private key: (t: T) => string;
   protected registry: Map<string, T>;
+  private keyFilter: (key: string) => boolean = () => true;
 
   static kindRegistry<T extends HasKind>(): Registry<T> {
     return new Registry<T>((t) => t.kind);
@@ -36,8 +37,23 @@ export class Registry<T> {
     this.key = key;
   }
 
+  set filter(filter: ((key: string) => boolean) | undefined) {
+    this.keyFilter = filter ?? (() => true);
+
+    // Run the filter to knock out anything already registered that does not pass it
+    [...this.registry.keys()]
+      .filter((key) => !this.keyFilter(key))
+      .forEach((key) => this.registry.delete(key));
+  }
+
   register(registrant: T): Disposable {
     const kind = this.key(registrant);
+    if (!this.keyFilter(kind)) {
+      // Simply refuse to register the entry
+      return {
+        [Symbol.dispose]: () => undefined,
+      };
+    }
     if (this.registry.has(kind)) {
       throw new RegistryError(
         `Registrant ${kind} already exists in the registry`,
@@ -85,8 +101,14 @@ export class Registry<T> {
     // A proxy is not sufficient because we need non-overridden
     // methods to delegate to overridden methods.
     const result = new (class ChildRegistry extends Registry<T> {
-      constructor (private readonly parent: Registry<T>) {
+      constructor(private readonly parent: Registry<T>) {
         super(parent.key);
+        this.keyFilter = parent.keyFilter;
+      }
+
+      override set filter(filter: ((key: string) => boolean) | undefined) {
+        this.parent.filter = filter;
+        super.filter = filter;
       }
 
       override has(kind: string): boolean {

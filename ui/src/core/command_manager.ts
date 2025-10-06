@@ -82,6 +82,16 @@ export class CommandManagerImpl implements CommandManager {
     return new CommandManagerImpl(this.registry);
   }
 
+  /**
+   * Set a filter to screen command registrations. Command IDs that do not
+   * pass the filter are not registered. This is distinct from the
+   * `allowlistCheck` function, which screens out start-up commands that
+   * should be skipped.
+   */
+  set filter(filter: ((commandId: string) => boolean) | undefined) {
+    this.registry.filter = filter;
+  }
+
   getCommand(commandId: string): Command {
     return this.registry.get(commandId);
   }
