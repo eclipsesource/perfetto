@@ -87,9 +87,16 @@ export class CommandManagerImpl implements CommandManager {
    * pass the filter are not registered. This is distinct from the
    * `allowlistCheck` function, which screens out start-up commands that
    * should be skipped.
+   *
+   * This is intended for applications embedding the Perfetto UI to exclude services
+   * that are inappropriate or otherwise unwanted in their contexts. Initially, a
+   * registry has no filter.
+   *
+   * **Note** that a filter may only be set once. An attempt to replace or clear the
+   * filter will throw an error.
    */
-  set filter(filter: ((commandId: string) => boolean) | undefined) {
-    this.registry.filter = filter;
+  setFilter(filter: (commandId: string) => boolean) {
+    this.registry.setFilter(filter);
   }
 
   getCommand(commandId: string): Command {

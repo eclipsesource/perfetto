@@ -53,7 +53,7 @@ describe('CommandManagerImpl filtering', () => {
     expect(mgr.hasCommand('allow')).toBe(true);
     expect(mgr.hasCommand('deny')).toBe(true);
 
-    mgr.filter = (id) => id.startsWith('allow');
+    mgr.setFilter((id) => id.startsWith('allow'));
 
     // Extant non-matching commands are purged
     expect(mgr.hasCommand('allow')).toBe(true);
@@ -64,10 +64,5 @@ describe('CommandManagerImpl filtering', () => {
     expect(mgr.hasCommand('deny')).toBe(false);
     mgr.registerCommand(TestCommand('allowed'));
     expect(mgr.hasCommand('allowed')).toBe(true);
-
-    // Clearing the filter allows registering the previously denied command.
-    mgr.filter = undefined;
-    mgr.registerCommand(TestCommand('deny'));
-    expect(mgr.hasCommand('deny')).toBe(true);
   });
 });
