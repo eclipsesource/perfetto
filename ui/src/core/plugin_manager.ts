@@ -66,6 +66,9 @@ export interface PluginWrapper {
   // boot time.
   readonly enabled: boolean;
 
+  // Whether this is a core plugin (part of CORE_PLUGINS) or not.
+  readonly isCore: boolean;
+
   // Keeps track of whether this plugin is active. A plugin can be active even
   // if it's disabled, if another plugin depends on it.
   //
@@ -86,7 +89,7 @@ class PluginWrapperImpl implements PluginWrapper {
 
   private readonly traceContexts = new Map<string, PluginTraceContext>();
 
-  constructor(readonly desc: PerfettoPluginStatic<PerfettoPlugin>, readonly enableFlag: Flag) {}
+  constructor(readonly desc: PerfettoPluginStatic<PerfettoPlugin>, readonly enableFlag: Flag, readonly isCore: boolean) {}
 
   get enabled(): boolean {
     return this.enableFlag.get();
@@ -126,7 +129,7 @@ export class PluginManagerImpl {
     this.registry = parentRegistry ? parentRegistry.createChild() : new Registry<PluginWrapper>((x) => x.desc.id);
   }
 
-  registerPlugin(desc: PerfettoPluginStatic<PerfettoPlugin>) {
+  registerPlugin(desc: PerfettoPluginStatic<PerfettoPlugin>, isCore = false) {
     const flagId = `plugin_${desc.id}`;
     const name = `Plugin: ${desc.id}`;
     const flag = featureFlags.register({
@@ -135,7 +138,7 @@ export class PluginManagerImpl {
       description: `Overrides '${desc.id}' plugin.`,
       defaultValue: defaultPlugins.includes(desc.id),
     });
-    this.registry.register(new PluginWrapperImpl(desc, flag));
+    this.registry.register(new PluginWrapperImpl(desc, flag, isCore));
   }
 
   /**
@@ -166,7 +169,7 @@ export class PluginManagerImpl {
     for (const next of this.orderedPlugins) {
       const p = assertIsInstance(next, PluginWrapperImpl);
 
-      if (p.active) {
+      if (p.active === true) {
         beforeEach?.(p.desc.id);
         const trace = traceCore.forkForPlugin(p.desc.id);
         const before = performance.now();
@@ -203,6 +206,11 @@ export class PluginManagerImpl {
     trace ??= this.app.trace;
     const plugin = this.registry.get(pluginDescriptor.id);
     return assertExists(plugin.traceContext(assertExists(trace))).instance as T;
+  }
+
+  isCorePlugin(pluginId: string): boolean {
+    const plugin = this.registry.tryGet(pluginId);
+    return plugin?.isCore ?? false;
   }
 
   /**
