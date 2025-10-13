@@ -42,7 +42,7 @@ export class PageManagerImpl {
 
   // Called by index.ts upon the main frame redraw callback.
   renderPageForCurrentRoute(trace?: Trace): m.Children {
-    const route = Router.parseFragment(location.hash);
+    const route = Router.currentRoute;
     this.previousPages.set(route.page, {
       page: route.page,
       subpage: route.subpage,

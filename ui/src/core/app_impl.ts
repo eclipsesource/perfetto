@@ -406,20 +406,26 @@ export class AppImpl implements App {
     };
   }
 
-  openTraceFromFile(file: File) {
-    return this.openTrace({type: 'FILE', file});
+  openTraceFromFile(file: File, serializedAppState?: SerializedAppState) {
+    return this.openTrace({type: 'FILE', file, serializedAppState});
   }
 
-  openTraceFromMultipleFiles(files: ReadonlyArray<File>) {
-    return this.openTrace({type: 'MULTIPLE_FILES', files});
+  openTraceFromMultipleFiles(
+    files: ReadonlyArray<File>,
+    serializedAppState?: SerializedAppState,
+  ) {
+    return this.openTrace({type: 'MULTIPLE_FILES', files, serializedAppState});
   }
 
   openTraceFromUrl(url: string, serializedAppState?: SerializedAppState) {
     return this.openTrace({type: 'URL', url, serializedAppState});
   }
 
-  openTraceFromStream(stream: TraceStream) {
-    return this.openTrace({type: 'STREAM', stream});
+  openTraceFromStream(
+    stream: TraceStream,
+    serializedAppState?: SerializedAppState,
+  ) {
+    return this.openTrace({type: 'STREAM', stream, serializedAppState});
   }
 
   openTraceFromBuffer(
@@ -429,8 +435,8 @@ export class AppImpl implements App {
     return this.openTrace({...args, type: 'ARRAY_BUFFER', serializedAppState});
   }
 
-  openTraceFromHttpRpc() {
-    return this.openTrace({type: 'HTTP_RPC'});
+  openTraceFromHttpRpc(serializedAppState?: SerializedAppState) {
+    return this.openTrace({type: 'HTTP_RPC', serializedAppState});
   }
 
   private async openTrace(src: TraceSource): Promise<TraceImpl> {
