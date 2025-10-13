@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {embedderContext} from '../core/embedder';
 import {assertTrue} from './logging';
 
 export function fetchWithTimeout(
@@ -80,8 +79,8 @@ export function getServingRoot() {
   const script = document.currentScript as HTMLScriptElement;
 
   if (script === null) {
-    // Can be null in tests or an embedding application.
-    assertTrue(typeof jest !== 'undefined' || embedderContext !== undefined);
+    // Can be null in tests.
+    assertTrue(typeof jest !== 'undefined');
     return '';
   }
 

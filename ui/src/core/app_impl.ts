@@ -30,7 +30,6 @@ import {Trace} from '../public/trace';
 import {NewEngineMode} from '../trace_processor/engine';
 import {AnalyticsInternal, initAnalytics} from './analytics_impl';
 import {CommandInvocation, CommandManagerImpl} from './command_manager';
-import {embedderContext} from './embedder';
 import {featureFlags} from './feature_flags';
 import {loadTrace} from './load_trace';
 import {
@@ -158,14 +157,9 @@ export class AppContext {
       initArgs.enforceStartupCommandAllowlistSetting;
     this.settingsManager = initArgs.settingsManager;
     this.initArgs = initArgs;
-    this.initialRouteArgs = {
-      ...initArgs.initialRouteArgs,
-      ...(embedderContext?.initialRouteArgs ?? {}),
-    };
+    this.initialRouteArgs = initArgs.initialRouteArgs;
     this.serviceWorkerController = new ServiceWorkerController();
-    this.embeddedMode =
-      this.initialRouteArgs.mode === 'embedded' ||
-      embedderContext !== undefined;
+    this.embeddedMode = this.initialRouteArgs.mode === 'embedded';
     this.testingMode =
       self.location !== undefined &&
       self.location.search.indexOf('testing=1') >= 0;

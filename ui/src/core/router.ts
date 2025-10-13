@@ -15,7 +15,6 @@
 import m from 'mithril';
 import {assertTrue} from '../base/logging';
 import {RouteArgs, ROUTE_SCHEMA} from '../public/route_schema';
-import {embedderContext} from './embedder';
 
 export const ROUTE_PREFIX = '#!';
 
@@ -89,15 +88,6 @@ export class Router {
     const oldRoute = Router.parseUrl(e.oldURL);
     const newRoute = Router.parseUrl(e.newURL);
 
-    const fromEmbedder = embedderContext?.routingHooks?.onHashChange?.(
-      oldRoute,
-      newRoute,
-    );
-    if (fromEmbedder) {
-      this.onRouteChanged(fromEmbedder);
-      return;
-    }
-
     if (
       newRoute.args.local_cache_key === undefined &&
       oldRoute.args.local_cache_key
@@ -136,11 +126,7 @@ export class Router {
 
   static navigate(newHash: string) {
     assertTrue(newHash.startsWith(ROUTE_PREFIX));
-    if (embedderContext?.routingHooks?.navigate) {
-      embedderContext.routingHooks.navigate(newHash);
-    } else {
-      window.location.hash = newHash;
-    }
+    window.location.hash = newHash;
   }
 
   // Breaks down a fragment into a Route object.

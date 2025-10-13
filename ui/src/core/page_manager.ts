@@ -20,7 +20,6 @@ import {Trace} from '../public/trace';
 import {Router} from './router';
 import {Gate} from '../base/mithril_utils';
 import {createProxy} from '../base/utils';
-import {embedderContext} from './embedder';
 
 export class PageManagerImpl {
   private readonly registry: Registry<PageHandler>;
@@ -43,9 +42,7 @@ export class PageManagerImpl {
 
   // Called by index.ts upon the main frame redraw callback.
   renderPageForCurrentRoute(trace?: Trace): m.Children {
-    const route =
-      embedderContext?.routingHooks?.currentRoute ??
-      Router.parseFragment(location.hash);
+    const route = Router.parseFragment(location.hash);
     this.previousPages.set(route.page, {
       page: route.page,
       subpage: route.subpage,
