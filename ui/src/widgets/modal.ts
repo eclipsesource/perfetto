@@ -164,7 +164,7 @@ export class Modal implements m.ClassComponent<ModalAttrs> {
             m('h2', {id: 'mm-title'}, attrs.title),
           ),
           m(
-            'button[aria-label=Close Modal]',
+            'button.pf-button[aria-label=Close Modal]',
             {onclick: () => closeModal(attrs.key)},
             m(Icon, {icon: 'close'}),
           ),
