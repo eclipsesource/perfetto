@@ -177,7 +177,7 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
 
   renderCommandOmnibox(): m.Children {
     // Fuzzy-filter commands by the filter string.
-    const {omnibox} = AppImpl.instance;
+    const omnibox = this.preferredApp.omnibox;
     const commands = this.preferredApp.commands;
     const filteredCmds = commands.fuzzyFilterCommands(omnibox.text);
 
