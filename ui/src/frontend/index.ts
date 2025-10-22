@@ -418,7 +418,11 @@ function onCssLoaded() {
   // accidentially clober the state of an open trace processor instance
   // otherwise.
   maybeChangeRpcPortFromFragment();
-  checkHttpRpcConnection().then(() => {
+  const source = AppImpl.instance.trace?.traceInfo.source;
+  const port =
+    (source?.type === 'HTTP_RPC' && source?.port) ||
+    HttpRpcEngine.defaultRpcPort;
+  checkHttpRpcConnection(port).then(() => {
     const route = Router.parseUrl(window.location.href);
     if (!AppImpl.instance.embeddedMode) {
       installFileDropHandler();
@@ -475,7 +479,7 @@ function maybeChangeRpcPortFromFragment() {
         ],
       });
     } else {
-      HttpRpcEngine.rpcPort = route.args.rpc_port;
+      HttpRpcEngine.defaultRpcPort = route.args.rpc_port;
     }
   }
 }

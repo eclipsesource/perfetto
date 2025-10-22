@@ -25,7 +25,7 @@ const CURRENT_API_VERSION =
   protos.TraceProcessorApiVersion.TRACE_PROCESSOR_CURRENT_API_VERSION;
 
 function getPromptMessage(tpStatus: protos.StatusResult): string {
-  return `Trace Processor detected on ${HttpRpcEngine.hostAndPort} with:
+  return `Trace Processor detected on ${HttpRpcEngine.getHostAndPort()} with:
 ${tpStatus.loadedTraceName}
 
 YES, use loaded trace:
@@ -47,7 +47,7 @@ Using the native accelerator has some minor caveats:
 }
 
 function getIncompatibleRpcMessage(tpStatus: protos.StatusResult): string {
-  return `The Trace Processor instance on ${HttpRpcEngine.hostAndPort} is too old.
+  return `The Trace Processor instance on ${HttpRpcEngine.getHostAndPort()} is too old.
 
 This UI requires TraceProcessor features that are not present in the
 Trace Processor native accelerator you are currently running.
@@ -69,7 +69,7 @@ Trace processor RPC API: ${tpStatus.apiVersion}
 }
 
 function getVersionMismatchMessage(tpStatus: protos.StatusResult): string {
-  return `The Trace Processor instance on ${HttpRpcEngine.hostAndPort} is a different build from the UI.
+  return `The Trace Processor instance on ${HttpRpcEngine.getHostAndPort()} is a different build from the UI.
 
 This may cause problems. Where possible it is better to use the matched version of the UI.
 You can do this by clicking the button below.
@@ -149,8 +149,8 @@ Trace processor RPC API: ${tpStatus.apiVersion}
 // trying to load a new trace. We do this ahead of time just to have a
 // consistent UX (i.e. so that the user can tell if the RPC is working without
 // having to open a trace).
-export async function checkHttpRpcConnection(): Promise<void> {
-  const state = await HttpRpcEngine.checkConnection();
+export async function checkHttpRpcConnection(port: string): Promise<void> {
+  const state = await HttpRpcEngine.checkConnection(port);
   AppImpl.instance.httpRpc.httpRpcAvailable = state.connected;
   if (!state.connected) {
     // No RPC = exit immediately to the WASM UI.

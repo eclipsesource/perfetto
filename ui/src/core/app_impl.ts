@@ -428,8 +428,8 @@ export class AppImpl implements App {
     return this.openTrace({...args, type: 'ARRAY_BUFFER', serializedAppState});
   }
 
-  openTraceFromHttpRpc() {
-    return this.openTrace({type: 'HTTP_RPC'});
+  openTraceFromHttpRpc(port?: string) {
+    return this.openTrace({type: 'HTTP_RPC', port});
   }
 
   private async openTrace(src: TraceSource): Promise<TraceImpl> {

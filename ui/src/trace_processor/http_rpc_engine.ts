@@ -36,9 +36,12 @@ export class HttpRpcEngine extends EngineBase {
   private isProcessingQueue = false;
 
   // Can be changed by frontend/index.ts when passing ?rpc_port=1234 .
-  static rpcPort = '9001';
+  static defaultRpcPort = '9001';
 
-  constructor(id: string) {
+  constructor(
+    id: string,
+    private port: string,
+  ) {
     super();
     this.id = id;
   }
@@ -46,7 +49,7 @@ export class HttpRpcEngine extends EngineBase {
   rpcSendRequestBytes(data: Uint8Array): void {
     if (this.websocket === undefined) {
       if (this.disposed) return;
-      const wsUrl = `ws://${HttpRpcEngine.hostAndPort}/websocket`;
+      const wsUrl = `ws://${HttpRpcEngine.getHostAndPort(this.port)}/websocket`;
       this.websocket = new WebSocket(wsUrl);
       this.websocket.onopen = () => this.onWebsocketConnected();
       this.websocket.onmessage = (e) => this.onWebsocketMessage(e);
@@ -108,8 +111,8 @@ export class HttpRpcEngine extends EngineBase {
     this.isProcessingQueue = false;
   }
 
-  static async checkConnection(): Promise<HttpRpcState> {
-    const RPC_URL = `http://${HttpRpcEngine.hostAndPort}/`;
+  static async checkConnection(port: string): Promise<HttpRpcState> {
+    const RPC_URL = `http://${HttpRpcEngine.getHostAndPort(port)}/`;
     const httpRpcState: HttpRpcState = {connected: false};
     console.info(
       `It's safe to ignore the ERR_CONNECTION_REFUSED on ${RPC_URL} below. ` +
@@ -137,8 +140,8 @@ export class HttpRpcEngine extends EngineBase {
     return httpRpcState;
   }
 
-  static get hostAndPort() {
-    return `127.0.0.1:${HttpRpcEngine.rpcPort}`;
+  static getHostAndPort(port = HttpRpcEngine.defaultRpcPort) {
+    return `127.0.0.1:${port}`;
   }
 
   [Symbol.dispose]() {

@@ -128,19 +128,23 @@ export async function loadTrace(
 ): Promise<TraceImpl> {
   updateStatus(traceSource, app, 'Opening trace');
   const engineId = `${++lastEngineId}`;
-  const engine = await createEngine(app, engineId);
+  const engine = await createEngine(app, engineId, traceSource);
   return await loadTraceIntoEngine(app, traceSource, engine);
 }
 
 async function createEngine(
   app: AppImpl,
   engineId: string,
+  traceSource: TraceSource,
 ): Promise<EngineBase> {
   // Check if there is any instance of the trace_processor_shell running in
   // HTTP RPC mode (i.e. trace_processor_shell -D).
   let useRpc = false;
+  const port =
+    (traceSource.type === 'HTTP_RPC' && traceSource.port) ||
+    HttpRpcEngine.defaultRpcPort;
   if (app.httpRpc.newEngineMode === 'USE_HTTP_RPC_IF_AVAILABLE') {
-    useRpc = (await HttpRpcEngine.checkConnection()).connected;
+    useRpc = (await HttpRpcEngine.checkConnection(port)).connected;
   }
   const descriptorBlobs: Uint8Array[] = [];
   if (app.extraParsingDescriptors.length > 0) {
@@ -151,7 +155,7 @@ async function createEngine(
   let engine;
   if (useRpc) {
     console.log('Opening trace using native accelerator over HTTP+RPC');
-    engine = new HttpRpcEngine(engineId);
+    engine = new HttpRpcEngine(engineId, port);
   } else {
     console.log('Opening trace using built-in WASM engine');
     engine = new WasmEngineProxy(engineId);
@@ -487,7 +491,7 @@ async function getTraceInfo(
       traceTitle += ` (${arrayBufferSizeMB} MB)`;
       break;
     case 'HTTP_RPC':
-      traceTitle = `RPC @ ${HttpRpcEngine.hostAndPort}`;
+      traceTitle = `RPC @ ${HttpRpcEngine.getHostAndPort()}`;
       break;
     default:
       break;
