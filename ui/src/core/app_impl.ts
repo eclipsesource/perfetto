@@ -31,7 +31,7 @@ import {CommandInvocation, CommandManagerImpl} from './command_manager';
 import {embedderContext} from './embedder';
 import {featureFlags} from './feature_flags';
 import {loadTrace} from './load_trace';
-import {OmniboxManagerImpl} from './omnibox_manager';
+import {HierarchicalOmniboxManager, OmniboxManagerImpl} from './omnibox_manager';
 import {PageManagerImpl} from './page_manager';
 import {PerfManager} from './perf_manager';
 import {PluginManagerImpl} from './plugin_manager';
@@ -71,7 +71,7 @@ export interface AppInitArgs {
  */
 export class AppImpl implements App {
   readonly commands = new CommandManagerImpl();
-  readonly omnibox = OmniboxManagerImpl.forApp(this);
+  readonly omnibox: HierarchicalOmniboxManager;
   readonly pages = new PageManagerImpl();
   readonly sidebar: SidebarManagerImpl;
   readonly plugins = new PluginManagerImpl();
@@ -162,6 +162,8 @@ export class AppImpl implements App {
     this.testingMode =
       self.location !== undefined &&
       self.location.search.indexOf('testing=1') >= 0;
+
+    this.omnibox = OmniboxManagerImpl.forApp(this);
     this.sidebar = new SidebarManagerImpl({
       id: 'app',
       disabled: this.embeddedMode,

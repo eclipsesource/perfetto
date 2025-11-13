@@ -73,6 +73,7 @@
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_THREAD_SAFETY_ANNOTATIONS() (0)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_ENABLE_WINSCOPE() (1)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_ENABLE_RT_MUTEX() (1)
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_ENABLE_LOCKFREE_TASKRUNNER() (1)
 
 struct PerfettoBuildFlag {
   const char* name;
@@ -109,6 +110,7 @@ static const struct PerfettoBuildFlag kPerfettoBuildFlags[] = {
     {"PERFETTO_THREAD_SAFETY_ANNOTATIONS", PERFETTO_BUILDFLAG_DEFINE_PERFETTO_THREAD_SAFETY_ANNOTATIONS()},
     {"PERFETTO_ENABLE_WINSCOPE", PERFETTO_BUILDFLAG_DEFINE_PERFETTO_ENABLE_WINSCOPE()},
     {"PERFETTO_ENABLE_RT_MUTEX", PERFETTO_BUILDFLAG_DEFINE_PERFETTO_ENABLE_RT_MUTEX()},
+    {"PERFETTO_ENABLE_LOCKFREE_TASKRUNNER", PERFETTO_BUILDFLAG_DEFINE_PERFETTO_ENABLE_LOCKFREE_TASKRUNNER()},
 };
 
 static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof(struct PerfettoBuildFlag);
@@ -155,6 +157,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 #elif defined(__APPLE__)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE() 1
@@ -165,6 +168,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FUCHSIA() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 // Include TARGET_OS_IPHONE when on __APPLE__ systems.
 #include <TargetConditionals.h>
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
@@ -193,6 +197,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 #elif defined(__QNXNTO__)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_LINUX() 1
@@ -206,6 +211,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 1
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 #elif defined(_WIN32)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_LINUX() 0
@@ -219,6 +225,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 #elif defined(__EMSCRIPTEN__)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_LINUX() 0
@@ -232,6 +239,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 #elif defined(__Fuchsia__)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE() 0
@@ -245,6 +253,7 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
 #elif defined(__native_client__)
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_LINUX() 0
@@ -258,6 +267,21 @@ static const int kPerfettoBuildFlagsCount = sizeof(kPerfettoBuildFlags) / sizeof
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 1
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
 #define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 0
+#elif defined(__FreeBSD__)
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_ANDROID() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_LINUX() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_LINUX_BUT_NOT_QNX() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_WIN() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_MAC() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_IOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_WASM() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FUCHSIA() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_NACL() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_QNX() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_APPLE_TVOS() 0
+#define PERFETTO_BUILDFLAG_DEFINE_PERFETTO_OS_FREEBSD() 1
 #else
 #error OS not supported (see build_config.h)
 #endif
@@ -1143,7 +1167,14 @@ inline TimeNanos GetWallTimeNs() {
 }
 
 inline TimeNanos GetWallTimeRawNs() {
+#if (PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD))
+  // Note: CLOCK_MONOTONIC_RAW is a Linux extension.
+  // FreeBSD doesn't implement it and its CLOCK_MONOTONIC_FAST
+  // doesnt implement the same semantics as CLOCK_MONOTONIC_RAW.
+  return GetTimeInternalNs(CLOCK_MONOTONIC);
+#else
   return GetTimeInternalNs(CLOCK_MONOTONIC_RAW);
+#endif
 }
 
 inline TimeNanos GetThreadCPUTimeNs() {
@@ -1633,6 +1664,21 @@ constexpr size_t kMaxOneByteMessageLength = (1 << 7) - 1;
 // (10 bytes at most). 15 bytes buffer is enough to store a simple field.
 constexpr size_t kMaxTagEncodedSize = 5;
 constexpr size_t kMaxSimpleFieldEncodedSize = kMaxTagEncodedSize + 10;
+
+constexpr uint8_t kFieldTypeNumBits = 3;
+
+constexpr uint64_t GetTagFieldId(uint64_t tag) {
+  // Since, the least 3 significant bits determine the field type. Skip them and
+  // return the id.
+  return (tag >> kFieldTypeNumBits);
+}
+
+constexpr uint64_t GetTagFieldType(uint64_t tag) {
+  // The least 3 significant bits determine the field type.
+  constexpr uint64_t kFieldTypeMask =
+      (1 << kFieldTypeNumBits) - 1;  // 0000 0111;
+  return (tag & kFieldTypeMask);
+}
 
 // Proto types: (int|uint|sint)(32|64), bool, enum.
 constexpr uint32_t MakeTagVarInt(uint32_t field_id) {
@@ -4358,15 +4404,20 @@ class PackedFixedSizeInt : public PackedBufferBase {
 #ifndef INCLUDE_PERFETTO_PROTOZERO_PROTO_DECODER_H_
 #define INCLUDE_PERFETTO_PROTOZERO_PROTO_DECODER_H_
 
-#include <stdint.h>
-#include <array>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <memory>
-#include <vector>
+#include <string>
+#include <type_traits>
+#include <variant>
 
-// gen_amalgamated expanded: #include "perfetto/base/compiler.h"
+// gen_amalgamated expanded: #include "perfetto/base/export.h"
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
 // gen_amalgamated expanded: #include "perfetto/protozero/field.h"
 // gen_amalgamated expanded: #include "perfetto/protozero/proto_utils.h"
+// gen_amalgamated expanded: #include "perfetto/public/compiler.h"
 
 namespace protozero {
 
@@ -4608,6 +4659,51 @@ class PackedRepeatedFieldIterator {
   bool* const parse_error_;
 };
 
+// A dispatching wrapper that can handle both packed and non-packed repeated
+// fields. It holds either a RepeatedFieldIterator or
+// PackedRepeatedFieldIterator and forwards calls to the appropriate one using
+// std::variant and base utilities.
+template <proto_utils::ProtoWireType wire_type, typename CppType>
+class UnifiedRepeatedFieldIterator {
+ public:
+  using RegularIterator = RepeatedFieldIterator<CppType>;
+  using PackedIterator = PackedRepeatedFieldIterator<wire_type, CppType>;
+  using VariantType = std::variant<RegularIterator, PackedIterator>;
+
+  // Constructor taking a regular iterator
+  explicit UnifiedRepeatedFieldIterator(RegularIterator iter)
+      : iter_(std::move(iter)) {}
+
+  // Constructor taking a packed iterator
+  explicit UnifiedRepeatedFieldIterator(PackedIterator iter)
+      : iter_(std::move(iter)) {}
+
+  // Constructs an invalid iterator.
+  UnifiedRepeatedFieldIterator() : iter_(RegularIterator()) {}
+
+  explicit operator bool() const {
+    return std::visit([](auto& it) { return static_cast<bool>(it); }, iter_);
+  }
+
+  CppType operator*() const {
+    return std::visit([](auto& it) { return *it; }, iter_);
+  }
+
+  UnifiedRepeatedFieldIterator& operator++() {
+    std::visit([](auto& it) { ++it; }, iter_);
+    return *this;
+  }
+
+  UnifiedRepeatedFieldIterator operator++(int) {
+    UnifiedRepeatedFieldIterator it(*this);
+    ++(*this);
+    return it;
+  }
+
+ private:
+  VariantType iter_;
+};
+
 // This decoder loads all fields upfront, without recursing in nested messages.
 // It is used as a base class for typed decoders generated by the pbzero plugin.
 // The split between TypedProtoDecoderBase and TypedProtoDecoder<> is to have
@@ -4690,6 +4786,32 @@ class PERFETTO_EXPORT_COMPONENT TypedProtoDecoderBase : public ProtoDecoder {
         nullptr, 0, parse_error_location);
   }
 
+  // Returns a unified iterator that automatically dispatches between packed and
+  // non-packed repeated field iteration based on the wire format. This allows
+  // parsers to handle both formats without knowing ahead of time which one is
+  // used.
+  //
+  // Example usage:
+  //   bool parse_error = false;
+  //   for (auto it = decoder.GetUnifiedRepeated<wire_type, int32_t>(N,
+  //   &parse_error);
+  //        it; ++it) { ... }
+  template <proto_utils::ProtoWireType wire_type, typename cpp_type>
+  UnifiedRepeatedFieldIterator<wire_type, cpp_type> GetUnifiedRepeated(
+      uint32_t field_id,
+      bool* parse_error_location) const {
+    const Field& field = Get(field_id);
+    if (field.valid() &&
+        field.type() == proto_utils::ProtoWireType::kLengthDelimited) {
+      // This looks like a packed repeated field
+      return UnifiedRepeatedFieldIterator<wire_type, cpp_type>(
+          GetPackedRepeated<wire_type, cpp_type>(field_id,
+                                                 parse_error_location));
+    }  // This is either invalid or a non-packed repeated field
+    return UnifiedRepeatedFieldIterator<wire_type, cpp_type>(
+        GetRepeated<cpp_type>(field_id));
+  }
+
  protected:
   TypedProtoDecoderBase(Field* storage,
                         uint32_t num_fields,
@@ -4764,7 +4886,11 @@ class PERFETTO_EXPORT_COMPONENT TypedProtoDecoderBase : public ProtoDecoder {
 
 // Template class instantiated by the auto-generated decoder classes declared in
 // xxx.pbzero.h files.
-template <int MAX_FIELD_ID, bool HAS_NONPACKED_REPEATED_FIELDS>
+// TODO(lalitm): the second argument exists for legacy reasons as targets in
+// G3 are (incorrectly) depending on internal implementation details of
+// Perfetto via checked-in protozero classes. Remove this when they fix this
+// incorrect dependency.
+template <int MAX_FIELD_ID, bool = false>
 class TypedProtoDecoder : public TypedProtoDecoderBase {
  public:
   TypedProtoDecoder(const uint8_t* buffer, size_t length)
@@ -4845,6 +4971,8 @@ class LogMessage;
 class Screenshot;
 class SourceLocation;
 class TaskExecution;
+class TrackEvent_Callstack;
+class TrackEvent_Callstack_Frame;
 class TrackEvent_LegacyEvent;
 namespace perfetto_pbzero_enum_TrackEvent_LegacyEvent {
 enum FlowDirection : int32_t;
@@ -4969,7 +5097,7 @@ const char* TrackEvent_LegacyEvent_InstantEventScope_Name(::perfetto::protos::pb
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class EventName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EventName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   EventName_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EventName_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -5033,7 +5161,7 @@ class EventName : public ::protozero::Message {
   }
 };
 
-class EventCategory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EventCategory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   EventCategory_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EventCategory_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -5097,7 +5225,7 @@ class EventCategory : public ::protozero::Message {
   }
 };
 
-class TrackEventDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/45, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TrackEventDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/45> {
  public:
   TrackEventDefaults_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEventDefaults_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -5176,7 +5304,7 @@ class TrackEventDefaults : public ::protozero::Message {
   }
 };
 
-class TrackEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/54, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TrackEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/56> {
  public:
   TrackEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -5219,6 +5347,10 @@ class TrackEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=
   ::protozero::ConstChars correlation_id_str() const { return at<53>().as_string(); }
   bool has_correlation_id_str_iid() const { return at<54>().valid(); }
   uint64_t correlation_id_str_iid() const { return at<54>().as_uint64(); }
+  bool has_callstack() const { return at<55>().valid(); }
+  ::protozero::ConstBytes callstack() const { return at<55>().as_bytes(); }
+  bool has_callstack_iid() const { return at<56>().valid(); }
+  uint64_t callstack_iid() const { return at<56>().as_uint64(); }
   bool has_debug_annotations() const { return at<4>().valid(); }
   ::protozero::RepeatedFieldIterator<::protozero::ConstBytes> debug_annotations() const { return GetRepeated<::protozero::ConstBytes>(4); }
   bool has_task_execution() const { return at<5>().valid(); }
@@ -5298,6 +5430,8 @@ class TrackEvent : public ::protozero::Message {
     kCorrelationIdFieldNumber = 52,
     kCorrelationIdStrFieldNumber = 53,
     kCorrelationIdStrIidFieldNumber = 54,
+    kCallstackFieldNumber = 55,
+    kCallstackIidFieldNumber = 56,
     kDebugAnnotationsFieldNumber = 4,
     kTaskExecutionFieldNumber = 5,
     kLogMessageFieldNumber = 21,
@@ -5328,6 +5462,7 @@ class TrackEvent : public ::protozero::Message {
   };
   static constexpr const char* GetName() { return ".perfetto.protos.TrackEvent"; }
 
+  using Callstack = ::perfetto::protos::pbzero::TrackEvent_Callstack;
   using LegacyEvent = ::perfetto::protos::pbzero::TrackEvent_LegacyEvent;
 
   using Type = ::perfetto::protos::pbzero::TrackEvent_Type;
@@ -5693,6 +5828,38 @@ class TrackEvent : public ::protozero::Message {
   static constexpr FieldMetadata_CorrelationIdStrIid kCorrelationIdStrIid{};
   void set_correlation_id_str_iid(uint64_t value) {
     static constexpr uint32_t field_id = FieldMetadata_CorrelationIdStrIid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Callstack =
+    ::protozero::proto_utils::FieldMetadata<
+      55,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      TrackEvent_Callstack,
+      TrackEvent>;
+
+  static constexpr FieldMetadata_Callstack kCallstack{};
+  template <typename T = TrackEvent_Callstack> T* set_callstack() {
+    return BeginNestedMessage<T>(55);
+  }
+
+
+  using FieldMetadata_CallstackIid =
+    ::protozero::proto_utils::FieldMetadata<
+      56,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      TrackEvent>;
+
+  static constexpr FieldMetadata_CallstackIid kCallstackIid{};
+  void set_callstack_iid(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_CallstackIid::kFieldId;
     // Call the appropriate protozero::Message::Append(field_id, ...)
     // method based on the type of the field.
     ::protozero::internal::FieldWriter<
@@ -6107,7 +6274,7 @@ class TrackEvent : public ::protozero::Message {
 
 };
 
-class TrackEvent_LegacyEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrackEvent_LegacyEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19> {
  public:
   TrackEvent_LegacyEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEvent_LegacyEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -6479,6 +6646,131 @@ class TrackEvent_LegacyEvent : public ::protozero::Message {
     // method based on the type of the field.
     ::protozero::internal::FieldWriter<
       ::protozero::proto_utils::ProtoSchemaType::kInt32>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class TrackEvent_Callstack_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
+ public:
+  TrackEvent_Callstack_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit TrackEvent_Callstack_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit TrackEvent_Callstack_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_frames() const { return at<1>().valid(); }
+  ::protozero::RepeatedFieldIterator<::protozero::ConstBytes> frames() const { return GetRepeated<::protozero::ConstBytes>(1); }
+};
+
+class TrackEvent_Callstack : public ::protozero::Message {
+ public:
+  using Decoder = TrackEvent_Callstack_Decoder;
+  enum : int32_t {
+    kFramesFieldNumber = 1,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.TrackEvent.Callstack"; }
+
+  using Frame = ::perfetto::protos::pbzero::TrackEvent_Callstack_Frame;
+
+  using FieldMetadata_Frames =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kRepeatedNotPacked,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      TrackEvent_Callstack_Frame,
+      TrackEvent_Callstack>;
+
+  static constexpr FieldMetadata_Frames kFrames{};
+  template <typename T = TrackEvent_Callstack_Frame> T* add_frames() {
+    return BeginNestedMessage<T>(1);
+  }
+
+};
+
+class TrackEvent_Callstack_Frame_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
+ public:
+  TrackEvent_Callstack_Frame_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit TrackEvent_Callstack_Frame_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit TrackEvent_Callstack_Frame_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_function_name() const { return at<1>().valid(); }
+  ::protozero::ConstChars function_name() const { return at<1>().as_string(); }
+  bool has_source_file() const { return at<2>().valid(); }
+  ::protozero::ConstChars source_file() const { return at<2>().as_string(); }
+  bool has_line_number() const { return at<3>().valid(); }
+  uint32_t line_number() const { return at<3>().as_uint32(); }
+};
+
+class TrackEvent_Callstack_Frame : public ::protozero::Message {
+ public:
+  using Decoder = TrackEvent_Callstack_Frame_Decoder;
+  enum : int32_t {
+    kFunctionNameFieldNumber = 1,
+    kSourceFileFieldNumber = 2,
+    kLineNumberFieldNumber = 3,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.TrackEvent.Callstack.Frame"; }
+
+
+  using FieldMetadata_FunctionName =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      TrackEvent_Callstack_Frame>;
+
+  static constexpr FieldMetadata_FunctionName kFunctionName{};
+  void set_function_name(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_FunctionName::kFieldId, data, size);
+  }
+  void set_function_name(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_FunctionName::kFieldId, chars.data, chars.size);
+  }
+  void set_function_name(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_FunctionName::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_SourceFile =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      TrackEvent_Callstack_Frame>;
+
+  static constexpr FieldMetadata_SourceFile kSourceFile{};
+  void set_source_file(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_SourceFile::kFieldId, data, size);
+  }
+  void set_source_file(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_SourceFile::kFieldId, chars.data, chars.size);
+  }
+  void set_source_file(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_SourceFile::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_LineNumber =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      TrackEvent_Callstack_Frame>;
+
+  static constexpr FieldMetadata_LineNumber kLineNumber{};
+  void set_line_number(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_LineNumber::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
         ::Append(*this, field_id, value);
   }
 };
@@ -7080,6 +7372,7 @@ class PERFETTO_EXPORT_COMPONENT TraceConfig : public ::protozero::CppMessageObj 
     kSessionSemaphoresFieldNumber = 39,
     kPriorityBoostFieldNumber = 40,
     kExclusivePrioFieldNumber = 41,
+    kNoFlushBeforeWriteIntoFileFieldNumber = 42,
   };
 
   TraceConfig();
@@ -7255,6 +7548,10 @@ class PERFETTO_EXPORT_COMPONENT TraceConfig : public ::protozero::CppMessageObj 
   uint32_t exclusive_prio() const { return exclusive_prio_; }
   void set_exclusive_prio(uint32_t value) { exclusive_prio_ = value; _has_field_.set(41); }
 
+  bool has_no_flush_before_write_into_file() const { return _has_field_[42]; }
+  bool no_flush_before_write_into_file() const { return no_flush_before_write_into_file_; }
+  void set_no_flush_before_write_into_file(bool value) { no_flush_before_write_into_file_ = value; _has_field_.set(42); }
+
  private:
   std::vector<TraceConfig_BufferConfig> buffers_;
   std::vector<TraceConfig_DataSource> data_sources_;
@@ -7293,12 +7590,13 @@ class PERFETTO_EXPORT_COMPONENT TraceConfig : public ::protozero::CppMessageObj 
   std::vector<TraceConfig_SessionSemaphore> session_semaphores_;
   ::protozero::CopyablePtr<PriorityBoostConfig> priority_boost_;
   uint32_t exclusive_prio_{};
+  bool no_flush_before_write_into_file_{};
 
   // Allows to preserve unknown protobuf fields for compatibility
   // with future versions of .proto files.
   std::string unknown_fields_;
 
-  std::bitset<42> _has_field_{};
+  std::bitset<43> _has_field_{};
 };
 
 
@@ -8398,6 +8696,9 @@ __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId();
 #else
 #include <pthread.h>
 #endif
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
+#include <pthread_np.h>
+#endif
 
 namespace perfetto {
 namespace base {
@@ -8433,6 +8734,11 @@ inline PlatformThreadId GetThreadId() {
 using PlatformThreadId = pid_t;
 inline PlatformThreadId GetThreadId() {
   return reinterpret_cast<int32_t>(pthread_self());
+}
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
+using PlatformThreadId = uint64_t;
+inline PlatformThreadId GetThreadId() {
+  return static_cast<uint64_t>(pthread_getthreadid_np());
 }
 #else  // Default to pthreads in case no OS is set.
 using PlatformThreadId = pthread_t;
@@ -10294,7 +10600,7 @@ const char* TracePacket_SequenceFlags_Name(::perfetto::protos::pbzero::TracePack
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class TracePacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/900, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracePacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/900> {
  public:
   TracePacket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracePacket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -13678,7 +13984,7 @@ const char* DebugAnnotation_NestedValue_NestedType_Name(::perfetto::protos::pbze
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class DebugAnnotationValueTypeName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DebugAnnotationValueTypeName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DebugAnnotationValueTypeName_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DebugAnnotationValueTypeName_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -13742,7 +14048,7 @@ class DebugAnnotationValueTypeName : public ::protozero::Message {
   }
 };
 
-class DebugAnnotationName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DebugAnnotationName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DebugAnnotationName_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DebugAnnotationName_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -13806,7 +14112,7 @@ class DebugAnnotationName : public ::protozero::Message {
   }
 };
 
-class DebugAnnotation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class DebugAnnotation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   DebugAnnotation_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DebugAnnotation_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -14177,7 +14483,7 @@ class DebugAnnotation : public ::protozero::Message {
 
 };
 
-class DebugAnnotation_NestedValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class DebugAnnotation_NestedValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   DebugAnnotation_NestedValue_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DebugAnnotation_NestedValue_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -15615,7 +15921,7 @@ const char* CounterDescriptor_Unit_Name(::perfetto::protos::pbzero::CounterDescr
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class CounterDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class CounterDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   CounterDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CounterDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -16042,7 +16348,7 @@ const char* ProcessDescriptor_ChromeProcessType_Name(::perfetto::protos::pbzero:
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ProcessDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   ProcessDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -16511,7 +16817,7 @@ const char* ThreadDescriptor_ChromeThreadType_Name(::perfetto::protos::pbzero::T
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ThreadDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ThreadDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   ThreadDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ThreadDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -17032,7 +17338,7 @@ const char* TrackDescriptor_SiblingMergeBehavior_Name(::perfetto::protos::pbzero
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class TrackDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrackDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   TrackDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -18146,7 +18452,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InternedData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/43, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class InternedData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/43> {
  public:
   InternedData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -25499,6 +25805,7 @@ enum GpuCounterDescriptor_GpuCounterGroup : int {
   GpuCounterDescriptor_GpuCounterGroup_PRIMITIVES = 4,
   GpuCounterDescriptor_GpuCounterGroup_MEMORY = 5,
   GpuCounterDescriptor_GpuCounterGroup_COMPUTE = 6,
+  GpuCounterDescriptor_GpuCounterGroup_RAY_TRACING = 7,
 };
 enum GpuCounterDescriptor_MeasureUnit : int {
   GpuCounterDescriptor_MeasureUnit_NONE = 0,
@@ -25556,8 +25863,9 @@ class PERFETTO_EXPORT_COMPONENT GpuCounterDescriptor : public ::protozero::CppMe
   static constexpr auto PRIMITIVES = GpuCounterDescriptor_GpuCounterGroup_PRIMITIVES;
   static constexpr auto MEMORY = GpuCounterDescriptor_GpuCounterGroup_MEMORY;
   static constexpr auto COMPUTE = GpuCounterDescriptor_GpuCounterGroup_COMPUTE;
+  static constexpr auto RAY_TRACING = GpuCounterDescriptor_GpuCounterGroup_RAY_TRACING;
   static constexpr auto GpuCounterGroup_MIN = GpuCounterDescriptor_GpuCounterGroup_UNCLASSIFIED;
-  static constexpr auto GpuCounterGroup_MAX = GpuCounterDescriptor_GpuCounterGroup_COMPUTE;
+  static constexpr auto GpuCounterGroup_MAX = GpuCounterDescriptor_GpuCounterGroup_RAY_TRACING;
   using MeasureUnit = GpuCounterDescriptor_MeasureUnit;
   static constexpr auto NONE = GpuCounterDescriptor_MeasureUnit_NONE;
   static constexpr auto BIT = GpuCounterDescriptor_MeasureUnit_BIT;
@@ -26139,6 +26447,7 @@ class PerfEvents_Tracepoint;
 class PerfEvents;
 class PerfEvents_Timebase;
 enum PerfEvents_Counter : int;
+enum PerfEvents_EventModifier : int;
 enum PerfEvents_PerfClock : int;
 }  // namespace perfetto
 }  // namespace protos
@@ -26174,6 +26483,12 @@ enum PerfEvents_Counter : int {
   PerfEvents_Counter_HW_STALLED_CYCLES_BACKEND = 18,
   PerfEvents_Counter_HW_REF_CPU_CYCLES = 19,
 };
+enum PerfEvents_EventModifier : int {
+  PerfEvents_EventModifier_UNKNOWN_EVENT_MODIFIER = 0,
+  PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_USERSPACE = 1,
+  PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_KERNEL = 2,
+  PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_HYPERVISOR = 3,
+};
 enum PerfEvents_PerfClock : int {
   PerfEvents_PerfClock_UNKNOWN_PERF_CLOCK = 0,
   PerfEvents_PerfClock_PERF_CLOCK_REALTIME = 1,
@@ -26188,6 +26503,7 @@ class PERFETTO_EXPORT_COMPONENT FollowerEvent : public ::protozero::CppMessageOb
     kCounterFieldNumber = 1,
     kTracepointFieldNumber = 2,
     kRawEventFieldNumber = 3,
+    kModifiersFieldNumber = 5,
     kNameFieldNumber = 4,
   };
 
@@ -26217,6 +26533,13 @@ class PERFETTO_EXPORT_COMPONENT FollowerEvent : public ::protozero::CppMessageOb
   const PerfEvents_RawEvent& raw_event() const { return *raw_event_; }
   PerfEvents_RawEvent* mutable_raw_event() { _has_field_.set(3); return raw_event_.get(); }
 
+  const std::vector<PerfEvents_EventModifier>& modifiers() const { return modifiers_; }
+  std::vector<PerfEvents_EventModifier>* mutable_modifiers() { return &modifiers_; }
+  int modifiers_size() const { return static_cast<int>(modifiers_.size()); }
+  void clear_modifiers() { modifiers_.clear(); }
+  void add_modifiers(PerfEvents_EventModifier value) { modifiers_.emplace_back(value); }
+  PerfEvents_EventModifier* add_modifiers() { modifiers_.emplace_back(); return &modifiers_.back(); }
+
   bool has_name() const { return _has_field_[4]; }
   const std::string& name() const { return name_; }
   void set_name(const std::string& value) { name_ = value; _has_field_.set(4); }
@@ -26225,13 +26548,14 @@ class PERFETTO_EXPORT_COMPONENT FollowerEvent : public ::protozero::CppMessageOb
   PerfEvents_Counter counter_{};
   ::protozero::CopyablePtr<PerfEvents_Tracepoint> tracepoint_;
   ::protozero::CopyablePtr<PerfEvents_RawEvent> raw_event_;
+  std::vector<PerfEvents_EventModifier> modifiers_;
   std::string name_{};
 
   // Allows to preserve unknown protobuf fields for compatibility
   // with future versions of .proto files.
   std::string unknown_fields_;
 
-  std::bitset<5> _has_field_{};
+  std::bitset<6> _has_field_{};
 };
 
 
@@ -26366,6 +26690,13 @@ class PERFETTO_EXPORT_COMPONENT PerfEvents : public ::protozero::CppMessageObj {
   static constexpr auto PERF_CLOCK_BOOTTIME = PerfEvents_PerfClock_PERF_CLOCK_BOOTTIME;
   static constexpr auto PerfClock_MIN = PerfEvents_PerfClock_UNKNOWN_PERF_CLOCK;
   static constexpr auto PerfClock_MAX = PerfEvents_PerfClock_PERF_CLOCK_BOOTTIME;
+  using EventModifier = PerfEvents_EventModifier;
+  static constexpr auto UNKNOWN_EVENT_MODIFIER = PerfEvents_EventModifier_UNKNOWN_EVENT_MODIFIER;
+  static constexpr auto EVENT_MODIFIER_COUNT_USERSPACE = PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_USERSPACE;
+  static constexpr auto EVENT_MODIFIER_COUNT_KERNEL = PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_KERNEL;
+  static constexpr auto EVENT_MODIFIER_COUNT_HYPERVISOR = PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_HYPERVISOR;
+  static constexpr auto EventModifier_MIN = PerfEvents_EventModifier_UNKNOWN_EVENT_MODIFIER;
+  static constexpr auto EventModifier_MAX = PerfEvents_EventModifier_EVENT_MODIFIER_COUNT_HYPERVISOR;
   enum FieldNumbers {
   };
 
@@ -26402,6 +26733,7 @@ class PERFETTO_EXPORT_COMPONENT PerfEvents_Timebase : public ::protozero::CppMes
     kCounterFieldNumber = 4,
     kTracepointFieldNumber = 3,
     kRawEventFieldNumber = 5,
+    kModifiersFieldNumber = 12,
     kTimestampClockFieldNumber = 11,
     kNameFieldNumber = 10,
   };
@@ -26444,6 +26776,13 @@ class PERFETTO_EXPORT_COMPONENT PerfEvents_Timebase : public ::protozero::CppMes
   const PerfEvents_RawEvent& raw_event() const { return *raw_event_; }
   PerfEvents_RawEvent* mutable_raw_event() { _has_field_.set(5); return raw_event_.get(); }
 
+  const std::vector<PerfEvents_EventModifier>& modifiers() const { return modifiers_; }
+  std::vector<PerfEvents_EventModifier>* mutable_modifiers() { return &modifiers_; }
+  int modifiers_size() const { return static_cast<int>(modifiers_.size()); }
+  void clear_modifiers() { modifiers_.clear(); }
+  void add_modifiers(PerfEvents_EventModifier value) { modifiers_.emplace_back(value); }
+  PerfEvents_EventModifier* add_modifiers() { modifiers_.emplace_back(); return &modifiers_.back(); }
+
   bool has_timestamp_clock() const { return _has_field_[11]; }
   PerfEvents_PerfClock timestamp_clock() const { return timestamp_clock_; }
   void set_timestamp_clock(PerfEvents_PerfClock value) { timestamp_clock_ = value; _has_field_.set(11); }
@@ -26459,6 +26798,7 @@ class PERFETTO_EXPORT_COMPONENT PerfEvents_Timebase : public ::protozero::CppMes
   PerfEvents_Counter counter_{};
   ::protozero::CopyablePtr<PerfEvents_Tracepoint> tracepoint_;
   ::protozero::CopyablePtr<PerfEvents_RawEvent> raw_event_;
+  std::vector<PerfEvents_EventModifier> modifiers_;
   PerfEvents_PerfClock timestamp_clock_{};
   std::string name_{};
 
@@ -26466,7 +26806,7 @@ class PERFETTO_EXPORT_COMPONENT PerfEvents_Timebase : public ::protozero::CppMes
   // with future versions of .proto files.
   std::string unknown_fields_;
 
-  std::bitset<12> _has_field_{};
+  std::bitset<13> _has_field_{};
 };
 
 }  // namespace perfetto
@@ -28020,7 +28360,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidEnergyConsumerDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidEnergyConsumerDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   AndroidEnergyConsumerDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidEnergyConsumerDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -28053,7 +28393,7 @@ class AndroidEnergyConsumerDescriptor : public ::protozero::Message {
 
 };
 
-class AndroidEnergyConsumer_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidEnergyConsumer_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidEnergyConsumer_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidEnergyConsumer_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -28312,7 +28652,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CommitDataRequest_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class CommitDataRequest_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CommitDataRequest_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CommitDataRequest_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -28385,7 +28725,7 @@ class CommitDataRequest : public ::protozero::Message {
   }
 };
 
-class CommitDataRequest_ChunkToPatch_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class CommitDataRequest_ChunkToPatch_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CommitDataRequest_ChunkToPatch_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CommitDataRequest_ChunkToPatch_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -28503,7 +28843,7 @@ class CommitDataRequest_ChunkToPatch : public ::protozero::Message {
   }
 };
 
-class CommitDataRequest_ChunkToPatch_Patch_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CommitDataRequest_ChunkToPatch_Patch_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   CommitDataRequest_ChunkToPatch_Patch_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CommitDataRequest_ChunkToPatch_Patch_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -28567,7 +28907,7 @@ class CommitDataRequest_ChunkToPatch_Patch : public ::protozero::Message {
   }
 };
 
-class CommitDataRequest_ChunksToMove_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CommitDataRequest_ChunksToMove_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CommitDataRequest_ChunksToMove_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CommitDataRequest_ChunksToMove_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -28706,7 +29046,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DataSourceDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DataSourceDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   DataSourceDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DataSourceDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29084,7 +29424,7 @@ const char* FieldDescriptorProto_Label_Name(::perfetto::protos::pbzero::FieldDes
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class OneofOptions_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class OneofOptions_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   OneofOptions_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit OneofOptions_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29098,7 +29438,7 @@ class OneofOptions : public ::protozero::Message {
 
 };
 
-class EnumValueDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EnumValueDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   EnumValueDescriptorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EnumValueDescriptorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29162,7 +29502,7 @@ class EnumValueDescriptorProto : public ::protozero::Message {
   }
 };
 
-class EnumDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class EnumDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   EnumDescriptorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EnumDescriptorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29249,7 +29589,7 @@ class EnumDescriptorProto : public ::protozero::Message {
   }
 };
 
-class OneofDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class OneofDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   OneofDescriptorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit OneofDescriptorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29309,7 +29649,7 @@ class OneofDescriptorProto : public ::protozero::Message {
 
 };
 
-class FieldDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FieldDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   FieldDescriptorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FieldDescriptorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29565,7 +29905,7 @@ class FieldDescriptorProto : public ::protozero::Message {
   }
 };
 
-class FieldOptions_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/999, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FieldOptions_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/999> {
  public:
   FieldOptions_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FieldOptions_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29619,7 +29959,7 @@ class FieldOptions : public ::protozero::Message {
 
 };
 
-class UninterpretedOption_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class UninterpretedOption_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   UninterpretedOption_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UninterpretedOption_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29797,7 +30137,7 @@ class UninterpretedOption : public ::protozero::Message {
   }
 };
 
-class UninterpretedOption_NamePart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class UninterpretedOption_NamePart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   UninterpretedOption_NamePart_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UninterpretedOption_NamePart_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -29861,7 +30201,7 @@ class UninterpretedOption_NamePart : public ::protozero::Message {
   }
 };
 
-class DescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class DescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   DescriptorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DescriptorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30034,7 +30374,7 @@ class DescriptorProto : public ::protozero::Message {
   }
 };
 
-class DescriptorProto_ReservedRange_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DescriptorProto_ReservedRange_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DescriptorProto_ReservedRange_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DescriptorProto_ReservedRange_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30092,7 +30432,7 @@ class DescriptorProto_ReservedRange : public ::protozero::Message {
   }
 };
 
-class FileDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FileDescriptorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   FileDescriptorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FileDescriptorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30282,7 +30622,7 @@ class FileDescriptorProto : public ::protozero::Message {
 
 };
 
-class FileDescriptorSet_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FileDescriptorSet_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   FileDescriptorSet_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FileDescriptorSet_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30346,7 +30686,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class FtraceDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FtraceDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   FtraceDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30380,7 +30720,7 @@ class FtraceDescriptor : public ::protozero::Message {
 
 };
 
-class FtraceDescriptor_AtraceCategory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceDescriptor_AtraceCategory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FtraceDescriptor_AtraceCategory_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceDescriptor_AtraceCategory_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30499,13 +30839,14 @@ enum GpuCounterGroup : int32_t {
   PRIMITIVES = 4,
   MEMORY = 5,
   COMPUTE = 6,
+  RAY_TRACING = 7,
 };
 } // namespace perfetto_pbzero_enum_GpuCounterDescriptor
 using GpuCounterDescriptor_GpuCounterGroup = perfetto_pbzero_enum_GpuCounterDescriptor::GpuCounterGroup;
 
 
 constexpr GpuCounterDescriptor_GpuCounterGroup GpuCounterDescriptor_GpuCounterGroup_MIN = GpuCounterDescriptor_GpuCounterGroup::UNCLASSIFIED;
-constexpr GpuCounterDescriptor_GpuCounterGroup GpuCounterDescriptor_GpuCounterGroup_MAX = GpuCounterDescriptor_GpuCounterGroup::COMPUTE;
+constexpr GpuCounterDescriptor_GpuCounterGroup GpuCounterDescriptor_GpuCounterGroup_MAX = GpuCounterDescriptor_GpuCounterGroup::RAY_TRACING;
 
 
 PERFETTO_PROTOZERO_CONSTEXPR14_OR_INLINE
@@ -30531,6 +30872,9 @@ const char* GpuCounterDescriptor_GpuCounterGroup_Name(::perfetto::protos::pbzero
 
   case ::perfetto::protos::pbzero::GpuCounterDescriptor_GpuCounterGroup::COMPUTE:
     return "COMPUTE";
+
+  case ::perfetto::protos::pbzero::GpuCounterDescriptor_GpuCounterGroup::RAY_TRACING:
+    return "RAY_TRACING";
   }
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
@@ -30716,7 +31060,7 @@ const char* GpuCounterDescriptor_MeasureUnit_Name(::perfetto::protos::pbzero::Gp
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class GpuCounterDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuCounterDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   GpuCounterDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuCounterDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -30764,6 +31108,7 @@ class GpuCounterDescriptor : public ::protozero::Message {
   static inline const GpuCounterGroup PRIMITIVES = GpuCounterGroup::PRIMITIVES;
   static inline const GpuCounterGroup MEMORY = GpuCounterGroup::MEMORY;
   static inline const GpuCounterGroup COMPUTE = GpuCounterGroup::COMPUTE;
+  static inline const GpuCounterGroup RAY_TRACING = GpuCounterGroup::RAY_TRACING;
   static inline const MeasureUnit NONE = MeasureUnit::NONE;
   static inline const MeasureUnit BIT = MeasureUnit::BIT;
   static inline const MeasureUnit KILOBIT = MeasureUnit::KILOBIT;
@@ -30889,7 +31234,7 @@ class GpuCounterDescriptor : public ::protozero::Message {
   }
 };
 
-class GpuCounterDescriptor_GpuCounterBlock_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuCounterDescriptor_GpuCounterBlock_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   GpuCounterDescriptor_GpuCounterBlock_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuCounterDescriptor_GpuCounterBlock_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31022,7 +31367,7 @@ class GpuCounterDescriptor_GpuCounterBlock : public ::protozero::Message {
   }
 };
 
-class GpuCounterDescriptor_GpuCounterSpec_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuCounterDescriptor_GpuCounterSpec_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   GpuCounterDescriptor_GpuCounterSpec_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuCounterDescriptor_GpuCounterSpec_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31263,7 +31608,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InterceptorDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InterceptorDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   InterceptorDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InterceptorDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31400,7 +31745,7 @@ const char* ObservableEvents_DataSourceInstanceState_Name(::perfetto::protos::pb
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ObservableEvents_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ObservableEvents_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ObservableEvents_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ObservableEvents_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31489,7 +31834,7 @@ class ObservableEvents : public ::protozero::Message {
 
 };
 
-class ObservableEvents_CloneTriggerHit_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ObservableEvents_CloneTriggerHit_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   ObservableEvents_CloneTriggerHit_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ObservableEvents_CloneTriggerHit_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31643,7 +31988,7 @@ class ObservableEvents_CloneTriggerHit : public ::protozero::Message {
   }
 };
 
-class ObservableEvents_DataSourceInstanceStateChange_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ObservableEvents_DataSourceInstanceStateChange_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ObservableEvents_DataSourceInstanceStateChange_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ObservableEvents_DataSourceInstanceStateChange_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31763,6 +32108,10 @@ namespace perfetto_pbzero_enum_PerfEvents {
 enum Counter : int32_t;
 }  // namespace perfetto_pbzero_enum_PerfEvents
 using PerfEvents_Counter = perfetto_pbzero_enum_PerfEvents::Counter;
+namespace perfetto_pbzero_enum_PerfEvents {
+enum EventModifier : int32_t;
+}  // namespace perfetto_pbzero_enum_PerfEvents
+using PerfEvents_EventModifier = perfetto_pbzero_enum_PerfEvents::EventModifier;
 namespace perfetto_pbzero_enum_PerfEvents {
 enum PerfClock : int32_t;
 }  // namespace perfetto_pbzero_enum_PerfEvents
@@ -31913,7 +32262,40 @@ const char* PerfEvents_PerfClock_Name(::perfetto::protos::pbzero::PerfEvents_Per
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class FollowerEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+namespace perfetto_pbzero_enum_PerfEvents {
+enum EventModifier : int32_t {
+  UNKNOWN_EVENT_MODIFIER = 0,
+  EVENT_MODIFIER_COUNT_USERSPACE = 1,
+  EVENT_MODIFIER_COUNT_KERNEL = 2,
+  EVENT_MODIFIER_COUNT_HYPERVISOR = 3,
+};
+} // namespace perfetto_pbzero_enum_PerfEvents
+using PerfEvents_EventModifier = perfetto_pbzero_enum_PerfEvents::EventModifier;
+
+
+constexpr PerfEvents_EventModifier PerfEvents_EventModifier_MIN = PerfEvents_EventModifier::UNKNOWN_EVENT_MODIFIER;
+constexpr PerfEvents_EventModifier PerfEvents_EventModifier_MAX = PerfEvents_EventModifier::EVENT_MODIFIER_COUNT_HYPERVISOR;
+
+
+PERFETTO_PROTOZERO_CONSTEXPR14_OR_INLINE
+const char* PerfEvents_EventModifier_Name(::perfetto::protos::pbzero::PerfEvents_EventModifier value) {
+  switch (value) {
+  case ::perfetto::protos::pbzero::PerfEvents_EventModifier::UNKNOWN_EVENT_MODIFIER:
+    return "UNKNOWN_EVENT_MODIFIER";
+
+  case ::perfetto::protos::pbzero::PerfEvents_EventModifier::EVENT_MODIFIER_COUNT_USERSPACE:
+    return "EVENT_MODIFIER_COUNT_USERSPACE";
+
+  case ::perfetto::protos::pbzero::PerfEvents_EventModifier::EVENT_MODIFIER_COUNT_KERNEL:
+    return "EVENT_MODIFIER_COUNT_KERNEL";
+
+  case ::perfetto::protos::pbzero::PerfEvents_EventModifier::EVENT_MODIFIER_COUNT_HYPERVISOR:
+    return "EVENT_MODIFIER_COUNT_HYPERVISOR";
+  }
+  return "PBZERO_UNKNOWN_ENUM_VALUE";
+}
+
+class FollowerEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   FollowerEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FollowerEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -31924,6 +32306,8 @@ class FollowerEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_
   ::protozero::ConstBytes tracepoint() const { return at<2>().as_bytes(); }
   bool has_raw_event() const { return at<3>().valid(); }
   ::protozero::ConstBytes raw_event() const { return at<3>().as_bytes(); }
+  bool has_modifiers() const { return at<5>().valid(); }
+  ::protozero::RepeatedFieldIterator<int32_t> modifiers() const { return GetRepeated<int32_t>(5); }
   bool has_name() const { return at<4>().valid(); }
   ::protozero::ConstChars name() const { return at<4>().as_string(); }
 };
@@ -31935,6 +32319,7 @@ class FollowerEvent : public ::protozero::Message {
     kCounterFieldNumber = 1,
     kTracepointFieldNumber = 2,
     kRawEventFieldNumber = 3,
+    kModifiersFieldNumber = 5,
     kNameFieldNumber = 4,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.FollowerEvent"; }
@@ -31986,6 +32371,24 @@ class FollowerEvent : public ::protozero::Message {
   }
 
 
+  using FieldMetadata_Modifiers =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kRepeatedNotPacked,
+      ::protozero::proto_utils::ProtoSchemaType::kEnum,
+      PerfEvents_EventModifier,
+      FollowerEvent>;
+
+  static constexpr FieldMetadata_Modifiers kModifiers{};
+  void add_modifiers(PerfEvents_EventModifier value) {
+    static constexpr uint32_t field_id = FieldMetadata_Modifiers::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kEnum>
+        ::Append(*this, field_id, value);
+  }
+
   using FieldMetadata_Name =
     ::protozero::proto_utils::FieldMetadata<
       4,
@@ -32011,7 +32414,7 @@ class FollowerEvent : public ::protozero::Message {
   }
 };
 
-class PerfEvents_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfEvents_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   PerfEvents_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEvents_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -32035,6 +32438,11 @@ class PerfEvents : public ::protozero::Message {
   using PerfClock = ::perfetto::protos::pbzero::PerfEvents_PerfClock;
   static inline const char* PerfClock_Name(PerfClock value) {
     return ::perfetto::protos::pbzero::PerfEvents_PerfClock_Name(value);
+  }
+
+  using EventModifier = ::perfetto::protos::pbzero::PerfEvents_EventModifier;
+  static inline const char* EventModifier_Name(EventModifier value) {
+    return ::perfetto::protos::pbzero::PerfEvents_EventModifier_Name(value);
   }
   static inline const Counter UNKNOWN_COUNTER = Counter::UNKNOWN_COUNTER;
   static inline const Counter SW_CPU_CLOCK = Counter::SW_CPU_CLOCK;
@@ -32062,9 +32470,13 @@ class PerfEvents : public ::protozero::Message {
   static inline const PerfClock PERF_CLOCK_MONOTONIC = PerfClock::PERF_CLOCK_MONOTONIC;
   static inline const PerfClock PERF_CLOCK_MONOTONIC_RAW = PerfClock::PERF_CLOCK_MONOTONIC_RAW;
   static inline const PerfClock PERF_CLOCK_BOOTTIME = PerfClock::PERF_CLOCK_BOOTTIME;
+  static inline const EventModifier UNKNOWN_EVENT_MODIFIER = EventModifier::UNKNOWN_EVENT_MODIFIER;
+  static inline const EventModifier EVENT_MODIFIER_COUNT_USERSPACE = EventModifier::EVENT_MODIFIER_COUNT_USERSPACE;
+  static inline const EventModifier EVENT_MODIFIER_COUNT_KERNEL = EventModifier::EVENT_MODIFIER_COUNT_KERNEL;
+  static inline const EventModifier EVENT_MODIFIER_COUNT_HYPERVISOR = EventModifier::EVENT_MODIFIER_COUNT_HYPERVISOR;
 };
 
-class PerfEvents_RawEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfEvents_RawEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   PerfEvents_RawEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEvents_RawEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -32164,7 +32576,7 @@ class PerfEvents_RawEvent : public ::protozero::Message {
   }
 };
 
-class PerfEvents_Tracepoint_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfEvents_Tracepoint_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PerfEvents_Tracepoint_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEvents_Tracepoint_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -32234,7 +32646,7 @@ class PerfEvents_Tracepoint : public ::protozero::Message {
   }
 };
 
-class PerfEvents_Timebase_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfEvents_Timebase_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   PerfEvents_Timebase_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEvents_Timebase_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -32251,6 +32663,8 @@ class PerfEvents_Timebase_Decoder : public ::protozero::TypedProtoDecoder</*MAX_
   ::protozero::ConstBytes tracepoint() const { return at<3>().as_bytes(); }
   bool has_raw_event() const { return at<5>().valid(); }
   ::protozero::ConstBytes raw_event() const { return at<5>().as_bytes(); }
+  bool has_modifiers() const { return at<12>().valid(); }
+  ::protozero::RepeatedFieldIterator<int32_t> modifiers() const { return GetRepeated<int32_t>(12); }
   bool has_timestamp_clock() const { return at<11>().valid(); }
   int32_t timestamp_clock() const { return at<11>().as_int32(); }
   bool has_name() const { return at<10>().valid(); }
@@ -32267,6 +32681,7 @@ class PerfEvents_Timebase : public ::protozero::Message {
     kCounterFieldNumber = 4,
     kTracepointFieldNumber = 3,
     kRawEventFieldNumber = 5,
+    kModifiersFieldNumber = 12,
     kTimestampClockFieldNumber = 11,
     kNameFieldNumber = 10,
   };
@@ -32372,6 +32787,24 @@ class PerfEvents_Timebase : public ::protozero::Message {
     return BeginNestedMessage<T>(5);
   }
 
+
+  using FieldMetadata_Modifiers =
+    ::protozero::proto_utils::FieldMetadata<
+      12,
+      ::protozero::proto_utils::RepetitionType::kRepeatedNotPacked,
+      ::protozero::proto_utils::ProtoSchemaType::kEnum,
+      PerfEvents_EventModifier,
+      PerfEvents_Timebase>;
+
+  static constexpr FieldMetadata_Modifiers kModifiers{};
+  void add_modifiers(PerfEvents_EventModifier value) {
+    static constexpr uint32_t field_id = FieldMetadata_Modifiers::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kEnum>
+        ::Append(*this, field_id, value);
+  }
 
   using FieldMetadata_TimestampClock =
     ::protozero::proto_utils::FieldMetadata<
@@ -33474,7 +33907,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SystemInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SystemInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   SystemInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SystemInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -33855,7 +34288,7 @@ class SystemInfo : public ::protozero::Message {
   }
 };
 
-class Utsname_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Utsname_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Utsname_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Utsname_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -34045,7 +34478,7 @@ const char* TraceStats_FinalFlushOutcome_Name(::perfetto::protos::pbzero::TraceS
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class TraceStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TraceStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18> {
  public:
   TraceStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -34417,7 +34850,7 @@ class TraceStats : public ::protozero::Message {
   }
 };
 
-class TraceStats_FilterStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TraceStats_FilterStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20> {
  public:
   TraceStats_FilterStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceStats_FilterStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -34559,7 +34992,7 @@ class TraceStats_FilterStats : public ::protozero::Message {
   }
 };
 
-class TraceStats_WriterStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceStats_WriterStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TraceStats_WriterStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceStats_WriterStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -34651,7 +35084,7 @@ class TraceStats_WriterStats : public ::protozero::Message {
   }
 };
 
-class TraceStats_BufferStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceStats_BufferStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19> {
  public:
   TraceStats_BufferStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceStats_BufferStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35100,7 +35533,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TracingServiceCapabilities_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TracingServiceCapabilities_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TracingServiceCapabilities_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceCapabilities_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35234,7 +35667,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TracingServiceState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TracingServiceState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   TracingServiceState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35394,7 +35827,7 @@ class TracingServiceState : public ::protozero::Message {
   }
 };
 
-class TracingServiceState_TracingSession_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TracingServiceState_TracingSession_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   TracingServiceState_TracingSession_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceState_TracingSession_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35659,7 +36092,7 @@ class TracingServiceState_TracingSession : public ::protozero::Message {
   }
 };
 
-class TracingServiceState_DataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracingServiceState_DataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TracingServiceState_DataSource_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceState_DataSource_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35713,7 +36146,7 @@ class TracingServiceState_DataSource : public ::protozero::Message {
   }
 };
 
-class TracingServiceState_Producer_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracingServiceState_Producer_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   TracingServiceState_Producer_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceState_Producer_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35898,7 +36331,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TrackEventDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TrackEventDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TrackEventDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEventDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -35931,7 +36364,7 @@ class TrackEventDescriptor : public ::protozero::Message {
 
 };
 
-class TrackEventCategory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TrackEventCategory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrackEventCategory_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEventCategory_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -39494,6 +39927,7 @@ class PerfEvents_Tracepoint;
 class PerfEvents_Timebase;
 enum PerfEventConfig_UnwindMode : int;
 enum PerfEvents_Counter : int;
+enum PerfEvents_EventModifier : int;
 enum PerfEvents_PerfClock : int;
 }  // namespace perfetto
 }  // namespace protos
@@ -42293,6 +42727,7 @@ class PERFETTO_EXPORT_COMPONENT EtwConfig : public ::protozero::CppMessageObj {
     kKernelFlagsFieldNumber = 1,
     kSchedulerProviderEventsFieldNumber = 2,
     kMemoryProviderEventsFieldNumber = 3,
+    kFileProviderEventsFieldNumber = 4,
   };
 
   EtwConfig();
@@ -42330,16 +42765,24 @@ class PERFETTO_EXPORT_COMPONENT EtwConfig : public ::protozero::CppMessageObj {
   void add_memory_provider_events(std::string value) { memory_provider_events_.emplace_back(value); }
   std::string* add_memory_provider_events() { memory_provider_events_.emplace_back(); return &memory_provider_events_.back(); }
 
+  const std::vector<std::string>& file_provider_events() const { return file_provider_events_; }
+  std::vector<std::string>* mutable_file_provider_events() { return &file_provider_events_; }
+  int file_provider_events_size() const { return static_cast<int>(file_provider_events_.size()); }
+  void clear_file_provider_events() { file_provider_events_.clear(); }
+  void add_file_provider_events(std::string value) { file_provider_events_.emplace_back(value); }
+  std::string* add_file_provider_events() { file_provider_events_.emplace_back(); return &file_provider_events_.back(); }
+
  private:
   std::vector<EtwConfig_KernelFlag> kernel_flags_;
   std::vector<std::string> scheduler_provider_events_;
   std::vector<std::string> memory_provider_events_;
+  std::vector<std::string> file_provider_events_;
 
   // Allows to preserve unknown protobuf fields for compatibility
   // with future versions of .proto files.
   std::string unknown_fields_;
 
-  std::bitset<4> _has_field_{};
+  std::bitset<5> _has_field_{};
 };
 
 }  // namespace perfetto
@@ -42889,7 +43332,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidGameInterventionListConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidGameInterventionListConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   AndroidGameInterventionListConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidGameInterventionListConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43025,7 +43468,7 @@ const char* AndroidInputEventConfig_TraceLevel_Name(::perfetto::protos::pbzero::
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class AndroidInputEventConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidInputEventConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidInputEventConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidInputEventConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43137,7 +43580,7 @@ class AndroidInputEventConfig : public ::protozero::Message {
   }
 };
 
-class AndroidInputEventConfig_TraceRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidInputEventConfig_TraceRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   AndroidInputEventConfig_TraceRule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidInputEventConfig_TraceRule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43302,7 +43745,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidLogConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidLogConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidLogConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidLogConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43411,7 +43854,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidPolledStateConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidPolledStateConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   AndroidPolledStateConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidPolledStateConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43472,7 +43915,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidSdkSyspropGuardConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidSdkSyspropGuardConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AndroidSdkSyspropGuardConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidSdkSyspropGuardConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43581,7 +44024,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidSystemPropertyConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidSystemPropertyConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AndroidSystemPropertyConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidSystemPropertyConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43669,7 +44112,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AppWakelocksConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AppWakelocksConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AppWakelocksConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AppWakelocksConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43772,7 +44215,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CpuPerUidConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuPerUidConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   CpuPerUidConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuPerUidConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43833,7 +44276,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class KernelWakelocksConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KernelWakelocksConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KernelWakelocksConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KernelWakelocksConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -43894,7 +44337,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class NetworkPacketTraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NetworkPacketTraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   NetworkPacketTraceConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NetworkPacketTraceConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44060,7 +44503,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PackagesListConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PackagesListConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PackagesListConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PackagesListConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44187,7 +44630,7 @@ const char* PixelModemConfig_EventGroup_Name(::perfetto::protos::pbzero::PixelMo
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class PixelModemConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PixelModemConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   PixelModemConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PixelModemConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44335,7 +44778,7 @@ const char* ProtoLogConfig_TracingMode_Name(::perfetto::protos::pbzero::ProtoLog
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ProtoLogGroup_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProtoLogGroup_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ProtoLogGroup_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProtoLogGroup_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44420,7 +44863,7 @@ class ProtoLogGroup : public ::protozero::Message {
   }
 };
 
-class ProtoLogConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProtoLogConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ProtoLogConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProtoLogConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44626,7 +45069,7 @@ const char* SurfaceFlingerLayersConfig_TraceFlag_Name(::perfetto::protos::pbzero
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class SurfaceFlingerLayersConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SurfaceFlingerLayersConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SurfaceFlingerLayersConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SurfaceFlingerLayersConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44770,7 +45213,7 @@ const char* SurfaceFlingerTransactionsConfig_Mode_Name(::perfetto::protos::pbzer
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class SurfaceFlingerTransactionsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SurfaceFlingerTransactionsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   SurfaceFlingerTransactionsConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SurfaceFlingerTransactionsConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -44919,7 +45362,7 @@ const char* WindowManagerConfig_LogLevel_Name(::perfetto::protos::pbzero::Window
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class WindowManagerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WindowManagerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   WindowManagerConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WindowManagerConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -45019,7 +45462,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class FrozenFtraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrozenFtraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   FrozenFtraceConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrozenFtraceConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -45201,7 +45644,7 @@ const char* FtraceConfig_KprobeEvent_KprobeType_Name(::perfetto::protos::pbzero:
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class FtraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/37, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FtraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/37> {
  public:
   FtraceConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -45897,7 +46340,7 @@ class FtraceConfig : public ::protozero::Message {
   }
 };
 
-class FtraceConfig_TracefsOption_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceConfig_TracefsOption_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FtraceConfig_TracefsOption_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_TracefsOption_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -45969,7 +46412,7 @@ class FtraceConfig_TracefsOption : public ::protozero::Message {
   }
 };
 
-class FtraceConfig_KprobeEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceConfig_KprobeEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FtraceConfig_KprobeEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_KprobeEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46042,7 +46485,7 @@ class FtraceConfig_KprobeEvent : public ::protozero::Message {
   }
 };
 
-class FtraceConfig_PrintFilter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FtraceConfig_PrintFilter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   FtraceConfig_PrintFilter_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_PrintFilter_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46076,7 +46519,7 @@ class FtraceConfig_PrintFilter : public ::protozero::Message {
 
 };
 
-class FtraceConfig_PrintFilter_Rule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceConfig_PrintFilter_Rule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   FtraceConfig_PrintFilter_Rule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_PrintFilter_Rule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46158,7 +46601,7 @@ class FtraceConfig_PrintFilter_Rule : public ::protozero::Message {
   }
 };
 
-class FtraceConfig_PrintFilter_Rule_AtraceMessage_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceConfig_PrintFilter_Rule_AtraceMessage_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FtraceConfig_PrintFilter_Rule_AtraceMessage_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_PrintFilter_Rule_AtraceMessage_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46228,7 +46671,7 @@ class FtraceConfig_PrintFilter_Rule_AtraceMessage : public ::protozero::Message 
   }
 };
 
-class FtraceConfig_CompactSchedConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceConfig_CompactSchedConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   FtraceConfig_CompactSchedConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceConfig_CompactSchedConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46289,7 +46732,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GpuCounterConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuCounterConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   GpuCounterConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuCounterConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46413,7 +46856,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GpuRenderStagesConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuRenderStagesConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuRenderStagesConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuRenderStagesConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46522,7 +46965,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class VulkanMemoryConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VulkanMemoryConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   VulkanMemoryConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VulkanMemoryConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46611,7 +47054,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InodeFileConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class InodeFileConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   InodeFileConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InodeFileConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46756,7 +47199,7 @@ class InodeFileConfig : public ::protozero::Message {
 
 };
 
-class InodeFileConfig_MountPointMappingEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class InodeFileConfig_MountPointMappingEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   InodeFileConfig_MountPointMappingEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InodeFileConfig_MountPointMappingEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -46889,7 +47332,7 @@ const char* ConsoleConfig_Output_Name(::perfetto::protos::pbzero::ConsoleConfig_
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ConsoleConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ConsoleConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ConsoleConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ConsoleConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -47030,7 +47473,7 @@ const char* AndroidPowerConfig_BatteryCounters_Name(::perfetto::protos::pbzero::
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class AndroidPowerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidPowerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   AndroidPowerConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidPowerConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -47225,7 +47668,7 @@ const char* PriorityBoostConfig_BoostPolicy_Name(::perfetto::protos::pbzero::Pri
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class PriorityBoostConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PriorityBoostConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PriorityBoostConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PriorityBoostConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -47354,7 +47797,7 @@ const char* ProcessStatsConfig_Quirks_Name(::perfetto::protos::pbzero::ProcessSt
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ProcessStatsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessStatsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   ProcessStatsConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessStatsConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -47619,7 +48062,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class HeapprofdConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/27, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class HeapprofdConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/27> {
  public:
   HeapprofdConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HeapprofdConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -48187,7 +48630,7 @@ class HeapprofdConfig : public ::protozero::Message {
   }
 };
 
-class HeapprofdConfig_ContinuousDumpConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HeapprofdConfig_ContinuousDumpConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   HeapprofdConfig_ContinuousDumpConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HeapprofdConfig_ContinuousDumpConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -48276,7 +48719,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class JavaHprofConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class JavaHprofConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   JavaHprofConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit JavaHprofConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -48454,7 +48897,7 @@ class JavaHprofConfig : public ::protozero::Message {
   }
 };
 
-class JavaHprofConfig_ContinuousDumpConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class JavaHprofConfig_ContinuousDumpConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   JavaHprofConfig_ContinuousDumpConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit JavaHprofConfig_ContinuousDumpConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -48604,7 +49047,7 @@ const char* PerfEventConfig_UnwindMode_Name(::perfetto::protos::pbzero::PerfEven
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class PerfEventConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PerfEventConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20> {
  public:
   PerfEventConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEventConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -49036,7 +49479,7 @@ class PerfEventConfig : public ::protozero::Message {
   }
 };
 
-class PerfEventConfig_Scope_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PerfEventConfig_Scope_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   PerfEventConfig_Scope_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEventConfig_Scope_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -49190,7 +49633,7 @@ class PerfEventConfig_Scope : public ::protozero::Message {
   }
 };
 
-class PerfEventConfig_CallstackSampling_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfEventConfig_CallstackSampling_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   PerfEventConfig_CallstackSampling_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfEventConfig_CallstackSampling_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -53946,7 +54389,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class StatsdPullAtomConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class StatsdPullAtomConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   StatsdPullAtomConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StatsdPullAtomConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -54052,7 +54495,7 @@ class StatsdPullAtomConfig : public ::protozero::Message {
   }
 };
 
-class StatsdTracingConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class StatsdTracingConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   StatsdTracingConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StatsdTracingConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -54200,7 +54643,7 @@ const char* SysStatsConfig_StatCounters_Name(::perfetto::protos::pbzero::SysStat
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class SysStatsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/14, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SysStatsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/14> {
  public:
   SysStatsConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStatsConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -54544,7 +54987,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SystemInfoConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SystemInfoConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   SystemInfoConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SystemInfoConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -54582,7 +55025,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TrackEventConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TrackEventConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   TrackEventConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEventConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -54895,7 +55338,7 @@ const char* ChromeConfig_ClientPriority_Name(::perfetto::protos::pbzero::ChromeC
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   ChromeConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55088,7 +55531,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromiumHistogramSamplesConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromiumHistogramSamplesConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromiumHistogramSamplesConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromiumHistogramSamplesConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55143,7 +55586,7 @@ class ChromiumHistogramSamplesConfig : public ::protozero::Message {
   }
 };
 
-class ChromiumHistogramSamplesConfig_HistogramSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromiumHistogramSamplesConfig_HistogramSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ChromiumHistogramSamplesConfig_HistogramSample_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromiumHistogramSamplesConfig_HistogramSample_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55264,7 +55707,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TracingTriggerRulesConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TracingTriggerRulesConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TracingTriggerRulesConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingTriggerRulesConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55297,7 +55740,7 @@ class TracingTriggerRulesConfig : public ::protozero::Message {
 
 };
 
-class ChromeFieldTracingConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeFieldTracingConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeFieldTracingConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeFieldTracingConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55330,7 +55773,7 @@ class ChromeFieldTracingConfig : public ::protozero::Message {
 
 };
 
-class ScenarioConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ScenarioConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   ScenarioConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ScenarioConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55523,7 +55966,7 @@ class ScenarioConfig : public ::protozero::Message {
   }
 };
 
-class NestedScenarioConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class NestedScenarioConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   NestedScenarioConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NestedScenarioConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55617,7 +56060,7 @@ class NestedScenarioConfig : public ::protozero::Message {
 
 };
 
-class TriggerRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TriggerRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   TriggerRule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TriggerRule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55786,7 +56229,7 @@ class TriggerRule : public ::protozero::Message {
 
 };
 
-class TriggerRule_RepeatingInterval_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TriggerRule_RepeatingInterval_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TriggerRule_RepeatingInterval_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TriggerRule_RepeatingInterval_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55844,7 +56287,7 @@ class TriggerRule_RepeatingInterval : public ::protozero::Message {
   }
 };
 
-class TriggerRule_HistogramTrigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TriggerRule_HistogramTrigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TriggerRule_HistogramTrigger_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TriggerRule_HistogramTrigger_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -55953,7 +56396,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromiumSystemMetricsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromiumSystemMetricsConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromiumSystemMetricsConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromiumSystemMetricsConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -56014,7 +56457,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class V8Config_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8Config_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   V8Config_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8Config_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -56207,7 +56650,7 @@ const char* DataSourceConfig_BufferExhaustedPolicy_Name(::perfetto::protos::pbze
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class DataSourceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/137, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DataSourceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/137> {
  public:
   DataSourceConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DataSourceConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -57317,7 +57760,7 @@ const char* EtwConfig_KernelFlag_Name(::perfetto::protos::pbzero::EtwConfig_Kern
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class EtwConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class EtwConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   EtwConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EtwConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -57328,6 +57771,8 @@ class EtwConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*
   ::protozero::RepeatedFieldIterator<::protozero::ConstChars> scheduler_provider_events() const { return GetRepeated<::protozero::ConstChars>(2); }
   bool has_memory_provider_events() const { return at<3>().valid(); }
   ::protozero::RepeatedFieldIterator<::protozero::ConstChars> memory_provider_events() const { return GetRepeated<::protozero::ConstChars>(3); }
+  bool has_file_provider_events() const { return at<4>().valid(); }
+  ::protozero::RepeatedFieldIterator<::protozero::ConstChars> file_provider_events() const { return GetRepeated<::protozero::ConstChars>(4); }
 };
 
 class EtwConfig : public ::protozero::Message {
@@ -57337,6 +57782,7 @@ class EtwConfig : public ::protozero::Message {
     kKernelFlagsFieldNumber = 1,
     kSchedulerProviderEventsFieldNumber = 2,
     kMemoryProviderEventsFieldNumber = 3,
+    kFileProviderEventsFieldNumber = 4,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.EtwConfig"; }
 
@@ -57413,6 +57859,30 @@ class EtwConfig : public ::protozero::Message {
       ::protozero::proto_utils::ProtoSchemaType::kString>
         ::Append(*this, field_id, value);
   }
+
+  using FieldMetadata_FileProviderEvents =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kRepeatedNotPacked,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      EtwConfig>;
+
+  static constexpr FieldMetadata_FileProviderEvents kFileProviderEvents{};
+  void add_file_provider_events(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_FileProviderEvents::kFieldId, data, size);
+  }
+  void add_file_provider_events(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_FileProviderEvents::kFieldId, chars.data, chars.size);
+  }
+  void add_file_provider_events(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileProviderEvents::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
 };
 
 } // Namespace.
@@ -57446,7 +57916,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InterceptorConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/100, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InterceptorConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/100> {
  public:
   InterceptorConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InterceptorConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -57538,7 +58008,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class StressTestConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class StressTestConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   StressTestConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StressTestConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -57774,7 +58244,7 @@ class StressTestConfig : public ::protozero::Message {
 
 };
 
-class StressTestConfig_WriterTiming_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class StressTestConfig_WriterTiming_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   StressTestConfig_WriterTiming_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StressTestConfig_WriterTiming_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -57926,7 +58396,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TestConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TestConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   TestConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TestConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -58065,7 +58535,7 @@ class TestConfig : public ::protozero::Message {
 
 };
 
-class TestConfig_DummyFields_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/14, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TestConfig_DummyFields_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/14> {
  public:
   TestConfig_DummyFields_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TestConfig_DummyFields_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -58646,7 +59116,7 @@ const char* TraceConfig_BufferConfig_FillPolicy_Name(::perfetto::protos::pbzero:
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class TraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/41, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/42> {
  public:
   TraceConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -58725,6 +59195,8 @@ class TraceConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID
   ::protozero::ConstBytes priority_boost() const { return at<40>().as_bytes(); }
   bool has_exclusive_prio() const { return at<41>().valid(); }
   uint32_t exclusive_prio() const { return at<41>().as_uint32(); }
+  bool has_no_flush_before_write_into_file() const { return at<42>().valid(); }
+  bool no_flush_before_write_into_file() const { return at<42>().as_bool(); }
 };
 
 class TraceConfig : public ::protozero::Message {
@@ -58768,6 +59240,7 @@ class TraceConfig : public ::protozero::Message {
     kSessionSemaphoresFieldNumber = 39,
     kPriorityBoostFieldNumber = 40,
     kExclusivePrioFieldNumber = 41,
+    kNoFlushBeforeWriteIntoFileFieldNumber = 42,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.TraceConfig"; }
 
@@ -59441,9 +59914,27 @@ class TraceConfig : public ::protozero::Message {
       ::protozero::proto_utils::ProtoSchemaType::kUint32>
         ::Append(*this, field_id, value);
   }
+
+  using FieldMetadata_NoFlushBeforeWriteIntoFile =
+    ::protozero::proto_utils::FieldMetadata<
+      42,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kBool,
+      bool,
+      TraceConfig>;
+
+  static constexpr FieldMetadata_NoFlushBeforeWriteIntoFile kNoFlushBeforeWriteIntoFile{};
+  void set_no_flush_before_write_into_file(bool value) {
+    static constexpr uint32_t field_id = FieldMetadata_NoFlushBeforeWriteIntoFile::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kBool>
+        ::Append(*this, field_id, value);
+  }
 };
 
-class TraceConfig_SessionSemaphore_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_SessionSemaphore_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TraceConfig_SessionSemaphore_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_SessionSemaphore_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -59507,7 +59998,7 @@ class TraceConfig_SessionSemaphore : public ::protozero::Message {
   }
 };
 
-class TraceConfig_CmdTraceStartDelay_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_CmdTraceStartDelay_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TraceConfig_CmdTraceStartDelay_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_CmdTraceStartDelay_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -59565,7 +60056,7 @@ class TraceConfig_CmdTraceStartDelay : public ::protozero::Message {
   }
 };
 
-class TraceConfig_AndroidReportConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_AndroidReportConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TraceConfig_AndroidReportConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_AndroidReportConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -59677,7 +60168,7 @@ class TraceConfig_AndroidReportConfig : public ::protozero::Message {
   }
 };
 
-class TraceConfig_TraceFilter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_TraceFilter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TraceConfig_TraceFilter_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_TraceFilter_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -59777,7 +60268,7 @@ class TraceConfig_TraceFilter : public ::protozero::Message {
 
 };
 
-class TraceConfig_TraceFilter_StringFilterChain_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TraceConfig_TraceFilter_StringFilterChain_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TraceConfig_TraceFilter_StringFilterChain_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_TraceFilter_StringFilterChain_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -59810,7 +60301,7 @@ class TraceConfig_TraceFilter_StringFilterChain : public ::protozero::Message {
 
 };
 
-class TraceConfig_TraceFilter_StringFilterRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_TraceFilter_StringFilterRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TraceConfig_TraceFilter_StringFilterRule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_TraceFilter_StringFilterRule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -59901,7 +60392,7 @@ class TraceConfig_TraceFilter_StringFilterRule : public ::protozero::Message {
   }
 };
 
-class TraceConfig_IncidentReportConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_IncidentReportConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TraceConfig_IncidentReportConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_IncidentReportConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60034,7 +60525,7 @@ class TraceConfig_IncidentReportConfig : public ::protozero::Message {
   }
 };
 
-class TraceConfig_IncrementalStateConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_IncrementalStateConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TraceConfig_IncrementalStateConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_IncrementalStateConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60071,7 +60562,7 @@ class TraceConfig_IncrementalStateConfig : public ::protozero::Message {
   }
 };
 
-class TraceConfig_TriggerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TraceConfig_TriggerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TraceConfig_TriggerConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_TriggerConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60177,7 +60668,7 @@ class TraceConfig_TriggerConfig : public ::protozero::Message {
   }
 };
 
-class TraceConfig_TriggerConfig_Trigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_TriggerConfig_Trigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TraceConfig_TriggerConfig_Trigger_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_TriggerConfig_Trigger_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60310,7 +60801,7 @@ class TraceConfig_TriggerConfig_Trigger : public ::protozero::Message {
   }
 };
 
-class TraceConfig_GuardrailOverrides_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_GuardrailOverrides_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TraceConfig_GuardrailOverrides_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_GuardrailOverrides_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60368,7 +60859,7 @@ class TraceConfig_GuardrailOverrides : public ::protozero::Message {
   }
 };
 
-class TraceConfig_StatsdMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_StatsdMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TraceConfig_StatsdMetadata_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_StatsdMetadata_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60468,7 +60959,7 @@ class TraceConfig_StatsdMetadata : public ::protozero::Message {
   }
 };
 
-class TraceConfig_ProducerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_ProducerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TraceConfig_ProducerConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_ProducerConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60553,7 +61044,7 @@ class TraceConfig_ProducerConfig : public ::protozero::Message {
   }
 };
 
-class TraceConfig_BuiltinDataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_BuiltinDataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   TraceConfig_BuiltinDataSource_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_BuiltinDataSource_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60737,7 +61228,7 @@ class TraceConfig_BuiltinDataSource : public ::protozero::Message {
   }
 };
 
-class TraceConfig_DataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TraceConfig_DataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TraceConfig_DataSource_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_DataSource_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -60851,7 +61342,7 @@ class TraceConfig_DataSource : public ::protozero::Message {
   }
 };
 
-class TraceConfig_BufferConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceConfig_BufferConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   TraceConfig_BufferConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceConfig_BufferConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61040,7 +61531,7 @@ const char* ClockSnapshot_Clock_BuiltinClocks_Name(::perfetto::protos::pbzero::C
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ClockSnapshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ClockSnapshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ClockSnapshot_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClockSnapshot_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61095,7 +61586,7 @@ class ClockSnapshot : public ::protozero::Message {
   }
 };
 
-class ClockSnapshot_Clock_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClockSnapshot_Clock_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ClockSnapshot_Clock_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClockSnapshot_Clock_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61232,7 +61723,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TraceUuid_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TraceUuid_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TraceUuid_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TraceUuid_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61314,7 +61805,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Trigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Trigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Trigger_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Trigger_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61450,7 +61941,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InsetsProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InsetsProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   InsetsProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InsetsProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61574,7 +62065,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PointProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PointProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PointProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PointProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61656,7 +62147,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class RectProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RectProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   RectProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RectProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61780,7 +62271,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class WinscopeExtensions_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WinscopeExtensions_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   WinscopeExtensions_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WinscopeExtensions_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61827,7 +62318,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ProtoLogViewerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProtoLogViewerConfig_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ProtoLogViewerConfig_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProtoLogViewerConfig_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61879,7 +62370,7 @@ class ProtoLogViewerConfig : public ::protozero::Message {
 
 };
 
-class ProtoLogViewerConfig_Group_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProtoLogViewerConfig_Group_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ProtoLogViewerConfig_Group_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProtoLogViewerConfig_Group_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -61970,7 +62461,7 @@ class ProtoLogViewerConfig_Group : public ::protozero::Message {
   }
 };
 
-class ProtoLogViewerConfig_MessageData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProtoLogViewerConfig_MessageData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   ProtoLogViewerConfig_MessageData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProtoLogViewerConfig_MessageData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62103,7 +62594,7 @@ class ProtoLogViewerConfig_MessageData : public ::protozero::Message {
   }
 };
 
-class ProtoLogMessage_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProtoLogMessage_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   ProtoLogMessage_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProtoLogMessage_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62277,7 +62768,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ShellHandlerMapping_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ShellHandlerMapping_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ShellHandlerMapping_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ShellHandlerMapping_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62341,7 +62832,7 @@ class ShellHandlerMapping : public ::protozero::Message {
   }
 };
 
-class ShellHandlerMappings_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ShellHandlerMappings_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ShellHandlerMappings_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ShellHandlerMappings_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62374,7 +62865,7 @@ class ShellHandlerMappings : public ::protozero::Message {
 
 };
 
-class ShellTransition_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ShellTransition_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   ShellTransition_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ShellTransition_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62744,7 +63235,7 @@ class ShellTransition : public ::protozero::Message {
   }
 };
 
-class ShellTransition_Target_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ShellTransition_Target_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ShellTransition_Target_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ShellTransition_Target_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62903,7 +63394,7 @@ const char* TrustedOverlay_Name(::perfetto::protos::pbzero::TrustedOverlay value
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class BorderSettings_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BorderSettings_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   BorderSettings_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BorderSettings_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62961,7 +63452,7 @@ class BorderSettings : public ::protozero::Message {
   }
 };
 
-class BoxShadowSettings_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class BoxShadowSettings_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BoxShadowSettings_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BoxShadowSettings_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -62995,7 +63486,7 @@ class BoxShadowSettings : public ::protozero::Message {
 
 };
 
-class BoxShadowSettings_BoxShadowParams_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BoxShadowSettings_BoxShadowParams_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BoxShadowSettings_BoxShadowParams_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BoxShadowSettings_BoxShadowParams_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -63116,7 +63607,7 @@ class BoxShadowSettings_BoxShadowParams : public ::protozero::Message {
   }
 };
 
-class ColorTransformProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ColorTransformProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ColorTransformProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ColorTransformProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -63149,7 +63640,7 @@ class ColorTransformProto : public ::protozero::Message {
   }
 };
 
-class BlurRegion_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlurRegion_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18> {
  public:
   BlurRegion_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlurRegion_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -63164,6 +63655,22 @@ class BlurRegion_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=
   uint32_t corner_radius_bl() const { return at<4>().as_uint32(); }
   bool has_corner_radius_br() const { return at<5>().valid(); }
   float corner_radius_br() const { return at<5>().as_float(); }
+  bool has_corner_radius_tlx() const { return at<11>().valid(); }
+  float corner_radius_tlx() const { return at<11>().as_float(); }
+  bool has_corner_radius_tly() const { return at<12>().valid(); }
+  float corner_radius_tly() const { return at<12>().as_float(); }
+  bool has_corner_radius_trx() const { return at<13>().valid(); }
+  float corner_radius_trx() const { return at<13>().as_float(); }
+  bool has_corner_radius_try() const { return at<14>().valid(); }
+  float corner_radius_try() const { return at<14>().as_float(); }
+  bool has_corner_radius_blx() const { return at<15>().valid(); }
+  float corner_radius_blx() const { return at<15>().as_float(); }
+  bool has_corner_radius_bly() const { return at<16>().valid(); }
+  float corner_radius_bly() const { return at<16>().as_float(); }
+  bool has_corner_radius_brx() const { return at<17>().valid(); }
+  float corner_radius_brx() const { return at<17>().as_float(); }
+  bool has_corner_radius_bry() const { return at<18>().valid(); }
+  float corner_radius_bry() const { return at<18>().as_float(); }
   bool has_alpha() const { return at<6>().valid(); }
   float alpha() const { return at<6>().as_float(); }
   bool has_left() const { return at<7>().valid(); }
@@ -63185,6 +63692,14 @@ class BlurRegion : public ::protozero::Message {
     kCornerRadiusTrFieldNumber = 3,
     kCornerRadiusBlFieldNumber = 4,
     kCornerRadiusBrFieldNumber = 5,
+    kCornerRadiusTlxFieldNumber = 11,
+    kCornerRadiusTlyFieldNumber = 12,
+    kCornerRadiusTrxFieldNumber = 13,
+    kCornerRadiusTryFieldNumber = 14,
+    kCornerRadiusBlxFieldNumber = 15,
+    kCornerRadiusBlyFieldNumber = 16,
+    kCornerRadiusBrxFieldNumber = 17,
+    kCornerRadiusBryFieldNumber = 18,
     kAlphaFieldNumber = 6,
     kLeftFieldNumber = 7,
     kTopFieldNumber = 8,
@@ -63284,6 +63799,150 @@ class BlurRegion : public ::protozero::Message {
         ::Append(*this, field_id, value);
   }
 
+  using FieldMetadata_CornerRadiusTlx =
+    ::protozero::proto_utils::FieldMetadata<
+      11,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusTlx kCornerRadiusTlx{};
+  void set_corner_radius_tlx(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusTlx::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusTly =
+    ::protozero::proto_utils::FieldMetadata<
+      12,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusTly kCornerRadiusTly{};
+  void set_corner_radius_tly(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusTly::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusTrx =
+    ::protozero::proto_utils::FieldMetadata<
+      13,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusTrx kCornerRadiusTrx{};
+  void set_corner_radius_trx(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusTrx::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusTry =
+    ::protozero::proto_utils::FieldMetadata<
+      14,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusTry kCornerRadiusTry{};
+  void set_corner_radius_try(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusTry::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusBlx =
+    ::protozero::proto_utils::FieldMetadata<
+      15,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusBlx kCornerRadiusBlx{};
+  void set_corner_radius_blx(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusBlx::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusBly =
+    ::protozero::proto_utils::FieldMetadata<
+      16,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusBly kCornerRadiusBly{};
+  void set_corner_radius_bly(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusBly::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusBrx =
+    ::protozero::proto_utils::FieldMetadata<
+      17,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusBrx kCornerRadiusBrx{};
+  void set_corner_radius_brx(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusBrx::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CornerRadiusBry =
+    ::protozero::proto_utils::FieldMetadata<
+      18,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      BlurRegion>;
+
+  static constexpr FieldMetadata_CornerRadiusBry kCornerRadiusBry{};
+  void set_corner_radius_bry(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_CornerRadiusBry::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
   using FieldMetadata_Alpha =
     ::protozero::proto_utils::FieldMetadata<
       6,
@@ -63375,7 +64034,7 @@ class BlurRegion : public ::protozero::Message {
   }
 };
 
-class InputWindowInfoProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InputWindowInfoProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   InputWindowInfoProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InputWindowInfoProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -63732,7 +64391,7 @@ class InputWindowInfoProto : public ::protozero::Message {
   }
 };
 
-class ColorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ColorProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ColorProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ColorProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -63832,7 +64491,7 @@ class ColorProto : public ::protozero::Message {
   }
 };
 
-class TransformProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TransformProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TransformProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TransformProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -63953,7 +64612,7 @@ class TransformProto : public ::protozero::Message {
   }
 };
 
-class SizeProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SizeProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SizeProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SizeProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64011,7 +64670,7 @@ class SizeProto : public ::protozero::Message {
   }
 };
 
-class RegionProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class RegionProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   RegionProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegionProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64166,7 +64825,7 @@ const char* LayersTraceFileProto_MagicNumber_Name(::perfetto::protos::pbzero::La
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class BarrierLayerProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BarrierLayerProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   BarrierLayerProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BarrierLayerProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64224,7 +64883,7 @@ class BarrierLayerProto : public ::protozero::Message {
   }
 };
 
-class ActiveBufferProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ActiveBufferProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   ActiveBufferProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ActiveBufferProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64345,7 +65004,7 @@ class ActiveBufferProto : public ::protozero::Message {
   }
 };
 
-class CornerRadiiProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CornerRadiiProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CornerRadiiProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CornerRadiiProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64445,7 +65104,7 @@ class CornerRadiiProto : public ::protozero::Message {
   }
 };
 
-class FloatRectProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FloatRectProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   FloatRectProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FloatRectProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64545,7 +65204,7 @@ class FloatRectProto : public ::protozero::Message {
   }
 };
 
-class PositionProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PositionProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PositionProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PositionProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64603,7 +65262,7 @@ class PositionProto : public ::protozero::Message {
   }
 };
 
-class LayerProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/66, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class LayerProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/67> {
  public:
   LayerProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -64740,6 +65399,8 @@ class LayerProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=
   ::protozero::ConstBytes box_shadow_settings() const { return at<65>().as_bytes(); }
   bool has_border_settings() const { return at<66>().valid(); }
   ::protozero::ConstBytes border_settings() const { return at<66>().as_bytes(); }
+  bool has_effective_radii() const { return at<67>().valid(); }
+  ::protozero::ConstBytes effective_radii() const { return at<67>().as_bytes(); }
 };
 
 class LayerProto : public ::protozero::Message {
@@ -64812,6 +65473,7 @@ class LayerProto : public ::protozero::Message {
     kSystemContentPriorityFieldNumber = 64,
     kBoxShadowSettingsFieldNumber = 65,
     kBorderSettingsFieldNumber = 66,
+    kEffectiveRadiiFieldNumber = 67,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.LayerProto"; }
 
@@ -65892,9 +66554,23 @@ class LayerProto : public ::protozero::Message {
     return BeginNestedMessage<T>(66);
   }
 
+
+  using FieldMetadata_EffectiveRadii =
+    ::protozero::proto_utils::FieldMetadata<
+      67,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      CornerRadiiProto,
+      LayerProto>;
+
+  static constexpr FieldMetadata_EffectiveRadii kEffectiveRadii{};
+  template <typename T = CornerRadiiProto> T* set_effective_radii() {
+    return BeginNestedMessage<T>(67);
+  }
+
 };
 
-class LayerProto_MetadataEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerProto_MetadataEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   LayerProto_MetadataEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerProto_MetadataEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -65958,7 +66634,7 @@ class LayerProto_MetadataEntry : public ::protozero::Message {
   }
 };
 
-class DisplayProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DisplayProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   DisplayProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DisplayProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -66157,7 +66833,7 @@ class DisplayProto : public ::protozero::Message {
   }
 };
 
-class LayersProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class LayersProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   LayersProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayersProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -66190,7 +66866,7 @@ class LayersProto : public ::protozero::Message {
 
 };
 
-class LayersSnapshotProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class LayersSnapshotProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   LayersSnapshotProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayersSnapshotProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -66378,7 +67054,7 @@ class LayersSnapshotProto : public ::protozero::Message {
   }
 };
 
-class LayersTraceFileProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class LayersTraceFileProto_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   LayersTraceFileProto_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayersTraceFileProto_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -67003,7 +67679,7 @@ const char* TransactionTraceFile_MagicNumber_Name(::perfetto::protos::pbzero::Tr
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class DisplayState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DisplayState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   DisplayState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DisplayState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -67211,7 +67887,7 @@ class DisplayState : public ::protozero::Message {
   }
 };
 
-class LayerState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/49, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class LayerState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/49> {
  public:
   LayerState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -68284,7 +68960,7 @@ class LayerState : public ::protozero::Message {
 
 };
 
-class LayerState_WindowInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerState_WindowInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   LayerState_WindowInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerState_WindowInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -68540,7 +69216,7 @@ class LayerState_WindowInfo : public ::protozero::Message {
   }
 };
 
-class LayerState_BufferData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerState_BufferData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   LayerState_BufferData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerState_BufferData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -68753,7 +69429,7 @@ class LayerState_BufferData : public ::protozero::Message {
   }
 };
 
-class LayerState_Color3_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerState_Color3_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   LayerState_Color3_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerState_Color3_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -68832,7 +69508,7 @@ class LayerState_Color3 : public ::protozero::Message {
   }
 };
 
-class LayerState_CornerRadii_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerState_CornerRadii_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   LayerState_CornerRadii_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerState_CornerRadii_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -68932,7 +69608,7 @@ class LayerState_CornerRadii : public ::protozero::Message {
   }
 };
 
-class LayerState_Matrix22_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerState_Matrix22_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   LayerState_Matrix22_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerState_Matrix22_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -69032,7 +69708,7 @@ class LayerState_Matrix22 : public ::protozero::Message {
   }
 };
 
-class TransactionState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TransactionState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   TransactionState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TransactionState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -69267,7 +69943,7 @@ class TransactionState : public ::protozero::Message {
 
 };
 
-class TransactionBarrier_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TransactionBarrier_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TransactionBarrier_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TransactionBarrier_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -69331,7 +70007,7 @@ class TransactionBarrier : public ::protozero::Message {
   }
 };
 
-class Transform_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Transform_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Transform_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Transform_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -69473,7 +70149,7 @@ class Transform : public ::protozero::Message {
   }
 };
 
-class LayerCreationArgs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LayerCreationArgs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   LayerCreationArgs_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LayerCreationArgs_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -69642,7 +70318,7 @@ class LayerCreationArgs : public ::protozero::Message {
   }
 };
 
-class DisplayInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DisplayInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   DisplayInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DisplayInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -69902,7 +70578,7 @@ class DisplayInfo : public ::protozero::Message {
   }
 };
 
-class TransactionTraceEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TransactionTraceEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   TransactionTraceEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TransactionTraceEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70112,7 +70788,7 @@ class TransactionTraceEntry : public ::protozero::Message {
 
 };
 
-class TransactionTraceFile_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TransactionTraceFile_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TransactionTraceFile_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TransactionTraceFile_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70248,7 +70924,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidGameInterventionList_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidGameInterventionList_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AndroidGameInterventionList_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidGameInterventionList_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70325,7 +71001,7 @@ class AndroidGameInterventionList : public ::protozero::Message {
   }
 };
 
-class AndroidGameInterventionList_GamePackageInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidGameInterventionList_GamePackageInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidGameInterventionList_GamePackageInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidGameInterventionList_GamePackageInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70427,7 +71103,7 @@ class AndroidGameInterventionList_GamePackageInfo : public ::protozero::Message 
 
 };
 
-class AndroidGameInterventionList_GameModeInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidGameInterventionList_GameModeInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidGameInterventionList_GameModeInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidGameInterventionList_GameModeInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70562,7 +71238,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidLogPacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidLogPacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AndroidLogPacket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidLogPacket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70614,7 +71290,7 @@ class AndroidLogPacket : public ::protozero::Message {
 
 };
 
-class AndroidLogPacket_Stats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidLogPacket_Stats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AndroidLogPacket_Stats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidLogPacket_Stats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70693,7 +71369,7 @@ class AndroidLogPacket_Stats : public ::protozero::Message {
   }
 };
 
-class AndroidLogPacket_LogEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidLogPacket_LogEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   AndroidLogPacket_LogEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidLogPacket_LogEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -70907,7 +71583,7 @@ class AndroidLogPacket_LogEvent : public ::protozero::Message {
 
 };
 
-class AndroidLogPacket_LogEvent_Arg_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidLogPacket_LogEvent_Arg_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidLogPacket_LogEvent_Arg_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidLogPacket_LogEvent_Arg_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71050,7 +71726,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidSystemProperty_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidSystemProperty_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   AndroidSystemProperty_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidSystemProperty_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71084,7 +71760,7 @@ class AndroidSystemProperty : public ::protozero::Message {
 
 };
 
-class AndroidSystemProperty_PropertyValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidSystemProperty_PropertyValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AndroidSystemProperty_PropertyValue_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidSystemProperty_PropertyValue_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71185,7 +71861,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AppWakelockBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AppWakelockBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AppWakelockBundle_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AppWakelockBundle_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71273,7 +71949,7 @@ class AppWakelockBundle : public ::protozero::Message {
   }
 };
 
-class AppWakelockInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AppWakelockInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   AppWakelockInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AppWakelockInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71497,7 +72173,7 @@ const char* BluetoothTracePacketType_Name(::perfetto::protos::pbzero::BluetoothT
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class BluetoothTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BluetoothTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   BluetoothTraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BluetoothTraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71760,7 +72436,7 @@ const char* AndroidCameraFrameEvent_CaptureResultStatus_Name(::perfetto::protos:
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class AndroidCameraSessionStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidCameraSessionStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AndroidCameraSessionStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidCameraSessionStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71815,7 +72491,7 @@ class AndroidCameraSessionStats : public ::protozero::Message {
 
 };
 
-class AndroidCameraSessionStats_CameraGraph_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidCameraSessionStats_CameraGraph_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AndroidCameraSessionStats_CameraGraph_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidCameraSessionStats_CameraGraph_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -71867,7 +72543,7 @@ class AndroidCameraSessionStats_CameraGraph : public ::protozero::Message {
 
 };
 
-class AndroidCameraSessionStats_CameraGraph_CameraEdge_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidCameraSessionStats_CameraGraph_CameraEdge_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   AndroidCameraSessionStats_CameraGraph_CameraEdge_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidCameraSessionStats_CameraGraph_CameraEdge_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -72015,7 +72691,7 @@ class AndroidCameraSessionStats_CameraGraph_CameraEdge : public ::protozero::Mes
   }
 };
 
-class AndroidCameraSessionStats_CameraGraph_CameraNode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidCameraSessionStats_CameraGraph_CameraNode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   AndroidCameraSessionStats_CameraGraph_CameraNode_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidCameraSessionStats_CameraGraph_CameraNode_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -72142,7 +72818,7 @@ class AndroidCameraSessionStats_CameraGraph_CameraNode : public ::protozero::Mes
   }
 };
 
-class AndroidCameraFrameEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidCameraFrameEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16> {
  public:
   AndroidCameraFrameEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidCameraFrameEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -72508,7 +73184,7 @@ class AndroidCameraFrameEvent : public ::protozero::Message {
   }
 };
 
-class AndroidCameraFrameEvent_CameraNodeProcessingDetails_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidCameraFrameEvent_CameraNodeProcessingDetails_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidCameraFrameEvent_CameraNodeProcessingDetails_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidCameraFrameEvent_CameraNodeProcessingDetails_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -72632,7 +73308,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CpuPerUidData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuPerUidData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CpuPerUidData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuPerUidData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -72764,13 +73440,16 @@ enum JankType : int32_t {
   JANK_UNKNOWN = 256,
   JANK_SF_STUFFING = 512,
   JANK_DROPPED = 1024,
+  JANK_NON_ANIMATING = 2048,
+  JANK_APP_RESYNCED_JITTER = 4096,
+  JANK_DISPLAY_NOT_ON = 8192,
 };
 } // namespace perfetto_pbzero_enum_FrameTimelineEvent
 using FrameTimelineEvent_JankType = perfetto_pbzero_enum_FrameTimelineEvent::JankType;
 
 
 constexpr FrameTimelineEvent_JankType FrameTimelineEvent_JankType_MIN = FrameTimelineEvent_JankType::JANK_UNSPECIFIED;
-constexpr FrameTimelineEvent_JankType FrameTimelineEvent_JankType_MAX = FrameTimelineEvent_JankType::JANK_DROPPED;
+constexpr FrameTimelineEvent_JankType FrameTimelineEvent_JankType_MAX = FrameTimelineEvent_JankType::JANK_DISPLAY_NOT_ON;
 
 
 PERFETTO_PROTOZERO_CONSTEXPR14_OR_INLINE
@@ -72811,6 +73490,15 @@ const char* FrameTimelineEvent_JankType_Name(::perfetto::protos::pbzero::FrameTi
 
   case ::perfetto::protos::pbzero::FrameTimelineEvent_JankType::JANK_DROPPED:
     return "JANK_DROPPED";
+
+  case ::perfetto::protos::pbzero::FrameTimelineEvent_JankType::JANK_NON_ANIMATING:
+    return "JANK_NON_ANIMATING";
+
+  case ::perfetto::protos::pbzero::FrameTimelineEvent_JankType::JANK_APP_RESYNCED_JITTER:
+    return "JANK_APP_RESYNCED_JITTER";
+
+  case ::perfetto::protos::pbzero::FrameTimelineEvent_JankType::JANK_DISPLAY_NOT_ON:
+    return "JANK_DISPLAY_NOT_ON";
   }
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
@@ -72922,7 +73610,7 @@ const char* FrameTimelineEvent_PredictionType_Name(::perfetto::protos::pbzero::F
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class FrameTimelineEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrameTimelineEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   FrameTimelineEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrameTimelineEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -72988,6 +73676,9 @@ class FrameTimelineEvent : public ::protozero::Message {
   static inline const JankType JANK_UNKNOWN = JankType::JANK_UNKNOWN;
   static inline const JankType JANK_SF_STUFFING = JankType::JANK_SF_STUFFING;
   static inline const JankType JANK_DROPPED = JankType::JANK_DROPPED;
+  static inline const JankType JANK_NON_ANIMATING = JankType::JANK_NON_ANIMATING;
+  static inline const JankType JANK_APP_RESYNCED_JITTER = JankType::JANK_APP_RESYNCED_JITTER;
+  static inline const JankType JANK_DISPLAY_NOT_ON = JankType::JANK_DISPLAY_NOT_ON;
   static inline const JankSeverityType SEVERITY_UNKNOWN = JankSeverityType::SEVERITY_UNKNOWN;
   static inline const JankSeverityType SEVERITY_NONE = JankSeverityType::SEVERITY_NONE;
   static inline const JankSeverityType SEVERITY_PARTIAL = JankSeverityType::SEVERITY_PARTIAL;
@@ -73074,7 +73765,7 @@ class FrameTimelineEvent : public ::protozero::Message {
 
 };
 
-class FrameTimelineEvent_FrameEnd_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrameTimelineEvent_FrameEnd_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   FrameTimelineEvent_FrameEnd_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrameTimelineEvent_FrameEnd_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -73111,7 +73802,7 @@ class FrameTimelineEvent_FrameEnd : public ::protozero::Message {
   }
 };
 
-class FrameTimelineEvent_ActualDisplayFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrameTimelineEvent_ActualDisplayFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   FrameTimelineEvent_ActualDisplayFrameStart_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrameTimelineEvent_ActualDisplayFrameStart_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -73134,6 +73825,14 @@ class FrameTimelineEvent_ActualDisplayFrameStart_Decoder : public ::protozero::T
   int32_t prediction_type() const { return at<8>().as_int32(); }
   bool has_jank_severity_type() const { return at<9>().valid(); }
   int32_t jank_severity_type() const { return at<9>().as_int32(); }
+  bool has_present_delay_millis() const { return at<10>().valid(); }
+  float present_delay_millis() const { return at<10>().as_float(); }
+  bool has_jank_severity_score() const { return at<11>().valid(); }
+  float jank_severity_score() const { return at<11>().as_float(); }
+  bool has_jank_type_experimental() const { return at<12>().valid(); }
+  int32_t jank_type_experimental() const { return at<12>().as_int32(); }
+  bool has_present_type_experimental() const { return at<13>().valid(); }
+  int32_t present_type_experimental() const { return at<13>().as_int32(); }
 };
 
 class FrameTimelineEvent_ActualDisplayFrameStart : public ::protozero::Message {
@@ -73149,6 +73848,10 @@ class FrameTimelineEvent_ActualDisplayFrameStart : public ::protozero::Message {
     kJankTypeFieldNumber = 7,
     kPredictionTypeFieldNumber = 8,
     kJankSeverityTypeFieldNumber = 9,
+    kPresentDelayMillisFieldNumber = 10,
+    kJankSeverityScoreFieldNumber = 11,
+    kJankTypeExperimentalFieldNumber = 12,
+    kPresentTypeExperimentalFieldNumber = 13,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.FrameTimelineEvent.ActualDisplayFrameStart"; }
 
@@ -73314,9 +74017,81 @@ class FrameTimelineEvent_ActualDisplayFrameStart : public ::protozero::Message {
       ::protozero::proto_utils::ProtoSchemaType::kEnum>
         ::Append(*this, field_id, value);
   }
+
+  using FieldMetadata_PresentDelayMillis =
+    ::protozero::proto_utils::FieldMetadata<
+      10,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      FrameTimelineEvent_ActualDisplayFrameStart>;
+
+  static constexpr FieldMetadata_PresentDelayMillis kPresentDelayMillis{};
+  void set_present_delay_millis(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_PresentDelayMillis::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_JankSeverityScore =
+    ::protozero::proto_utils::FieldMetadata<
+      11,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      FrameTimelineEvent_ActualDisplayFrameStart>;
+
+  static constexpr FieldMetadata_JankSeverityScore kJankSeverityScore{};
+  void set_jank_severity_score(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_JankSeverityScore::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_JankTypeExperimental =
+    ::protozero::proto_utils::FieldMetadata<
+      12,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kInt32,
+      int32_t,
+      FrameTimelineEvent_ActualDisplayFrameStart>;
+
+  static constexpr FieldMetadata_JankTypeExperimental kJankTypeExperimental{};
+  void set_jank_type_experimental(int32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_JankTypeExperimental::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kInt32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_PresentTypeExperimental =
+    ::protozero::proto_utils::FieldMetadata<
+      13,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kEnum,
+      FrameTimelineEvent_PresentType,
+      FrameTimelineEvent_ActualDisplayFrameStart>;
+
+  static constexpr FieldMetadata_PresentTypeExperimental kPresentTypeExperimental{};
+  void set_present_type_experimental(FrameTimelineEvent_PresentType value) {
+    static constexpr uint32_t field_id = FieldMetadata_PresentTypeExperimental::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kEnum>
+        ::Append(*this, field_id, value);
+  }
 };
 
-class FrameTimelineEvent_ExpectedDisplayFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrameTimelineEvent_ExpectedDisplayFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   FrameTimelineEvent_ExpectedDisplayFrameStart_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrameTimelineEvent_ExpectedDisplayFrameStart_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -73395,7 +74170,7 @@ class FrameTimelineEvent_ExpectedDisplayFrameStart : public ::protozero::Message
   }
 };
 
-class FrameTimelineEvent_ActualSurfaceFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrameTimelineEvent_ActualSurfaceFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   FrameTimelineEvent_ActualSurfaceFrameStart_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrameTimelineEvent_ActualSurfaceFrameStart_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -73424,6 +74199,16 @@ class FrameTimelineEvent_ActualSurfaceFrameStart_Decoder : public ::protozero::T
   bool is_buffer() const { return at<11>().as_bool(); }
   bool has_jank_severity_type() const { return at<12>().valid(); }
   int32_t jank_severity_type() const { return at<12>().as_int32(); }
+  bool has_present_delay_millis() const { return at<13>().valid(); }
+  float present_delay_millis() const { return at<13>().as_float(); }
+  bool has_vsync_resynced_jitter_millis() const { return at<14>().valid(); }
+  float vsync_resynced_jitter_millis() const { return at<14>().as_float(); }
+  bool has_jank_severity_score() const { return at<15>().valid(); }
+  float jank_severity_score() const { return at<15>().as_float(); }
+  bool has_jank_type_experimental() const { return at<16>().valid(); }
+  int32_t jank_type_experimental() const { return at<16>().as_int32(); }
+  bool has_present_type_experimental() const { return at<17>().valid(); }
+  int32_t present_type_experimental() const { return at<17>().as_int32(); }
 };
 
 class FrameTimelineEvent_ActualSurfaceFrameStart : public ::protozero::Message {
@@ -73442,6 +74227,11 @@ class FrameTimelineEvent_ActualSurfaceFrameStart : public ::protozero::Message {
     kPredictionTypeFieldNumber = 10,
     kIsBufferFieldNumber = 11,
     kJankSeverityTypeFieldNumber = 12,
+    kPresentDelayMillisFieldNumber = 13,
+    kVsyncResyncedJitterMillisFieldNumber = 14,
+    kJankSeverityScoreFieldNumber = 15,
+    kJankTypeExperimentalFieldNumber = 16,
+    kPresentTypeExperimentalFieldNumber = 17,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.FrameTimelineEvent.ActualSurfaceFrameStart"; }
 
@@ -73667,9 +74457,99 @@ class FrameTimelineEvent_ActualSurfaceFrameStart : public ::protozero::Message {
       ::protozero::proto_utils::ProtoSchemaType::kEnum>
         ::Append(*this, field_id, value);
   }
+
+  using FieldMetadata_PresentDelayMillis =
+    ::protozero::proto_utils::FieldMetadata<
+      13,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      FrameTimelineEvent_ActualSurfaceFrameStart>;
+
+  static constexpr FieldMetadata_PresentDelayMillis kPresentDelayMillis{};
+  void set_present_delay_millis(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_PresentDelayMillis::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_VsyncResyncedJitterMillis =
+    ::protozero::proto_utils::FieldMetadata<
+      14,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      FrameTimelineEvent_ActualSurfaceFrameStart>;
+
+  static constexpr FieldMetadata_VsyncResyncedJitterMillis kVsyncResyncedJitterMillis{};
+  void set_vsync_resynced_jitter_millis(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_VsyncResyncedJitterMillis::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_JankSeverityScore =
+    ::protozero::proto_utils::FieldMetadata<
+      15,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kFloat,
+      float,
+      FrameTimelineEvent_ActualSurfaceFrameStart>;
+
+  static constexpr FieldMetadata_JankSeverityScore kJankSeverityScore{};
+  void set_jank_severity_score(float value) {
+    static constexpr uint32_t field_id = FieldMetadata_JankSeverityScore::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kFloat>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_JankTypeExperimental =
+    ::protozero::proto_utils::FieldMetadata<
+      16,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kInt32,
+      int32_t,
+      FrameTimelineEvent_ActualSurfaceFrameStart>;
+
+  static constexpr FieldMetadata_JankTypeExperimental kJankTypeExperimental{};
+  void set_jank_type_experimental(int32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_JankTypeExperimental::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kInt32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_PresentTypeExperimental =
+    ::protozero::proto_utils::FieldMetadata<
+      17,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kEnum,
+      FrameTimelineEvent_PresentType,
+      FrameTimelineEvent_ActualSurfaceFrameStart>;
+
+  static constexpr FieldMetadata_PresentTypeExperimental kPresentTypeExperimental{};
+  void set_present_type_experimental(FrameTimelineEvent_PresentType value) {
+    static constexpr uint32_t field_id = FieldMetadata_PresentTypeExperimental::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kEnum>
+        ::Append(*this, field_id, value);
+  }
 };
 
-class FrameTimelineEvent_ExpectedSurfaceFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FrameTimelineEvent_ExpectedSurfaceFrameStart_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   FrameTimelineEvent_ExpectedSurfaceFrameStart_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FrameTimelineEvent_ExpectedSurfaceFrameStart_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -73820,7 +74700,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GpuMemTotalEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuMemTotalEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuMemTotalEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuMemTotalEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74007,7 +74887,7 @@ const char* GraphicsFrameEvent_BufferEventType_Name(::perfetto::protos::pbzero::
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class GraphicsFrameEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GraphicsFrameEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   GraphicsFrameEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GraphicsFrameEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74060,7 +74940,7 @@ class GraphicsFrameEvent : public ::protozero::Message {
 
 };
 
-class GraphicsFrameEvent_BufferEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GraphicsFrameEvent_BufferEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   GraphicsFrameEvent_BufferEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GraphicsFrameEvent_BufferEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74211,7 +75091,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InitialDisplayState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InitialDisplayState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   InitialDisplayState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InitialDisplayState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74333,7 +75213,7 @@ const char* KernelWakelockData_Wakelock_Type_Name(::perfetto::protos::pbzero::Ke
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class KernelWakelockData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class KernelWakelockData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KernelWakelockData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KernelWakelockData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74422,7 +75302,7 @@ class KernelWakelockData : public ::protozero::Message {
   }
 };
 
-class KernelWakelockData_Wakelock_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KernelWakelockData_Wakelock_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KernelWakelockData_Wakelock_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KernelWakelockData_Wakelock_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74572,7 +75452,7 @@ const char* TrafficDirection_Name(::perfetto::protos::pbzero::TrafficDirection v
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class NetworkPacketContext_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NetworkPacketContext_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   NetworkPacketContext_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NetworkPacketContext_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74626,7 +75506,7 @@ class NetworkPacketContext : public ::protozero::Message {
 
 };
 
-class NetworkPacketBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NetworkPacketBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   NetworkPacketBundle_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NetworkPacketBundle_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -74777,7 +75657,7 @@ class NetworkPacketBundle : public ::protozero::Message {
   }
 };
 
-class NetworkPacketEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NetworkPacketEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   NetworkPacketEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NetworkPacketEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75061,7 +75941,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PackagesList_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PackagesList_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   PackagesList_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PackagesList_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75137,7 +76017,7 @@ class PackagesList : public ::protozero::Message {
   }
 };
 
-class PackagesList_PackageInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PackagesList_PackageInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   PackagesList_PackageInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PackagesList_PackageInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75288,7 +76168,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PixelModemTokenDatabase_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PixelModemTokenDatabase_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   PixelModemTokenDatabase_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PixelModemTokenDatabase_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75331,7 +76211,7 @@ class PixelModemTokenDatabase : public ::protozero::Message {
   }
 };
 
-class PixelModemEvents_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PixelModemEvents_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PixelModemEvents_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PixelModemEvents_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75419,7 +76299,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeBenchmarkMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeBenchmarkMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   ChromeBenchmarkMetadata_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeBenchmarkMetadata_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75771,7 +76651,7 @@ const char* BackgroundTracingMetadata_TriggerRule_NamedRule_EventType_Name(::per
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class BackgroundTracingMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class BackgroundTracingMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   BackgroundTracingMetadata_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BackgroundTracingMetadata_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75843,7 +76723,7 @@ class BackgroundTracingMetadata : public ::protozero::Message {
   }
 };
 
-class BackgroundTracingMetadata_TriggerRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BackgroundTracingMetadata_TriggerRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   BackgroundTracingMetadata_TriggerRule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BackgroundTracingMetadata_TriggerRule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -75945,7 +76825,7 @@ class BackgroundTracingMetadata_TriggerRule : public ::protozero::Message {
   }
 };
 
-class BackgroundTracingMetadata_TriggerRule_NamedRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BackgroundTracingMetadata_TriggerRule_NamedRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   BackgroundTracingMetadata_TriggerRule_NamedRule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BackgroundTracingMetadata_TriggerRule_NamedRule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76015,7 +76895,7 @@ class BackgroundTracingMetadata_TriggerRule_NamedRule : public ::protozero::Mess
   }
 };
 
-class BackgroundTracingMetadata_TriggerRule_HistogramRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BackgroundTracingMetadata_TriggerRule_HistogramRule_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   BackgroundTracingMetadata_TriggerRule_HistogramRule_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BackgroundTracingMetadata_TriggerRule_HistogramRule_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76094,7 +76974,7 @@ class BackgroundTracingMetadata_TriggerRule_HistogramRule : public ::protozero::
   }
 };
 
-class ChromeMetadataPacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeMetadataPacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ChromeMetadataPacket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeMetadataPacket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76193,7 +77073,7 @@ class ChromeMetadataPacket : public ::protozero::Message {
 
 };
 
-class ChromeMetadataPacket_FinchHash_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeMetadataPacket_FinchHash_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeMetadataPacket_FinchHash_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeMetadataPacket_FinchHash_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76345,7 +77225,7 @@ const char* ChromeTracedValue_NestedType_Name(::perfetto::protos::pbzero::Chrome
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeEventBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeEventBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   ChromeEventBundle_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeEventBundle_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76456,7 +77336,7 @@ class ChromeEventBundle : public ::protozero::Message {
 
 };
 
-class ChromeLegacyJsonTrace_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeLegacyJsonTrace_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeLegacyJsonTrace_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeLegacyJsonTrace_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76527,7 +77407,7 @@ class ChromeLegacyJsonTrace : public ::protozero::Message {
   }
 };
 
-class ChromeMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeMetadata_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   ChromeMetadata_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeMetadata_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -76666,7 +77546,7 @@ class ChromeMetadata : public ::protozero::Message {
   }
 };
 
-class ChromeTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16> {
  public:
   ChromeTraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeTraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -77033,7 +77913,7 @@ class ChromeTraceEvent : public ::protozero::Message {
   }
 };
 
-class ChromeTraceEvent_Arg_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeTraceEvent_Arg_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   ChromeTraceEvent_Arg_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeTraceEvent_Arg_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -77273,7 +78153,7 @@ class ChromeTraceEvent_Arg : public ::protozero::Message {
   }
 };
 
-class ChromeStringTableEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeStringTableEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeStringTableEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeStringTableEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -77337,7 +78217,7 @@ class ChromeStringTableEntry : public ::protozero::Message {
   }
 };
 
-class ChromeTracedValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeTracedValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   ChromeTracedValue_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeTracedValue_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -77556,7 +78436,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeTrigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeTrigger_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ChromeTrigger_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeTrigger_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -77994,7 +78874,7 @@ const char* InternedV8JsScript_Type_Name(::perfetto::protos::pbzero::InternedV8J
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class V8CodeDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8CodeDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   V8CodeDefaults_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8CodeDefaults_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -78031,7 +78911,7 @@ class V8CodeDefaults : public ::protozero::Message {
   }
 };
 
-class V8CodeMove_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8CodeMove_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   V8CodeMove_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8CodeMove_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -78206,7 +79086,7 @@ class V8CodeMove : public ::protozero::Message {
   }
 };
 
-class V8RegExpCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8RegExpCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   V8RegExpCode_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8RegExpCode_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -78350,7 +79230,7 @@ class V8RegExpCode : public ::protozero::Message {
   }
 };
 
-class V8WasmCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8WasmCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   V8WasmCode_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8WasmCode_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -78575,7 +79455,7 @@ class V8WasmCode : public ::protozero::Message {
   }
 };
 
-class V8InternalCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8InternalCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   V8InternalCode_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8InternalCode_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -78786,7 +79666,7 @@ class V8InternalCode : public ::protozero::Message {
   }
 };
 
-class V8JsCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8JsCode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   V8JsCode_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8JsCode_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -78993,7 +79873,7 @@ class V8JsCode : public ::protozero::Message {
   }
 };
 
-class InternedV8Isolate_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedV8Isolate_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   InternedV8Isolate_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedV8Isolate_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -79132,7 +80012,7 @@ class InternedV8Isolate : public ::protozero::Message {
   }
 };
 
-class InternedV8Isolate_CodeRange_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedV8Isolate_CodeRange_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   InternedV8Isolate_CodeRange_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedV8Isolate_CodeRange_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -79232,7 +80112,7 @@ class InternedV8Isolate_CodeRange : public ::protozero::Message {
   }
 };
 
-class InternedV8JsFunction_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedV8JsFunction_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   InternedV8JsFunction_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedV8JsFunction_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -79449,7 +80329,7 @@ class InternedV8JsFunction : public ::protozero::Message {
   }
 };
 
-class InternedV8WasmScript_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedV8WasmScript_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   InternedV8WasmScript_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedV8WasmScript_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -79561,7 +80441,7 @@ class InternedV8WasmScript : public ::protozero::Message {
   }
 };
 
-class InternedV8JsScript_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedV8JsScript_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   InternedV8JsScript_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedV8JsScript_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -79686,7 +80566,7 @@ class InternedV8JsScript : public ::protozero::Message {
 
 };
 
-class InternedV8String_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedV8String_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   InternedV8String_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedV8String_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -79804,7 +80684,7 @@ class InternedV8String : public ::protozero::Message {
   }
 };
 
-class V8String_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V8String_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   V8String_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V8String_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -80256,7 +81136,850 @@ const char* CSwitchEtwEvent_OldThreadState_Name(::perfetto::protos::pbzero::CSwi
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class MemInfoEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FileIoOpEndEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
+ public:
+  FileIoOpEndEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FileIoOpEndEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FileIoOpEndEtwEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_irp_ptr() const { return at<1>().valid(); }
+  uint64_t irp_ptr() const { return at<1>().as_uint64(); }
+  bool has_extra_info() const { return at<2>().valid(); }
+  uint64_t extra_info() const { return at<2>().as_uint64(); }
+  bool has_nt_status() const { return at<3>().valid(); }
+  uint32_t nt_status() const { return at<3>().as_uint32(); }
+};
+
+class FileIoOpEndEtwEvent : public ::protozero::Message {
+ public:
+  using Decoder = FileIoOpEndEtwEvent_Decoder;
+  enum : int32_t {
+    kIrpPtrFieldNumber = 1,
+    kExtraInfoFieldNumber = 2,
+    kNtStatusFieldNumber = 3,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FileIoOpEndEtwEvent"; }
+
+
+  using FieldMetadata_IrpPtr =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoOpEndEtwEvent>;
+
+  static constexpr FieldMetadata_IrpPtr kIrpPtr{};
+  void set_irp_ptr(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IrpPtr::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_ExtraInfo =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoOpEndEtwEvent>;
+
+  static constexpr FieldMetadata_ExtraInfo kExtraInfo{};
+  void set_extra_info(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_ExtraInfo::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_NtStatus =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoOpEndEtwEvent>;
+
+  static constexpr FieldMetadata_NtStatus kNtStatus{};
+  void set_nt_status(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_NtStatus::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class FileIoSimpleOpEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
+ public:
+  FileIoSimpleOpEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FileIoSimpleOpEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FileIoSimpleOpEtwEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_irp_ptr() const { return at<1>().valid(); }
+  uint64_t irp_ptr() const { return at<1>().as_uint64(); }
+  bool has_file_object() const { return at<2>().valid(); }
+  uint64_t file_object() const { return at<2>().as_uint64(); }
+  bool has_file_key() const { return at<3>().valid(); }
+  uint64_t file_key() const { return at<3>().as_uint64(); }
+  bool has_ttid() const { return at<4>().valid(); }
+  uint32_t ttid() const { return at<4>().as_uint32(); }
+};
+
+class FileIoSimpleOpEtwEvent : public ::protozero::Message {
+ public:
+  using Decoder = FileIoSimpleOpEtwEvent_Decoder;
+  enum : int32_t {
+    kIrpPtrFieldNumber = 1,
+    kFileObjectFieldNumber = 2,
+    kFileKeyFieldNumber = 3,
+    kTtidFieldNumber = 4,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FileIoSimpleOpEtwEvent"; }
+
+
+  using FieldMetadata_IrpPtr =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoSimpleOpEtwEvent>;
+
+  static constexpr FieldMetadata_IrpPtr kIrpPtr{};
+  void set_irp_ptr(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IrpPtr::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileObject =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoSimpleOpEtwEvent>;
+
+  static constexpr FieldMetadata_FileObject kFileObject{};
+  void set_file_object(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileObject::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileKey =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoSimpleOpEtwEvent>;
+
+  static constexpr FieldMetadata_FileKey kFileKey{};
+  void set_file_key(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileKey::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ttid =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoSimpleOpEtwEvent>;
+
+  static constexpr FieldMetadata_Ttid kTtid{};
+  void set_ttid(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ttid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class FileIoReadWriteEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
+ public:
+  FileIoReadWriteEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FileIoReadWriteEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FileIoReadWriteEtwEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_offset() const { return at<1>().valid(); }
+  uint64_t offset() const { return at<1>().as_uint64(); }
+  bool has_irp_ptr() const { return at<2>().valid(); }
+  uint64_t irp_ptr() const { return at<2>().as_uint64(); }
+  bool has_file_object() const { return at<3>().valid(); }
+  uint64_t file_object() const { return at<3>().as_uint64(); }
+  bool has_file_key() const { return at<4>().valid(); }
+  uint64_t file_key() const { return at<4>().as_uint64(); }
+  bool has_ttid() const { return at<5>().valid(); }
+  uint32_t ttid() const { return at<5>().as_uint32(); }
+  bool has_io_size() const { return at<6>().valid(); }
+  uint32_t io_size() const { return at<6>().as_uint32(); }
+  bool has_io_flags() const { return at<7>().valid(); }
+  uint32_t io_flags() const { return at<7>().as_uint32(); }
+};
+
+class FileIoReadWriteEtwEvent : public ::protozero::Message {
+ public:
+  using Decoder = FileIoReadWriteEtwEvent_Decoder;
+  enum : int32_t {
+    kOffsetFieldNumber = 1,
+    kIrpPtrFieldNumber = 2,
+    kFileObjectFieldNumber = 3,
+    kFileKeyFieldNumber = 4,
+    kTtidFieldNumber = 5,
+    kIoSizeFieldNumber = 6,
+    kIoFlagsFieldNumber = 7,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FileIoReadWriteEtwEvent"; }
+
+
+  using FieldMetadata_Offset =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_Offset kOffset{};
+  void set_offset(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Offset::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_IrpPtr =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_IrpPtr kIrpPtr{};
+  void set_irp_ptr(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IrpPtr::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileObject =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_FileObject kFileObject{};
+  void set_file_object(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileObject::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileKey =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_FileKey kFileKey{};
+  void set_file_key(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileKey::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ttid =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_Ttid kTtid{};
+  void set_ttid(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ttid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_IoSize =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_IoSize kIoSize{};
+  void set_io_size(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IoSize::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_IoFlags =
+    ::protozero::proto_utils::FieldMetadata<
+      7,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoReadWriteEtwEvent>;
+
+  static constexpr FieldMetadata_IoFlags kIoFlags{};
+  void set_io_flags(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IoFlags::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class FileIoInfoEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
+ public:
+  FileIoInfoEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FileIoInfoEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FileIoInfoEtwEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_irp_ptr() const { return at<1>().valid(); }
+  uint64_t irp_ptr() const { return at<1>().as_uint64(); }
+  bool has_file_object() const { return at<2>().valid(); }
+  uint64_t file_object() const { return at<2>().as_uint64(); }
+  bool has_file_key() const { return at<3>().valid(); }
+  uint64_t file_key() const { return at<3>().as_uint64(); }
+  bool has_extra_info() const { return at<4>().valid(); }
+  uint64_t extra_info() const { return at<4>().as_uint64(); }
+  bool has_ttid() const { return at<5>().valid(); }
+  uint32_t ttid() const { return at<5>().as_uint32(); }
+  bool has_info_class() const { return at<6>().valid(); }
+  uint32_t info_class() const { return at<6>().as_uint32(); }
+};
+
+class FileIoInfoEtwEvent : public ::protozero::Message {
+ public:
+  using Decoder = FileIoInfoEtwEvent_Decoder;
+  enum : int32_t {
+    kIrpPtrFieldNumber = 1,
+    kFileObjectFieldNumber = 2,
+    kFileKeyFieldNumber = 3,
+    kExtraInfoFieldNumber = 4,
+    kTtidFieldNumber = 5,
+    kInfoClassFieldNumber = 6,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FileIoInfoEtwEvent"; }
+
+
+  using FieldMetadata_IrpPtr =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoInfoEtwEvent>;
+
+  static constexpr FieldMetadata_IrpPtr kIrpPtr{};
+  void set_irp_ptr(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IrpPtr::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileObject =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoInfoEtwEvent>;
+
+  static constexpr FieldMetadata_FileObject kFileObject{};
+  void set_file_object(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileObject::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileKey =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoInfoEtwEvent>;
+
+  static constexpr FieldMetadata_FileKey kFileKey{};
+  void set_file_key(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileKey::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_ExtraInfo =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoInfoEtwEvent>;
+
+  static constexpr FieldMetadata_ExtraInfo kExtraInfo{};
+  void set_extra_info(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_ExtraInfo::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ttid =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoInfoEtwEvent>;
+
+  static constexpr FieldMetadata_Ttid kTtid{};
+  void set_ttid(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ttid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_InfoClass =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoInfoEtwEvent>;
+
+  static constexpr FieldMetadata_InfoClass kInfoClass{};
+  void set_info_class(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_InfoClass::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class FileIoDirEnumEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
+ public:
+  FileIoDirEnumEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FileIoDirEnumEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FileIoDirEnumEtwEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_irp_ptr() const { return at<1>().valid(); }
+  uint64_t irp_ptr() const { return at<1>().as_uint64(); }
+  bool has_file_object() const { return at<2>().valid(); }
+  uint64_t file_object() const { return at<2>().as_uint64(); }
+  bool has_file_key() const { return at<3>().valid(); }
+  uint64_t file_key() const { return at<3>().as_uint64(); }
+  bool has_ttid() const { return at<4>().valid(); }
+  uint32_t ttid() const { return at<4>().as_uint32(); }
+  bool has_length() const { return at<5>().valid(); }
+  uint32_t length() const { return at<5>().as_uint32(); }
+  bool has_info_class() const { return at<6>().valid(); }
+  uint32_t info_class() const { return at<6>().as_uint32(); }
+  bool has_file_index() const { return at<7>().valid(); }
+  uint32_t file_index() const { return at<7>().as_uint32(); }
+  bool has_file_name() const { return at<8>().valid(); }
+  ::protozero::ConstChars file_name() const { return at<8>().as_string(); }
+};
+
+class FileIoDirEnumEtwEvent : public ::protozero::Message {
+ public:
+  using Decoder = FileIoDirEnumEtwEvent_Decoder;
+  enum : int32_t {
+    kIrpPtrFieldNumber = 1,
+    kFileObjectFieldNumber = 2,
+    kFileKeyFieldNumber = 3,
+    kTtidFieldNumber = 4,
+    kLengthFieldNumber = 5,
+    kInfoClassFieldNumber = 6,
+    kFileIndexFieldNumber = 7,
+    kFileNameFieldNumber = 8,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FileIoDirEnumEtwEvent"; }
+
+
+  using FieldMetadata_IrpPtr =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_IrpPtr kIrpPtr{};
+  void set_irp_ptr(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IrpPtr::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileObject =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_FileObject kFileObject{};
+  void set_file_object(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileObject::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileKey =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_FileKey kFileKey{};
+  void set_file_key(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileKey::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ttid =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_Ttid kTtid{};
+  void set_ttid(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ttid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Length =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_Length kLength{};
+  void set_length(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Length::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_InfoClass =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_InfoClass kInfoClass{};
+  void set_info_class(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_InfoClass::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileIndex =
+    ::protozero::proto_utils::FieldMetadata<
+      7,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_FileIndex kFileIndex{};
+  void set_file_index(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileIndex::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileName =
+    ::protozero::proto_utils::FieldMetadata<
+      8,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      FileIoDirEnumEtwEvent>;
+
+  static constexpr FieldMetadata_FileName kFileName{};
+  void set_file_name(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_FileName::kFieldId, data, size);
+  }
+  void set_file_name(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_FileName::kFieldId, chars.data, chars.size);
+  }
+  void set_file_name(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileName::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class FileIoCreateEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
+ public:
+  FileIoCreateEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FileIoCreateEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FileIoCreateEtwEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_irp_ptr() const { return at<1>().valid(); }
+  uint64_t irp_ptr() const { return at<1>().as_uint64(); }
+  bool has_file_object() const { return at<2>().valid(); }
+  uint64_t file_object() const { return at<2>().as_uint64(); }
+  bool has_ttid() const { return at<3>().valid(); }
+  uint32_t ttid() const { return at<3>().as_uint32(); }
+  bool has_create_options() const { return at<4>().valid(); }
+  uint32_t create_options() const { return at<4>().as_uint32(); }
+  bool has_file_attributes() const { return at<5>().valid(); }
+  uint32_t file_attributes() const { return at<5>().as_uint32(); }
+  bool has_share_access() const { return at<6>().valid(); }
+  uint32_t share_access() const { return at<6>().as_uint32(); }
+  bool has_open_path() const { return at<7>().valid(); }
+  ::protozero::ConstChars open_path() const { return at<7>().as_string(); }
+};
+
+class FileIoCreateEtwEvent : public ::protozero::Message {
+ public:
+  using Decoder = FileIoCreateEtwEvent_Decoder;
+  enum : int32_t {
+    kIrpPtrFieldNumber = 1,
+    kFileObjectFieldNumber = 2,
+    kTtidFieldNumber = 3,
+    kCreateOptionsFieldNumber = 4,
+    kFileAttributesFieldNumber = 5,
+    kShareAccessFieldNumber = 6,
+    kOpenPathFieldNumber = 7,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FileIoCreateEtwEvent"; }
+
+
+  using FieldMetadata_IrpPtr =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_IrpPtr kIrpPtr{};
+  void set_irp_ptr(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_IrpPtr::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileObject =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_FileObject kFileObject{};
+  void set_file_object(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileObject::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ttid =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_Ttid kTtid{};
+  void set_ttid(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ttid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_CreateOptions =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_CreateOptions kCreateOptions{};
+  void set_create_options(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_CreateOptions::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FileAttributes =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_FileAttributes kFileAttributes{};
+  void set_file_attributes(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FileAttributes::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_ShareAccess =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_ShareAccess kShareAccess{};
+  void set_share_access(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_ShareAccess::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_OpenPath =
+    ::protozero::proto_utils::FieldMetadata<
+      7,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      FileIoCreateEtwEvent>;
+
+  static constexpr FieldMetadata_OpenPath kOpenPath{};
+  void set_open_path(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_OpenPath::kFieldId, data, size);
+  }
+  void set_open_path(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_OpenPath::kFieldId, chars.data, chars.size);
+  }
+  void set_open_path(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_OpenPath::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class MemInfoEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   MemInfoEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MemInfoEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -80545,7 +82268,7 @@ class MemInfoEtwEvent : public ::protozero::Message {
   }
 };
 
-class ReadyThreadEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ReadyThreadEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   ReadyThreadEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ReadyThreadEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -80704,7 +82427,7 @@ class ReadyThreadEtwEvent : public ::protozero::Message {
   }
 };
 
-class CSwitchEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CSwitchEtwEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   CSwitchEtwEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CSwitchEtwEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -81079,6 +82802,12 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 class CSwitchEtwEvent;
+class FileIoCreateEtwEvent;
+class FileIoDirEnumEtwEvent;
+class FileIoInfoEtwEvent;
+class FileIoOpEndEtwEvent;
+class FileIoReadWriteEtwEvent;
+class FileIoSimpleOpEtwEvent;
 class MemInfoEtwEvent;
 class ReadyThreadEtwEvent;
 } // Namespace pbzero.
@@ -81089,7 +82818,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class EtwTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EtwTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   EtwTraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EtwTraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -81106,6 +82835,18 @@ class EtwTraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_
   ::protozero::ConstBytes ready_thread() const { return at<3>().as_bytes(); }
   bool has_mem_info() const { return at<6>().valid(); }
   ::protozero::ConstBytes mem_info() const { return at<6>().as_bytes(); }
+  bool has_file_io_create() const { return at<7>().valid(); }
+  ::protozero::ConstBytes file_io_create() const { return at<7>().as_bytes(); }
+  bool has_file_io_dir_enum() const { return at<8>().valid(); }
+  ::protozero::ConstBytes file_io_dir_enum() const { return at<8>().as_bytes(); }
+  bool has_file_io_info() const { return at<9>().valid(); }
+  ::protozero::ConstBytes file_io_info() const { return at<9>().as_bytes(); }
+  bool has_file_io_read_write() const { return at<10>().valid(); }
+  ::protozero::ConstBytes file_io_read_write() const { return at<10>().as_bytes(); }
+  bool has_file_io_simple_op() const { return at<11>().valid(); }
+  ::protozero::ConstBytes file_io_simple_op() const { return at<11>().as_bytes(); }
+  bool has_file_io_op_end() const { return at<12>().valid(); }
+  ::protozero::ConstBytes file_io_op_end() const { return at<12>().as_bytes(); }
 };
 
 class EtwTraceEvent : public ::protozero::Message {
@@ -81118,6 +82859,12 @@ class EtwTraceEvent : public ::protozero::Message {
     kCSwitchFieldNumber = 2,
     kReadyThreadFieldNumber = 3,
     kMemInfoFieldNumber = 6,
+    kFileIoCreateFieldNumber = 7,
+    kFileIoDirEnumFieldNumber = 8,
+    kFileIoInfoFieldNumber = 9,
+    kFileIoReadWriteFieldNumber = 10,
+    kFileIoSimpleOpFieldNumber = 11,
+    kFileIoOpEndFieldNumber = 12,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.EtwTraceEvent"; }
 
@@ -81217,6 +82964,90 @@ class EtwTraceEvent : public ::protozero::Message {
     return BeginNestedMessage<T>(6);
   }
 
+
+  using FieldMetadata_FileIoCreate =
+    ::protozero::proto_utils::FieldMetadata<
+      7,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FileIoCreateEtwEvent,
+      EtwTraceEvent>;
+
+  static constexpr FieldMetadata_FileIoCreate kFileIoCreate{};
+  template <typename T = FileIoCreateEtwEvent> T* set_file_io_create() {
+    return BeginNestedMessage<T>(7);
+  }
+
+
+  using FieldMetadata_FileIoDirEnum =
+    ::protozero::proto_utils::FieldMetadata<
+      8,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FileIoDirEnumEtwEvent,
+      EtwTraceEvent>;
+
+  static constexpr FieldMetadata_FileIoDirEnum kFileIoDirEnum{};
+  template <typename T = FileIoDirEnumEtwEvent> T* set_file_io_dir_enum() {
+    return BeginNestedMessage<T>(8);
+  }
+
+
+  using FieldMetadata_FileIoInfo =
+    ::protozero::proto_utils::FieldMetadata<
+      9,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FileIoInfoEtwEvent,
+      EtwTraceEvent>;
+
+  static constexpr FieldMetadata_FileIoInfo kFileIoInfo{};
+  template <typename T = FileIoInfoEtwEvent> T* set_file_io_info() {
+    return BeginNestedMessage<T>(9);
+  }
+
+
+  using FieldMetadata_FileIoReadWrite =
+    ::protozero::proto_utils::FieldMetadata<
+      10,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FileIoReadWriteEtwEvent,
+      EtwTraceEvent>;
+
+  static constexpr FieldMetadata_FileIoReadWrite kFileIoReadWrite{};
+  template <typename T = FileIoReadWriteEtwEvent> T* set_file_io_read_write() {
+    return BeginNestedMessage<T>(10);
+  }
+
+
+  using FieldMetadata_FileIoSimpleOp =
+    ::protozero::proto_utils::FieldMetadata<
+      11,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FileIoSimpleOpEtwEvent,
+      EtwTraceEvent>;
+
+  static constexpr FieldMetadata_FileIoSimpleOp kFileIoSimpleOp{};
+  template <typename T = FileIoSimpleOpEtwEvent> T* set_file_io_simple_op() {
+    return BeginNestedMessage<T>(11);
+  }
+
+
+  using FieldMetadata_FileIoOpEnd =
+    ::protozero::proto_utils::FieldMetadata<
+      12,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FileIoOpEndEtwEvent,
+      EtwTraceEvent>;
+
+  static constexpr FieldMetadata_FileIoOpEnd kFileIoOpEnd{};
+  template <typename T = FileIoOpEndEtwEvent> T* set_file_io_op_end() {
+    return BeginNestedMessage<T>(12);
+  }
+
 };
 
 } // Namespace.
@@ -81250,7 +83081,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class EtwTraceEventBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class EtwTraceEventBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   EtwTraceEventBundle_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EtwTraceEventBundle_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -81368,7 +83199,7 @@ const char* InodeFileMap_Entry_Type_Name(::perfetto::protos::pbzero::InodeFileMa
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class InodeFileMap_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class InodeFileMap_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   InodeFileMap_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InodeFileMap_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -81450,7 +83281,7 @@ class InodeFileMap : public ::protozero::Message {
 
 };
 
-class InodeFileMap_Entry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class InodeFileMap_Entry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   InodeFileMap_Entry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InodeFileMap_Entry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -81657,7 +83488,12 @@ class DpuDsiRxFtraceEvent;
 class DpuDsiTxFtraceEvent;
 class DpuTracingMarkWriteFtraceEvent;
 class DrmRunJobFtraceEvent;
+class DrmSchedJobAddDepFtraceEvent;
+class DrmSchedJobDoneFtraceEvent;
 class DrmSchedJobFtraceEvent;
+class DrmSchedJobQueueFtraceEvent;
+class DrmSchedJobRunFtraceEvent;
+class DrmSchedJobUnschedulableFtraceEvent;
 class DrmSchedProcessJobFtraceEvent;
 class DrmVblankEventDeliveredFtraceEvent;
 class DrmVblankEventFtraceEvent;
@@ -81821,6 +83657,7 @@ class FenceInitFtraceEvent;
 class FenceSignaledFtraceEvent;
 class FuncgraphEntryFtraceEvent;
 class FuncgraphExitFtraceEvent;
+class FwtpPerfettoCounterFtraceEvent;
 class G2dTracingMarkWriteFtraceEvent;
 class GenericFtraceEvent;
 class GoogleIccEventFtraceEvent;
@@ -82142,7 +83979,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/590, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/596> {
  public:
   FtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -83291,6 +85128,18 @@ class FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID
   ::protozero::ConstBytes hypervisor_iommu_idmap_complete() const { return at<589>().as_bytes(); }
   bool has_hypervisor_vcpu_illegal_trap() const { return at<590>().valid(); }
   ::protozero::ConstBytes hypervisor_vcpu_illegal_trap() const { return at<590>().as_bytes(); }
+  bool has_drm_sched_job_add_dep() const { return at<591>().valid(); }
+  ::protozero::ConstBytes drm_sched_job_add_dep() const { return at<591>().as_bytes(); }
+  bool has_drm_sched_job_done() const { return at<592>().valid(); }
+  ::protozero::ConstBytes drm_sched_job_done() const { return at<592>().as_bytes(); }
+  bool has_drm_sched_job_queue() const { return at<593>().valid(); }
+  ::protozero::ConstBytes drm_sched_job_queue() const { return at<593>().as_bytes(); }
+  bool has_drm_sched_job_run() const { return at<594>().valid(); }
+  ::protozero::ConstBytes drm_sched_job_run() const { return at<594>().as_bytes(); }
+  bool has_drm_sched_job_unschedulable() const { return at<595>().valid(); }
+  ::protozero::ConstBytes drm_sched_job_unschedulable() const { return at<595>().as_bytes(); }
+  bool has_fwtp_perfetto_counter() const { return at<596>().valid(); }
+  ::protozero::ConstBytes fwtp_perfetto_counter() const { return at<596>().as_bytes(); }
 };
 
 class FtraceEvent : public ::protozero::Message {
@@ -83869,6 +85718,12 @@ class FtraceEvent : public ::protozero::Message {
     kHypervisorHypEnterFieldNumber = 588,
     kHypervisorIommuIdmapCompleteFieldNumber = 589,
     kHypervisorVcpuIllegalTrapFieldNumber = 590,
+    kDrmSchedJobAddDepFieldNumber = 591,
+    kDrmSchedJobDoneFieldNumber = 592,
+    kDrmSchedJobQueueFieldNumber = 593,
+    kDrmSchedJobRunFieldNumber = 594,
+    kDrmSchedJobUnschedulableFieldNumber = 595,
+    kFwtpPerfettoCounterFieldNumber = 596,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.FtraceEvent"; }
 
@@ -91892,6 +93747,90 @@ class FtraceEvent : public ::protozero::Message {
     return BeginNestedMessage<T>(590);
   }
 
+
+  using FieldMetadata_DrmSchedJobAddDep =
+    ::protozero::proto_utils::FieldMetadata<
+      591,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      DrmSchedJobAddDepFtraceEvent,
+      FtraceEvent>;
+
+  static constexpr FieldMetadata_DrmSchedJobAddDep kDrmSchedJobAddDep{};
+  template <typename T = DrmSchedJobAddDepFtraceEvent> T* set_drm_sched_job_add_dep() {
+    return BeginNestedMessage<T>(591);
+  }
+
+
+  using FieldMetadata_DrmSchedJobDone =
+    ::protozero::proto_utils::FieldMetadata<
+      592,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      DrmSchedJobDoneFtraceEvent,
+      FtraceEvent>;
+
+  static constexpr FieldMetadata_DrmSchedJobDone kDrmSchedJobDone{};
+  template <typename T = DrmSchedJobDoneFtraceEvent> T* set_drm_sched_job_done() {
+    return BeginNestedMessage<T>(592);
+  }
+
+
+  using FieldMetadata_DrmSchedJobQueue =
+    ::protozero::proto_utils::FieldMetadata<
+      593,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      DrmSchedJobQueueFtraceEvent,
+      FtraceEvent>;
+
+  static constexpr FieldMetadata_DrmSchedJobQueue kDrmSchedJobQueue{};
+  template <typename T = DrmSchedJobQueueFtraceEvent> T* set_drm_sched_job_queue() {
+    return BeginNestedMessage<T>(593);
+  }
+
+
+  using FieldMetadata_DrmSchedJobRun =
+    ::protozero::proto_utils::FieldMetadata<
+      594,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      DrmSchedJobRunFtraceEvent,
+      FtraceEvent>;
+
+  static constexpr FieldMetadata_DrmSchedJobRun kDrmSchedJobRun{};
+  template <typename T = DrmSchedJobRunFtraceEvent> T* set_drm_sched_job_run() {
+    return BeginNestedMessage<T>(594);
+  }
+
+
+  using FieldMetadata_DrmSchedJobUnschedulable =
+    ::protozero::proto_utils::FieldMetadata<
+      595,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      DrmSchedJobUnschedulableFtraceEvent,
+      FtraceEvent>;
+
+  static constexpr FieldMetadata_DrmSchedJobUnschedulable kDrmSchedJobUnschedulable{};
+  template <typename T = DrmSchedJobUnschedulableFtraceEvent> T* set_drm_sched_job_unschedulable() {
+    return BeginNestedMessage<T>(595);
+  }
+
+
+  using FieldMetadata_FwtpPerfettoCounter =
+    ::protozero::proto_utils::FieldMetadata<
+      596,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kMessage,
+      FwtpPerfettoCounterFtraceEvent,
+      FtraceEvent>;
+
+  static constexpr FieldMetadata_FwtpPerfettoCounter kFwtpPerfettoCounter{};
+  template <typename T = FwtpPerfettoCounterFtraceEvent> T* set_fwtp_perfetto_counter() {
+    return BeginNestedMessage<T>(596);
+  }
+
 };
 
 } // Namespace.
@@ -91963,7 +93902,7 @@ const char* FtraceClock_Name(::perfetto::protos::pbzero::FtraceClock value) {
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class FtraceEventBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/512, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FtraceEventBundle_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/512> {
  public:
   FtraceEventBundle_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceEventBundle_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -92224,13 +94163,15 @@ class FtraceEventBundle : public ::protozero::Message {
   }
 };
 
-class FtraceEventBundle_GenericEventDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceEventBundle_GenericEventDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   FtraceEventBundle_GenericEventDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceEventBundle_GenericEventDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
   explicit FtraceEventBundle_GenericEventDescriptor_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
   bool has_field_id() const { return at<1>().valid(); }
   int32_t field_id() const { return at<1>().as_int32(); }
+  bool has_group_name() const { return at<3>().valid(); }
+  ::protozero::ConstChars group_name() const { return at<3>().as_string(); }
   bool has_event_descriptor() const { return at<2>().valid(); }
   ::protozero::ConstBytes event_descriptor() const { return at<2>().as_bytes(); }
 };
@@ -92240,6 +94181,7 @@ class FtraceEventBundle_GenericEventDescriptor : public ::protozero::Message {
   using Decoder = FtraceEventBundle_GenericEventDescriptor_Decoder;
   enum : int32_t {
     kFieldIdFieldNumber = 1,
+    kGroupNameFieldNumber = 3,
     kEventDescriptorFieldNumber = 2,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.FtraceEventBundle.GenericEventDescriptor"; }
@@ -92260,6 +94202,30 @@ class FtraceEventBundle_GenericEventDescriptor : public ::protozero::Message {
     // method based on the type of the field.
     ::protozero::internal::FieldWriter<
       ::protozero::proto_utils::ProtoSchemaType::kInt32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_GroupName =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      FtraceEventBundle_GenericEventDescriptor>;
+
+  static constexpr FieldMetadata_GroupName kGroupName{};
+  void set_group_name(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_GroupName::kFieldId, data, size);
+  }
+  void set_group_name(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_GroupName::kFieldId, chars.data, chars.size);
+  }
+  void set_group_name(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_GroupName::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
         ::Append(*this, field_id, value);
   }
 
@@ -92288,7 +94254,7 @@ class FtraceEventBundle_GenericEventDescriptor : public ::protozero::Message {
   }
 };
 
-class FtraceEventBundle_FtraceError_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceEventBundle_FtraceError_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FtraceEventBundle_FtraceError_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceEventBundle_FtraceError_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -92346,7 +94312,7 @@ class FtraceEventBundle_FtraceError : public ::protozero::Message {
   }
 };
 
-class FtraceEventBundle_CompactSched_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FtraceEventBundle_CompactSched_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   FtraceEventBundle_CompactSched_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceEventBundle_CompactSched_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -92727,7 +94693,7 @@ const char* FtraceStats_Phase_Name(::perfetto::protos::pbzero::FtraceStats_Phase
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class FtraceStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class FtraceStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   FtraceStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93040,7 +95006,7 @@ class FtraceStats : public ::protozero::Message {
   }
 };
 
-class FtraceKprobeStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceKprobeStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FtraceKprobeStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceKprobeStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93098,7 +95064,7 @@ class FtraceKprobeStats : public ::protozero::Message {
   }
 };
 
-class FtraceCpuStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FtraceCpuStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   FtraceCpuStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FtraceCpuStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93334,7 +95300,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TestBundleWrapper_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TestBundleWrapper_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TestBundleWrapper_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TestBundleWrapper_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93489,7 +95455,7 @@ const char* KprobeEvent_KprobeType_Name(::perfetto::protos::pbzero::KprobeEvent_
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class KprobeEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KprobeEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KprobeEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KprobeEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93562,7 +95528,7 @@ class KprobeEvent : public ::protozero::Message {
   }
 };
 
-class GenericFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GenericFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GenericFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93623,7 +95589,7 @@ class GenericFtraceEvent : public ::protozero::Message {
 
 };
 
-class GenericFtraceEvent_Field_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GenericFtraceEvent_Field_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   GenericFtraceEvent_Field_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericFtraceEvent_Field_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93759,7 +95725,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidFsFsyncStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidFsFsyncStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   AndroidFsFsyncStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidFsFsyncStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93892,7 +95858,7 @@ class AndroidFsFsyncStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AndroidFsFsyncEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidFsFsyncEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AndroidFsFsyncEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidFsFsyncEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -93971,7 +95937,7 @@ class AndroidFsFsyncEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AndroidFsDatawriteStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidFsDatawriteStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   AndroidFsDatawriteStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidFsDatawriteStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94146,7 +96112,7 @@ class AndroidFsDatawriteStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AndroidFsDatawriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidFsDatawriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AndroidFsDatawriteEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidFsDatawriteEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94225,7 +96191,7 @@ class AndroidFsDatawriteEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AndroidFsDatareadStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidFsDatareadStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   AndroidFsDatareadStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidFsDatareadStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94400,7 +96366,7 @@ class AndroidFsDatareadStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AndroidFsDatareadEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidFsDatareadEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   AndroidFsDatareadEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidFsDatareadEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94503,7 +96469,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class BclIrqTriggerFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BclIrqTriggerFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   BclIrqTriggerFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BclIrqTriggerFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94732,7 +96698,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class BinderReturnFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderReturnFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BinderReturnFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderReturnFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94769,7 +96735,7 @@ class BinderReturnFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderCommandFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderCommandFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BinderCommandFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderCommandFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94806,7 +96772,7 @@ class BinderCommandFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderTransactionAllocBufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderTransactionAllocBufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   BinderTransactionAllocBufFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderTransactionAllocBufFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94906,7 +96872,7 @@ class BinderTransactionAllocBufFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderUnlockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderUnlockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BinderUnlockFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderUnlockFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94949,7 +96915,7 @@ class BinderUnlockFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderLockedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderLockedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BinderLockedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderLockedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -94992,7 +96958,7 @@ class BinderLockedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderLockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderLockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BinderLockFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderLockFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95035,7 +97001,7 @@ class BinderLockFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderSetPriorityFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderSetPriorityFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BinderSetPriorityFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderSetPriorityFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95156,7 +97122,7 @@ class BinderSetPriorityFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderTransactionReceivedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderTransactionReceivedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BinderTransactionReceivedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderTransactionReceivedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95193,7 +97159,7 @@ class BinderTransactionReceivedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BinderTransactionFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BinderTransactionFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BinderTransactionFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BinderTransactionFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95380,7 +97346,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class BlockIoDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockIoDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   BlockIoDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockIoDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95582,7 +97548,7 @@ class BlockIoDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockIoStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockIoStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   BlockIoStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockIoStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95784,7 +97750,7 @@ class BlockIoStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockUnplugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockUnplugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   BlockUnplugFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockUnplugFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95848,7 +97814,7 @@ class BlockUnplugFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockTouchBufferFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockTouchBufferFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   BlockTouchBufferFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockTouchBufferFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -95927,7 +97893,7 @@ class BlockTouchBufferFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockSplitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockSplitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockSplitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockSplitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -96060,7 +98026,7 @@ class BlockSplitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockSleeprqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockSleeprqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockSleeprqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockSleeprqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -96193,7 +98159,7 @@ class BlockSleeprqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockRqRequeueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockRqRequeueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   BlockRqRequeueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockRqRequeueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -96347,7 +98313,7 @@ class BlockRqRequeueFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockRqRemapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockRqRemapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BlockRqRemapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockRqRemapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -96516,7 +98482,7 @@ class BlockRqRemapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockRqInsertFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockRqInsertFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BlockRqInsertFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockRqInsertFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -96697,7 +98663,7 @@ class BlockRqInsertFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockRqCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockRqCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BlockRqCompleteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockRqCompleteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -96872,7 +98838,7 @@ class BlockRqCompleteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockRqAbortFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockRqAbortFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   BlockRqAbortFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockRqAbortFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97026,7 +98992,7 @@ class BlockRqAbortFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockPlugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockPlugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   BlockPlugFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockPlugFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97069,7 +99035,7 @@ class BlockPlugFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockGetrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockGetrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockGetrqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockGetrqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97202,7 +99168,7 @@ class BlockGetrqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockDirtyBufferFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockDirtyBufferFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   BlockDirtyBufferFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockDirtyBufferFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97281,7 +99247,7 @@ class BlockDirtyBufferFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockBioRemapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockBioRemapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   BlockBioRemapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockBioRemapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97429,7 +99395,7 @@ class BlockBioRemapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockBioQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockBioQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockBioQueueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockBioQueueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97562,7 +99528,7 @@ class BlockBioQueueFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockBioFrontmergeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockBioFrontmergeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockBioFrontmergeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockBioFrontmergeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97695,7 +99661,7 @@ class BlockBioFrontmergeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockBioCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockBioCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockBioCompleteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockBioCompleteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97822,7 +99788,7 @@ class BlockBioCompleteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockBioBounceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockBioBounceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockBioBounceFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockBioBounceFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -97955,7 +99921,7 @@ class BlockBioBounceFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockBioBackmergeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockBioBackmergeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   BlockBioBackmergeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockBioBackmergeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98088,7 +100054,7 @@ class BlockBioBackmergeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class BlockRqIssueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BlockRqIssueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BlockRqIssueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BlockRqIssueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98293,7 +100259,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CgroupSetupRootFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupSetupRootFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CgroupSetupRootFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupSetupRootFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98378,7 +100344,7 @@ class CgroupSetupRootFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupRenameFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupRenameFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CgroupRenameFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupRenameFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98511,7 +100477,7 @@ class CgroupRenameFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupReleaseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupReleaseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CgroupReleaseFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupReleaseFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98644,7 +100610,7 @@ class CgroupReleaseFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupDestroyRootFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupDestroyRootFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CgroupDestroyRootFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupDestroyRootFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98729,7 +100695,7 @@ class CgroupDestroyRootFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupTransferTasksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupTransferTasksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   CgroupTransferTasksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupTransferTasksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -98910,7 +100876,7 @@ class CgroupTransferTasksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupRmdirFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupRmdirFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CgroupRmdirFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupRmdirFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99043,7 +101009,7 @@ class CgroupRmdirFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupRemountFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupRemountFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CgroupRemountFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupRemountFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99128,7 +101094,7 @@ class CgroupRemountFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupMkdirFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupMkdirFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CgroupMkdirFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupMkdirFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99261,7 +101227,7 @@ class CgroupMkdirFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CgroupAttachTaskFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CgroupAttachTaskFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   CgroupAttachTaskFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CgroupAttachTaskFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99466,7 +101432,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ClkSetRateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClkSetRateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ClkSetRateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClkSetRateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99530,7 +101496,7 @@ class ClkSetRateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ClkDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClkDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ClkDisableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClkDisableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99573,7 +101539,7 @@ class ClkDisableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ClkEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClkEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ClkEnableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClkEnableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99640,7 +101606,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CmaAllocFinishFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CmaAllocFinishFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   CmaAllocFinishFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CmaAllocFinishFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -99788,7 +101754,7 @@ class CmaAllocFinishFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CmaAllocInfoFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CmaAllocInfoFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   CmaAllocInfoFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CmaAllocInfoFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100020,7 +101986,7 @@ class CmaAllocInfoFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CmaAllocStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CmaAllocStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CmaAllocStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CmaAllocStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100129,7 +102095,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class MmCompactionWakeupKcompactdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionWakeupKcompactdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionWakeupKcompactdFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionWakeupKcompactdFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100229,7 +102195,7 @@ class MmCompactionWakeupKcompactdFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionTryToCompactPagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionTryToCompactPagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionTryToCompactPagesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionTryToCompactPagesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100329,7 +102295,7 @@ class MmCompactionTryToCompactPagesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionSuitableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionSuitableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionSuitableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionSuitableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100429,7 +102395,7 @@ class MmCompactionSuitableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionMigratepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionMigratepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   MmCompactionMigratepagesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionMigratepagesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100487,7 +102453,7 @@ class MmCompactionMigratepagesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionKcompactdWakeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionKcompactdWakeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionKcompactdWakeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionKcompactdWakeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100587,7 +102553,7 @@ class MmCompactionKcompactdWakeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionKcompactdSleepFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionKcompactdSleepFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MmCompactionKcompactdSleepFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionKcompactdSleepFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100624,7 +102590,7 @@ class MmCompactionKcompactdSleepFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionIsolateMigratepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionIsolateMigratepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionIsolateMigratepagesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionIsolateMigratepagesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100724,7 +102690,7 @@ class MmCompactionIsolateMigratepagesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionIsolateFreepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionIsolateFreepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionIsolateFreepagesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionIsolateFreepagesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100824,7 +102790,7 @@ class MmCompactionIsolateFreepagesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionFinishedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionFinishedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmCompactionFinishedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionFinishedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -100924,7 +102890,7 @@ class MmCompactionFinishedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   MmCompactionEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101066,7 +103032,7 @@ class MmCompactionEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionDeferResetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionDeferResetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   MmCompactionDeferResetFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionDeferResetFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101208,7 +103174,7 @@ class MmCompactionDeferResetFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionDeferredFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionDeferredFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   MmCompactionDeferredFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionDeferredFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101350,7 +103316,7 @@ class MmCompactionDeferredFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionDeferCompactionFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionDeferCompactionFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   MmCompactionDeferCompactionFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionDeferCompactionFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101492,7 +103458,7 @@ class MmCompactionDeferCompactionFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmCompactionBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmCompactionBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MmCompactionBeginFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmCompactionBeginFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101637,7 +103603,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ParamSetValueCpmFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ParamSetValueCpmFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ParamSetValueCpmFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ParamSetValueCpmFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101746,7 +103712,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CpuhpPauseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuhpPauseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CpuhpPauseFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuhpPauseFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101846,7 +103812,7 @@ class CpuhpPauseFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuhpLatencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuhpLatencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CpuhpLatencyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuhpLatencyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -101946,7 +103912,7 @@ class CpuhpLatencyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuhpEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuhpEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CpuhpEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuhpEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102046,7 +104012,7 @@ class CpuhpEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuhpMultiEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuhpMultiEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CpuhpMultiEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuhpMultiEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102146,7 +104112,7 @@ class CpuhpMultiEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuhpExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuhpExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   CpuhpExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuhpExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102270,7 +104236,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CrosEcSensorhubDataFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CrosEcSensorhubDataFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   CrosEcSensorhubDataFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CrosEcSensorhubDataFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102436,7 +104402,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DcvshFreqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DcvshFreqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DcvshFreqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DcvshFreqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102518,7 +104484,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DevfreqFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DevfreqFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   DevfreqFrequencyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DevfreqFrequencyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102669,7 +104635,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DmaFenceWaitEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaFenceWaitEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DmaFenceWaitEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaFenceWaitEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102781,7 +104747,7 @@ class DmaFenceWaitEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DmaFenceWaitStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaFenceWaitStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DmaFenceWaitStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaFenceWaitStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -102893,7 +104859,7 @@ class DmaFenceWaitStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DmaFenceSignaledFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaFenceSignaledFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DmaFenceSignaledFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaFenceSignaledFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103005,7 +104971,7 @@ class DmaFenceSignaledFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DmaFenceEmitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaFenceEmitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DmaFenceEmitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaFenceEmitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103117,7 +105083,7 @@ class DmaFenceEmitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DmaFenceInitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaFenceInitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DmaFenceInitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaFenceInitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103253,7 +105219,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DmaHeapStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaHeapStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DmaHeapStatFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaHeapStatFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103356,7 +105322,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DpuDispVblankIrqEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DpuDispVblankIrqEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DpuDispVblankIrqEnableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DpuDispVblankIrqEnableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103435,7 +105401,7 @@ class DpuDispVblankIrqEnableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DpuDispDpuUnderrunFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DpuDispDpuUnderrunFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DpuDispDpuUnderrunFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DpuDispDpuUnderrunFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103514,7 +105480,7 @@ class DpuDispDpuUnderrunFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DpuDsiTxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DpuDsiTxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DpuDsiTxFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DpuDsiTxFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103614,7 +105580,7 @@ class DpuDsiTxFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DpuDsiRxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DpuDsiRxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DpuDsiRxFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DpuDsiRxFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103672,7 +105638,7 @@ class DpuDsiRxFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DpuDsiCmdFifoStatusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DpuDsiCmdFifoStatusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DpuDsiCmdFifoStatusFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DpuDsiCmdFifoStatusFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103730,7 +105696,7 @@ class DpuDsiCmdFifoStatusFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DpuTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DpuTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   DpuTracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DpuTracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103908,7 +105874,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DrmVblankEventDeliveredFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DrmVblankEventDeliveredFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DrmVblankEventDeliveredFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DrmVblankEventDeliveredFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -103987,7 +105953,7 @@ class DrmVblankEventDeliveredFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DrmVblankEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DrmVblankEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   DrmVblankEventFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DrmVblankEventFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -104111,7 +106077,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Dwc3WritelFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3WritelFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Dwc3WritelFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3WritelFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -104217,7 +106183,7 @@ class Dwc3WritelFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3ReadlFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3ReadlFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Dwc3ReadlFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3ReadlFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -104323,7 +106289,7 @@ class Dwc3ReadlFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3PrepareTrbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3PrepareTrbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   Dwc3PrepareTrbFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3PrepareTrbFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -104576,7 +106542,7 @@ class Dwc3PrepareTrbFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3GadgetGivebackFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3GadgetGivebackFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Dwc3GadgetGivebackFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3GadgetGivebackFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -104766,7 +106732,7 @@ class Dwc3GadgetGivebackFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3GadgetGenericCmdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3GadgetGenericCmdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Dwc3GadgetGenericCmdFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3GadgetGenericCmdFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -104845,7 +106811,7 @@ class Dwc3GadgetGenericCmdFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3GadgetEpEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3GadgetEpEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   Dwc3GadgetEpEnableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3GadgetEpEnableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -105056,7 +107022,7 @@ class Dwc3GadgetEpEnableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3GadgetEpDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3GadgetEpDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   Dwc3GadgetEpDisableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3GadgetEpDisableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -105267,7 +107233,7 @@ class Dwc3GadgetEpDisableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3GadgetEpCmdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3GadgetEpCmdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Dwc3GadgetEpCmdFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3GadgetEpCmdFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -105415,7 +107381,7 @@ class Dwc3GadgetEpCmdFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3FreeRequestFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3FreeRequestFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Dwc3FreeRequestFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3FreeRequestFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -105605,7 +107571,7 @@ class Dwc3FreeRequestFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3EventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3EventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Dwc3EventFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3EventFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -105690,7 +107656,7 @@ class Dwc3EventFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3EpQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3EpQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Dwc3EpQueueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3EpQueueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -105880,7 +107846,7 @@ class Dwc3EpQueueFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3EpDequeueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3EpDequeueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Dwc3EpDequeueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3EpDequeueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -106070,7 +108036,7 @@ class Dwc3EpDequeueFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3CtrlReqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3CtrlReqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Dwc3CtrlReqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3CtrlReqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -106218,7 +108184,7 @@ class Dwc3CtrlReqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3CompleteTrbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3CompleteTrbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   Dwc3CompleteTrbFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3CompleteTrbFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -106471,7 +108437,7 @@ class Dwc3CompleteTrbFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Dwc3AllocRequestFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Dwc3AllocRequestFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Dwc3AllocRequestFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Dwc3AllocRequestFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -106685,7 +108651,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Ext4ZeroRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ZeroRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4ZeroRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ZeroRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -106806,7 +108772,7 @@ class Ext4ZeroRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4WritepagesResultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4WritepagesResultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   Ext4WritepagesResultFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4WritepagesResultFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -106969,7 +108935,7 @@ class Ext4WritepagesResultFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4WritepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4WritepagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4WritepagesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4WritepagesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107195,7 +109161,7 @@ class Ext4WritepagesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4WritepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4WritepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4WritepageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4WritepageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107274,7 +109240,7 @@ class Ext4WritepageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4WriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4WriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4WriteEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4WriteEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107395,7 +109361,7 @@ class Ext4WriteEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4WriteBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4WriteBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4WriteBeginFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4WriteBeginFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107516,7 +109482,7 @@ class Ext4WriteBeginFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4UnlinkExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4UnlinkExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4UnlinkExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4UnlinkExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107595,7 +109561,7 @@ class Ext4UnlinkExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4UnlinkEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4UnlinkEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4UnlinkEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4UnlinkEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107695,7 +109661,7 @@ class Ext4UnlinkEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4TruncateExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4TruncateExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4TruncateExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4TruncateExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107774,7 +109740,7 @@ class Ext4TruncateExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4TruncateEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4TruncateEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4TruncateEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4TruncateEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107853,7 +109819,7 @@ class Ext4TruncateEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4TrimExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4TrimExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4TrimExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4TrimExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -107974,7 +109940,7 @@ class Ext4TrimExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4TrimAllFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4TrimAllFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4TrimAllFreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4TrimAllFreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108095,7 +110061,7 @@ class Ext4TrimAllFreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4SyncFsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4SyncFsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Ext4SyncFsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4SyncFsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108153,7 +110119,7 @@ class Ext4SyncFsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4RequestInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4RequestInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4RequestInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4RequestInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108232,7 +110198,7 @@ class Ext4RequestInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4RequestBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4RequestBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4RequestBlocksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4RequestBlocksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108458,7 +110424,7 @@ class Ext4RequestBlocksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4RemoveBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4RemoveBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   Ext4RemoveBlocksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4RemoveBlocksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108705,7 +110671,7 @@ class Ext4RemoveBlocksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ReleasepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ReleasepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4ReleasepageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ReleasepageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108784,7 +110750,7 @@ class Ext4ReleasepageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ReadpageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ReadpageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4ReadpageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ReadpageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108863,7 +110829,7 @@ class Ext4ReadpageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ReadBlockBitmapLoadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ReadBlockBitmapLoadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4ReadBlockBitmapLoadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ReadBlockBitmapLoadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -108942,7 +110908,7 @@ class Ext4ReadBlockBitmapLoadFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4PunchHoleFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4PunchHoleFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4PunchHoleFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4PunchHoleFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -109063,7 +111029,7 @@ class Ext4PunchHoleFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4OtherInodeUpdateTimeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4OtherInodeUpdateTimeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4OtherInodeUpdateTimeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4OtherInodeUpdateTimeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -109205,7 +111171,7 @@ class Ext4OtherInodeUpdateTimeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MballocPreallocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MballocPreallocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4MballocPreallocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MballocPreallocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -109431,7 +111397,7 @@ class Ext4MballocPreallocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MballocFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MballocFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4MballocFreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MballocFreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -109552,7 +111518,7 @@ class Ext4MballocFreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MballocDiscardFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MballocDiscardFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4MballocDiscardFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MballocDiscardFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -109673,7 +111639,7 @@ class Ext4MballocDiscardFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MballocAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MballocAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20> {
  public:
   Ext4MballocAllocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MballocAllocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110109,7 +112075,7 @@ class Ext4MballocAllocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbReleaseInodePaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbReleaseInodePaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4MbReleaseInodePaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbReleaseInodePaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110209,7 +112175,7 @@ class Ext4MbReleaseInodePaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbReleaseGroupPaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbReleaseGroupPaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4MbReleaseGroupPaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbReleaseGroupPaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110288,7 +112254,7 @@ class Ext4MbReleaseGroupPaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbNewInodePaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbNewInodePaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4MbNewInodePaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbNewInodePaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110409,7 +112375,7 @@ class Ext4MbNewInodePaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbNewGroupPaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbNewGroupPaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4MbNewGroupPaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbNewGroupPaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110530,7 +112496,7 @@ class Ext4MbNewGroupPaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbDiscardPreallocationsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbDiscardPreallocationsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Ext4MbDiscardPreallocationsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbDiscardPreallocationsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110588,7 +112554,7 @@ class Ext4MbDiscardPreallocationsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbBuddyBitmapLoadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbBuddyBitmapLoadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Ext4MbBuddyBitmapLoadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbBuddyBitmapLoadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110646,7 +112612,7 @@ class Ext4MbBuddyBitmapLoadFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MbBitmapLoadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MbBitmapLoadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Ext4MbBitmapLoadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MbBitmapLoadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110704,7 +112670,7 @@ class Ext4MbBitmapLoadFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4MarkInodeDirtyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4MarkInodeDirtyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4MarkInodeDirtyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4MarkInodeDirtyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110783,7 +112749,7 @@ class Ext4MarkInodeDirtyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4LoadInodeBitmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4LoadInodeBitmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Ext4LoadInodeBitmapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4LoadInodeBitmapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110841,7 +112807,7 @@ class Ext4LoadInodeBitmapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4LoadInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4LoadInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Ext4LoadInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4LoadInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -110899,7 +112865,7 @@ class Ext4LoadInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4JournalledWriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4JournalledWriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4JournalledWriteEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4JournalledWriteEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111020,7 +112986,7 @@ class Ext4JournalledWriteEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4JournalledInvalidatepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4JournalledInvalidatepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4JournalledInvalidatepageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4JournalledInvalidatepageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111141,7 +113107,7 @@ class Ext4JournalledInvalidatepageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4JournalStartReservedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4JournalStartReservedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4JournalStartReservedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4JournalStartReservedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111220,7 +113186,7 @@ class Ext4JournalStartReservedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4JournalStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4JournalStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4JournalStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4JournalStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111362,7 +113328,7 @@ class Ext4JournalStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4InvalidatepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4InvalidatepageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4InvalidatepageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4InvalidatepageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111483,7 +113449,7 @@ class Ext4InvalidatepageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4InsertRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4InsertRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4InsertRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4InsertRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111583,7 +113549,7 @@ class Ext4InsertRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4IndMapBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4IndMapBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Ext4IndMapBlocksExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4IndMapBlocksExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111767,7 +113733,7 @@ class Ext4IndMapBlocksExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4IndMapBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4IndMapBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4IndMapBlocksEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4IndMapBlocksEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111888,7 +113854,7 @@ class Ext4IndMapBlocksEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4GetReservedClusterAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4GetReservedClusterAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4GetReservedClusterAllocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4GetReservedClusterAllocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -111988,7 +113954,7 @@ class Ext4GetReservedClusterAllocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4GetImpliedClusterAllocExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4GetImpliedClusterAllocExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4GetImpliedClusterAllocExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4GetImpliedClusterAllocExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112130,7 +114096,7 @@ class Ext4GetImpliedClusterAllocExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4FreeInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4FreeInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4FreeInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4FreeInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112272,7 +114238,7 @@ class Ext4FreeInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4FreeBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4FreeBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4FreeBlocksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4FreeBlocksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112414,7 +114380,7 @@ class Ext4FreeBlocksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ForgetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ForgetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4ForgetFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ForgetFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112535,7 +114501,7 @@ class Ext4ForgetFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4FindDelallocRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4FindDelallocRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   Ext4FindDelallocRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4FindDelallocRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112698,7 +114664,7 @@ class Ext4FindDelallocRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4FallocateExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4FallocateExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4FallocateExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4FallocateExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112819,7 +114785,7 @@ class Ext4FallocateExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4FallocateEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4FallocateEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4FallocateEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4FallocateEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -112961,7 +114927,7 @@ class Ext4FallocateEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtShowExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtShowExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4ExtShowExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtShowExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -113082,7 +115048,7 @@ class Ext4ExtShowExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtRmLeafFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtRmLeafFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4ExtRmLeafFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtRmLeafFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -113308,7 +115274,7 @@ class Ext4ExtRmLeafFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtRmIdxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtRmIdxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4ExtRmIdxFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtRmIdxFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -113387,7 +115353,7 @@ class Ext4ExtRmIdxFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtRemoveSpaceDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtRemoveSpaceDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4ExtRemoveSpaceDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtRemoveSpaceDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -113613,7 +115579,7 @@ class Ext4ExtRemoveSpaceDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtRemoveSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtRemoveSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4ExtRemoveSpaceFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtRemoveSpaceFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -113734,7 +115700,7 @@ class Ext4ExtRemoveSpaceFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtPutInCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtPutInCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4ExtPutInCacheFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtPutInCacheFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -113855,7 +115821,7 @@ class Ext4ExtPutInCacheFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtMapBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtMapBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Ext4ExtMapBlocksExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtMapBlocksExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114039,7 +116005,7 @@ class Ext4ExtMapBlocksExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtMapBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtMapBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4ExtMapBlocksEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtMapBlocksEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114160,7 +116126,7 @@ class Ext4ExtMapBlocksEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtLoadExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtLoadExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4ExtLoadExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtLoadExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114260,7 +116226,7 @@ class Ext4ExtLoadExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtInCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtInCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4ExtInCacheFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtInCacheFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114360,7 +116326,7 @@ class Ext4ExtInCacheFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtHandleUnwrittenExtentsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtHandleUnwrittenExtentsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Ext4ExtHandleUnwrittenExtentsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtHandleUnwrittenExtentsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114544,7 +116510,7 @@ class Ext4ExtHandleUnwrittenExtentsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4ExtConvertToInitializedFastpathFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtConvertToInitializedFastpathFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4ExtConvertToInitializedFastpathFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtConvertToInitializedFastpathFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114770,7 +116736,7 @@ class Ext4ExtConvertToInitializedFastpathFtraceEvent : public ::protozero::Messa
   }
 };
 
-class Ext4ExtConvertToInitializedEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4ExtConvertToInitializedEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   Ext4ExtConvertToInitializedEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4ExtConvertToInitializedEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -114933,7 +116899,7 @@ class Ext4ExtConvertToInitializedEnterFtraceEvent : public ::protozero::Message 
   }
 };
 
-class Ext4EvictInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EvictInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4EvictInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EvictInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115012,7 +116978,7 @@ class Ext4EvictInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsShrinkScanExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsShrinkScanExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4EsShrinkScanExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsShrinkScanExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115091,7 +117057,7 @@ class Ext4EsShrinkScanExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsShrinkScanEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsShrinkScanEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4EsShrinkScanEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsShrinkScanEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115170,7 +117136,7 @@ class Ext4EsShrinkScanEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsShrinkCountFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsShrinkCountFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4EsShrinkCountFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsShrinkCountFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115249,7 +117215,7 @@ class Ext4EsShrinkCountFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsShrinkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsShrinkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4EsShrinkFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsShrinkFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115370,7 +117336,7 @@ class Ext4EsShrinkFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsRemoveExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsRemoveExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4EsRemoveExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsRemoveExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115470,7 +117436,7 @@ class Ext4EsRemoveExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsLookupExtentExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsLookupExtentExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   Ext4EsLookupExtentExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsLookupExtentExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115633,7 +117599,7 @@ class Ext4EsLookupExtentExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsLookupExtentEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsLookupExtentEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4EsLookupExtentEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsLookupExtentEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115712,7 +117678,7 @@ class Ext4EsLookupExtentEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsInsertExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsInsertExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4EsInsertExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsInsertExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115854,7 +117820,7 @@ class Ext4EsInsertExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4EsFindDelayedExtentRangeExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsFindDelayedExtentRangeExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4EsFindDelayedExtentRangeExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsFindDelayedExtentRangeExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -115996,7 +117962,7 @@ class Ext4EsFindDelayedExtentRangeExitFtraceEvent : public ::protozero::Message 
   }
 };
 
-class Ext4EsFindDelayedExtentRangeEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsFindDelayedExtentRangeEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4EsFindDelayedExtentRangeEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsFindDelayedExtentRangeEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116075,7 +118041,7 @@ class Ext4EsFindDelayedExtentRangeEnterFtraceEvent : public ::protozero::Message
   }
 };
 
-class Ext4EsCacheExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4EsCacheExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4EsCacheExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4EsCacheExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116217,7 +118183,7 @@ class Ext4EsCacheExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DropInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DropInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4DropInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DropInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116296,7 +118262,7 @@ class Ext4DropInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DiscardPreallocationsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DiscardPreallocationsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4DiscardPreallocationsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DiscardPreallocationsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116396,7 +118362,7 @@ class Ext4DiscardPreallocationsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DiscardBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DiscardBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4DiscardBlocksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DiscardBlocksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116475,7 +118441,7 @@ class Ext4DiscardBlocksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DirectIOExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DirectIOExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Ext4DirectIOExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DirectIOExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116617,7 +118583,7 @@ class Ext4DirectIOExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DirectIOEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DirectIOEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4DirectIOEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DirectIOEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116738,7 +118704,7 @@ class Ext4DirectIOEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaWritePagesExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaWritePagesExtentFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4DaWritePagesExtentFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaWritePagesExtentFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -116859,7 +118825,7 @@ class Ext4DaWritePagesExtentFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaWritePagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaWritePagesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   Ext4DaWritePagesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaWritePagesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117085,7 +119051,7 @@ class Ext4DaWritePagesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaUpdateReserveSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaUpdateReserveSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   Ext4DaUpdateReserveSpaceFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaUpdateReserveSpaceFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117290,7 +119256,7 @@ class Ext4DaUpdateReserveSpaceFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaReserveSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaReserveSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   Ext4DaReserveSpaceFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaReserveSpaceFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117453,7 +119419,7 @@ class Ext4DaReserveSpaceFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaReleaseSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaReleaseSpaceFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Ext4DaReleaseSpaceFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaReleaseSpaceFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117637,7 +119603,7 @@ class Ext4DaReleaseSpaceFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4CollapseRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4CollapseRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4CollapseRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4CollapseRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117737,7 +119703,7 @@ class Ext4CollapseRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4BeginOrderedTruncateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4BeginOrderedTruncateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4BeginOrderedTruncateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4BeginOrderedTruncateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117816,7 +119782,7 @@ class Ext4BeginOrderedTruncateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4AllocateInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4AllocateInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4AllocateInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4AllocateInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -117916,7 +119882,7 @@ class Ext4AllocateInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4AllocateBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4AllocateBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   Ext4AllocateBlocksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4AllocateBlocksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118163,7 +120129,7 @@ class Ext4AllocateBlocksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4AllocDaBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4AllocDaBlocksFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4AllocDaBlocksFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4AllocDaBlocksFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118263,7 +120229,7 @@ class Ext4AllocDaBlocksFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4SyncFileExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4SyncFileExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Ext4SyncFileExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4SyncFileExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118342,7 +120308,7 @@ class Ext4SyncFileExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4SyncFileEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4SyncFileEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   Ext4SyncFileEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4SyncFileEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118442,7 +120408,7 @@ class Ext4SyncFileEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaWriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaWriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4DaWriteEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaWriteEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118563,7 +120529,7 @@ class Ext4DaWriteEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Ext4DaWriteBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Ext4DaWriteBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   Ext4DaWriteBeginFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Ext4DaWriteBeginFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118708,7 +120674,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class F2fsGcEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsGcEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   F2fsGcEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsGcEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -118955,7 +120921,7 @@ class F2fsGcEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsGcBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsGcBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   F2fsGcBeginFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsGcBeginFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -119244,7 +121210,7 @@ class F2fsGcBeginFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsBackgroundGcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsBackgroundGcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   F2fsBackgroundGcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsBackgroundGcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -119344,7 +121310,7 @@ class F2fsBackgroundGcFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsIostatLatencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/28, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsIostatLatencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/28> {
  public:
   F2fsIostatLatencyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsIostatLatencyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -119948,7 +121914,7 @@ class F2fsIostatLatencyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsIostatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/23, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsIostatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/23> {
  public:
   F2fsIostatFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsIostatFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -120447,7 +122413,7 @@ class F2fsIostatFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsWriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsWriteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsWriteEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsWriteEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -120568,7 +122534,7 @@ class F2fsWriteEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsWriteCheckpointFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsWriteCheckpointFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   F2fsWriteCheckpointFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsWriteCheckpointFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -120674,7 +122640,7 @@ class F2fsWriteCheckpointFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsWriteBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsWriteBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsWriteBeginFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsWriteBeginFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -120795,7 +122761,7 @@ class F2fsWriteBeginFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsVmPageMkwriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsVmPageMkwriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   F2fsVmPageMkwriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsVmPageMkwriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -120958,7 +122924,7 @@ class F2fsVmPageMkwriteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsUnlinkExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsUnlinkExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsUnlinkExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsUnlinkExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121037,7 +123003,7 @@ class F2fsUnlinkExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsUnlinkEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsUnlinkEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsUnlinkEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsUnlinkEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121164,7 +123130,7 @@ class F2fsUnlinkEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncatePartialNodesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncatePartialNodesFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsTruncatePartialNodesFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncatePartialNodesFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121285,7 +123251,7 @@ class F2fsTruncatePartialNodesFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateNodesExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateNodesExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsTruncateNodesExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateNodesExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121364,7 +123330,7 @@ class F2fsTruncateNodesExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateNodesEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateNodesEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   F2fsTruncateNodesEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateNodesEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121464,7 +123430,7 @@ class F2fsTruncateNodesEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateNodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateNodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   F2fsTruncateNodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateNodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121564,7 +123530,7 @@ class F2fsTruncateNodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateInodeBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateInodeBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsTruncateInodeBlocksExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateInodeBlocksExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121643,7 +123609,7 @@ class F2fsTruncateInodeBlocksExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateInodeBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateInodeBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsTruncateInodeBlocksEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateInodeBlocksEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121764,7 +123730,7 @@ class F2fsTruncateInodeBlocksEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateDataBlocksRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateDataBlocksRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsTruncateDataBlocksRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateDataBlocksRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121885,7 +123851,7 @@ class F2fsTruncateDataBlocksRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateBlocksExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsTruncateBlocksExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateBlocksExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -121964,7 +123930,7 @@ class F2fsTruncateBlocksExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateBlocksEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsTruncateBlocksEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateBlocksEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122085,7 +124051,7 @@ class F2fsTruncateBlocksEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsTruncateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsTruncateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   F2fsTruncateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsTruncateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122269,7 +124235,7 @@ class F2fsTruncateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsSyncFsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsSyncFsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsSyncFsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsSyncFsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122348,7 +124314,7 @@ class F2fsSyncFsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsSyncFileExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsSyncFileExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   F2fsSyncFileExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsSyncFileExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122490,7 +124456,7 @@ class F2fsSyncFileExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsSyncFileEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsSyncFileEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   F2fsSyncFileEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsSyncFileEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122674,7 +124640,7 @@ class F2fsSyncFileEnterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsSubmitWritePageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsSubmitWritePageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsSubmitWritePageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsSubmitWritePageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122795,7 +124761,7 @@ class F2fsSubmitWritePageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsSetPageDirtyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsSetPageDirtyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   F2fsSetPageDirtyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsSetPageDirtyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -122958,7 +124924,7 @@ class F2fsSetPageDirtyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsReserveNewBlockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsReserveNewBlockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsReserveNewBlockFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsReserveNewBlockFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123037,7 +125003,7 @@ class F2fsReserveNewBlockFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsReadpageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsReadpageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   F2fsReadpageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsReadpageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123221,7 +125187,7 @@ class F2fsReadpageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsNewInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsNewInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsNewInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsNewInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123300,7 +125266,7 @@ class F2fsNewInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsIgetExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsIgetExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   F2fsIgetExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsIgetExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123379,7 +125345,7 @@ class F2fsIgetExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsIgetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsIgetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   F2fsIgetFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsIgetFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123563,7 +125529,7 @@ class F2fsIgetFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsGetVictimFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsGetVictimFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   F2fsGetVictimFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsGetVictimFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123810,7 +125776,7 @@ class F2fsGetVictimFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsGetDataBlockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsGetDataBlockFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   F2fsGetDataBlockFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsGetDataBlockFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -123952,7 +125918,7 @@ class F2fsGetDataBlockFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsFallocateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsFallocateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   F2fsFallocateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsFallocateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124136,7 +126102,7 @@ class F2fsFallocateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsEvictInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsEvictInodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   F2fsEvictInodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsEvictInodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124320,7 +126286,7 @@ class F2fsEvictInodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class F2fsDoSubmitBioFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class F2fsDoSubmitBioFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   F2fsDoSubmitBioFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit F2fsDoSubmitBioFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124465,7 +126431,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class FastrpcDmaMapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FastrpcDmaMapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   FastrpcDmaMapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FastrpcDmaMapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124628,7 +126594,7 @@ class FastrpcDmaMapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FastrpcDmaUnmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FastrpcDmaUnmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   FastrpcDmaUnmapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FastrpcDmaUnmapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124707,7 +126673,7 @@ class FastrpcDmaUnmapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FastrpcDmaAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FastrpcDmaAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   FastrpcDmaAllocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FastrpcDmaAllocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124828,7 +126794,7 @@ class FastrpcDmaAllocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FastrpcDmaFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FastrpcDmaFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   FastrpcDmaFreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FastrpcDmaFreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -124907,7 +126873,7 @@ class FastrpcDmaFreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FastrpcDmaStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FastrpcDmaStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   FastrpcDmaStatFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FastrpcDmaStatFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125010,7 +126976,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class FenceSignaledFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FenceSignaledFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   FenceSignaledFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FenceSignaledFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125122,7 +127088,7 @@ class FenceSignaledFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FenceEnableSignalFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FenceEnableSignalFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   FenceEnableSignalFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FenceEnableSignalFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125234,7 +127200,7 @@ class FenceEnableSignalFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FenceDestroyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FenceDestroyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   FenceDestroyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FenceDestroyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125346,7 +127312,7 @@ class FenceDestroyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FenceInitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FenceInitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   FenceInitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FenceInitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125482,7 +127448,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class MmFilemapDeleteFromPageCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmFilemapDeleteFromPageCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MmFilemapDeleteFromPageCacheFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmFilemapDeleteFromPageCacheFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125603,7 +127569,7 @@ class MmFilemapDeleteFromPageCacheFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmFilemapAddToPageCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmFilemapAddToPageCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MmFilemapAddToPageCacheFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmFilemapAddToPageCacheFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125748,7 +127714,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class OpenExecFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class OpenExecFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   OpenExecFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit OpenExecFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125791,7 +127757,7 @@ class OpenExecFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DoSysOpenFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DoSysOpenFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DoSysOpenFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DoSysOpenFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -125900,7 +127866,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class FuncgraphExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FuncgraphExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   FuncgraphExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FuncgraphExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126021,7 +127987,7 @@ class FuncgraphExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class FuncgraphEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class FuncgraphEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   FuncgraphEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit FuncgraphEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126079,7 +128045,7 @@ class FuncgraphEntryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class PrintFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PrintFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PrintFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PrintFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126147,6 +128113,163 @@ class PrintFtraceEvent : public ::protozero::Message {
 } // Namespace.
 } // Namespace.
 #endif  // Include guard.
+// gen_amalgamated begin header: gen/protos/perfetto/trace/ftrace/fwtp_ftrace.pbzero.h
+// Autogenerated by the ProtoZero compiler plugin. DO NOT EDIT.
+
+#ifndef PERFETTO_PROTOS_PROTOS_PERFETTO_TRACE_FTRACE_FWTP_FTRACE_PROTO_H_
+#define PERFETTO_PROTOS_PROTOS_PERFETTO_TRACE_FTRACE_FWTP_FTRACE_PROTO_H_
+
+#include <stddef.h>
+#include <stdint.h>
+
+// gen_amalgamated expanded: #include "perfetto/protozero/field_writer.h"
+// gen_amalgamated expanded: #include "perfetto/protozero/message.h"
+// gen_amalgamated expanded: #include "perfetto/protozero/packed_repeated_fields.h"
+// gen_amalgamated expanded: #include "perfetto/protozero/proto_decoder.h"
+// gen_amalgamated expanded: #include "perfetto/protozero/proto_utils.h"
+
+
+namespace perfetto {
+namespace protos {
+namespace pbzero {
+
+class FwtpPerfettoCounterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
+ public:
+  FwtpPerfettoCounterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit FwtpPerfettoCounterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit FwtpPerfettoCounterFtraceEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_timestamp() const { return at<1>().valid(); }
+  uint64_t timestamp() const { return at<1>().as_uint64(); }
+  bool has_track_id() const { return at<2>().valid(); }
+  uint32_t track_id() const { return at<2>().as_uint32(); }
+  bool has_category() const { return at<3>().valid(); }
+  ::protozero::ConstChars category() const { return at<3>().as_string(); }
+  bool has_name() const { return at<4>().valid(); }
+  ::protozero::ConstChars name() const { return at<4>().as_string(); }
+  bool has_value() const { return at<5>().valid(); }
+  uint32_t value() const { return at<5>().as_uint32(); }
+};
+
+class FwtpPerfettoCounterFtraceEvent : public ::protozero::Message {
+ public:
+  using Decoder = FwtpPerfettoCounterFtraceEvent_Decoder;
+  enum : int32_t {
+    kTimestampFieldNumber = 1,
+    kTrackIdFieldNumber = 2,
+    kCategoryFieldNumber = 3,
+    kNameFieldNumber = 4,
+    kValueFieldNumber = 5,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.FwtpPerfettoCounterFtraceEvent"; }
+
+
+  using FieldMetadata_Timestamp =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      FwtpPerfettoCounterFtraceEvent>;
+
+  static constexpr FieldMetadata_Timestamp kTimestamp{};
+  void set_timestamp(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Timestamp::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_TrackId =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FwtpPerfettoCounterFtraceEvent>;
+
+  static constexpr FieldMetadata_TrackId kTrackId{};
+  void set_track_id(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_TrackId::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Category =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      FwtpPerfettoCounterFtraceEvent>;
+
+  static constexpr FieldMetadata_Category kCategory{};
+  void set_category(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_Category::kFieldId, data, size);
+  }
+  void set_category(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_Category::kFieldId, chars.data, chars.size);
+  }
+  void set_category(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_Category::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Name =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      FwtpPerfettoCounterFtraceEvent>;
+
+  static constexpr FieldMetadata_Name kName{};
+  void set_name(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_Name::kFieldId, data, size);
+  }
+  void set_name(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_Name::kFieldId, chars.data, chars.size);
+  }
+  void set_name(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_Name::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Value =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      FwtpPerfettoCounterFtraceEvent>;
+
+  static constexpr FieldMetadata_Value kValue{};
+  void set_value(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Value::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+};
+
+} // Namespace.
+} // Namespace.
+} // Namespace.
+#endif  // Include guard.
 // gen_amalgamated begin header: gen/protos/perfetto/trace/ftrace/g2d.pbzero.h
 // Autogenerated by the ProtoZero compiler plugin. DO NOT EDIT.
 
@@ -126167,7 +128290,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class G2dTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class G2dTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   G2dTracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit G2dTracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126297,7 +128420,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GoogleIccEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GoogleIccEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GoogleIccEventFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GoogleIccEventFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126385,7 +128508,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GoogleIrmEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GoogleIrmEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GoogleIrmEventFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GoogleIrmEventFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126473,7 +128596,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GpuMemTotalFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuMemTotalFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuMemTotalFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuMemTotalFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126576,7 +128699,615 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DrmSchedProcessJobFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DrmSchedJobUnschedulableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
+ public:
+  DrmSchedJobUnschedulableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit DrmSchedJobUnschedulableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit DrmSchedJobUnschedulableFtraceEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_fence_context() const { return at<1>().valid(); }
+  uint64_t fence_context() const { return at<1>().as_uint64(); }
+  bool has_fence_seqno() const { return at<2>().valid(); }
+  uint64_t fence_seqno() const { return at<2>().as_uint64(); }
+  bool has_ctx() const { return at<3>().valid(); }
+  uint64_t ctx() const { return at<3>().as_uint64(); }
+  bool has_seqno() const { return at<4>().valid(); }
+  uint64_t seqno() const { return at<4>().as_uint64(); }
+};
+
+class DrmSchedJobUnschedulableFtraceEvent : public ::protozero::Message {
+ public:
+  using Decoder = DrmSchedJobUnschedulableFtraceEvent_Decoder;
+  enum : int32_t {
+    kFenceContextFieldNumber = 1,
+    kFenceSeqnoFieldNumber = 2,
+    kCtxFieldNumber = 3,
+    kSeqnoFieldNumber = 4,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.DrmSchedJobUnschedulableFtraceEvent"; }
+
+
+  using FieldMetadata_FenceContext =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobUnschedulableFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceContext kFenceContext{};
+  void set_fence_context(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceContext::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceSeqno =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobUnschedulableFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceSeqno kFenceSeqno{};
+  void set_fence_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceSeqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ctx =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobUnschedulableFtraceEvent>;
+
+  static constexpr FieldMetadata_Ctx kCtx{};
+  void set_ctx(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ctx::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Seqno =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobUnschedulableFtraceEvent>;
+
+  static constexpr FieldMetadata_Seqno kSeqno{};
+  void set_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Seqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class DrmSchedJobRunFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
+ public:
+  DrmSchedJobRunFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit DrmSchedJobRunFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit DrmSchedJobRunFtraceEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_name() const { return at<1>().valid(); }
+  ::protozero::ConstChars name() const { return at<1>().as_string(); }
+  bool has_job_count() const { return at<2>().valid(); }
+  uint32_t job_count() const { return at<2>().as_uint32(); }
+  bool has_hw_job_count() const { return at<3>().valid(); }
+  int32_t hw_job_count() const { return at<3>().as_int32(); }
+  bool has_dev() const { return at<4>().valid(); }
+  ::protozero::ConstChars dev() const { return at<4>().as_string(); }
+  bool has_fence_context() const { return at<5>().valid(); }
+  uint64_t fence_context() const { return at<5>().as_uint64(); }
+  bool has_fence_seqno() const { return at<6>().valid(); }
+  uint64_t fence_seqno() const { return at<6>().as_uint64(); }
+  bool has_client_id() const { return at<7>().valid(); }
+  uint64_t client_id() const { return at<7>().as_uint64(); }
+};
+
+class DrmSchedJobRunFtraceEvent : public ::protozero::Message {
+ public:
+  using Decoder = DrmSchedJobRunFtraceEvent_Decoder;
+  enum : int32_t {
+    kNameFieldNumber = 1,
+    kJobCountFieldNumber = 2,
+    kHwJobCountFieldNumber = 3,
+    kDevFieldNumber = 4,
+    kFenceContextFieldNumber = 5,
+    kFenceSeqnoFieldNumber = 6,
+    kClientIdFieldNumber = 7,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.DrmSchedJobRunFtraceEvent"; }
+
+
+  using FieldMetadata_Name =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_Name kName{};
+  void set_name(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_Name::kFieldId, data, size);
+  }
+  void set_name(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_Name::kFieldId, chars.data, chars.size);
+  }
+  void set_name(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_Name::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_JobCount =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_JobCount kJobCount{};
+  void set_job_count(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_JobCount::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_HwJobCount =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kInt32,
+      int32_t,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_HwJobCount kHwJobCount{};
+  void set_hw_job_count(int32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_HwJobCount::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kInt32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Dev =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_Dev kDev{};
+  void set_dev(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_Dev::kFieldId, data, size);
+  }
+  void set_dev(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_Dev::kFieldId, chars.data, chars.size);
+  }
+  void set_dev(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_Dev::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceContext =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceContext kFenceContext{};
+  void set_fence_context(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceContext::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceSeqno =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceSeqno kFenceSeqno{};
+  void set_fence_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceSeqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_ClientId =
+    ::protozero::proto_utils::FieldMetadata<
+      7,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobRunFtraceEvent>;
+
+  static constexpr FieldMetadata_ClientId kClientId{};
+  void set_client_id(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_ClientId::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class DrmSchedJobQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
+ public:
+  DrmSchedJobQueueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit DrmSchedJobQueueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit DrmSchedJobQueueFtraceEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_name() const { return at<1>().valid(); }
+  ::protozero::ConstChars name() const { return at<1>().as_string(); }
+  bool has_job_count() const { return at<2>().valid(); }
+  uint32_t job_count() const { return at<2>().as_uint32(); }
+  bool has_hw_job_count() const { return at<3>().valid(); }
+  int32_t hw_job_count() const { return at<3>().as_int32(); }
+  bool has_dev() const { return at<4>().valid(); }
+  ::protozero::ConstChars dev() const { return at<4>().as_string(); }
+  bool has_fence_context() const { return at<5>().valid(); }
+  uint64_t fence_context() const { return at<5>().as_uint64(); }
+  bool has_fence_seqno() const { return at<6>().valid(); }
+  uint64_t fence_seqno() const { return at<6>().as_uint64(); }
+  bool has_client_id() const { return at<7>().valid(); }
+  uint64_t client_id() const { return at<7>().as_uint64(); }
+};
+
+class DrmSchedJobQueueFtraceEvent : public ::protozero::Message {
+ public:
+  using Decoder = DrmSchedJobQueueFtraceEvent_Decoder;
+  enum : int32_t {
+    kNameFieldNumber = 1,
+    kJobCountFieldNumber = 2,
+    kHwJobCountFieldNumber = 3,
+    kDevFieldNumber = 4,
+    kFenceContextFieldNumber = 5,
+    kFenceSeqnoFieldNumber = 6,
+    kClientIdFieldNumber = 7,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.DrmSchedJobQueueFtraceEvent"; }
+
+
+  using FieldMetadata_Name =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_Name kName{};
+  void set_name(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_Name::kFieldId, data, size);
+  }
+  void set_name(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_Name::kFieldId, chars.data, chars.size);
+  }
+  void set_name(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_Name::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_JobCount =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_JobCount kJobCount{};
+  void set_job_count(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_JobCount::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_HwJobCount =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kInt32,
+      int32_t,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_HwJobCount kHwJobCount{};
+  void set_hw_job_count(int32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_HwJobCount::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kInt32>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Dev =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kString,
+      std::string,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_Dev kDev{};
+  void set_dev(const char* data, size_t size) {
+    AppendBytes(FieldMetadata_Dev::kFieldId, data, size);
+  }
+  void set_dev(::protozero::ConstChars chars) {
+    AppendBytes(FieldMetadata_Dev::kFieldId, chars.data, chars.size);
+  }
+  void set_dev(std::string value) {
+    static constexpr uint32_t field_id = FieldMetadata_Dev::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kString>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceContext =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceContext kFenceContext{};
+  void set_fence_context(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceContext::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceSeqno =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceSeqno kFenceSeqno{};
+  void set_fence_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceSeqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_ClientId =
+    ::protozero::proto_utils::FieldMetadata<
+      7,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobQueueFtraceEvent>;
+
+  static constexpr FieldMetadata_ClientId kClientId{};
+  void set_client_id(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_ClientId::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class DrmSchedJobDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
+ public:
+  DrmSchedJobDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit DrmSchedJobDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit DrmSchedJobDoneFtraceEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_fence_context() const { return at<1>().valid(); }
+  uint64_t fence_context() const { return at<1>().as_uint64(); }
+  bool has_fence_seqno() const { return at<2>().valid(); }
+  uint64_t fence_seqno() const { return at<2>().as_uint64(); }
+};
+
+class DrmSchedJobDoneFtraceEvent : public ::protozero::Message {
+ public:
+  using Decoder = DrmSchedJobDoneFtraceEvent_Decoder;
+  enum : int32_t {
+    kFenceContextFieldNumber = 1,
+    kFenceSeqnoFieldNumber = 2,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.DrmSchedJobDoneFtraceEvent"; }
+
+
+  using FieldMetadata_FenceContext =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobDoneFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceContext kFenceContext{};
+  void set_fence_context(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceContext::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceSeqno =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobDoneFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceSeqno kFenceSeqno{};
+  void set_fence_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceSeqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class DrmSchedJobAddDepFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
+ public:
+  DrmSchedJobAddDepFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
+  explicit DrmSchedJobAddDepFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
+  explicit DrmSchedJobAddDepFtraceEvent_Decoder(const ::protozero::ConstBytes& raw) : TypedProtoDecoder(raw.data, raw.size) {}
+  bool has_fence_context() const { return at<1>().valid(); }
+  uint64_t fence_context() const { return at<1>().as_uint64(); }
+  bool has_fence_seqno() const { return at<2>().valid(); }
+  uint64_t fence_seqno() const { return at<2>().as_uint64(); }
+  bool has_ctx() const { return at<3>().valid(); }
+  uint64_t ctx() const { return at<3>().as_uint64(); }
+  bool has_seqno() const { return at<4>().valid(); }
+  uint64_t seqno() const { return at<4>().as_uint64(); }
+};
+
+class DrmSchedJobAddDepFtraceEvent : public ::protozero::Message {
+ public:
+  using Decoder = DrmSchedJobAddDepFtraceEvent_Decoder;
+  enum : int32_t {
+    kFenceContextFieldNumber = 1,
+    kFenceSeqnoFieldNumber = 2,
+    kCtxFieldNumber = 3,
+    kSeqnoFieldNumber = 4,
+  };
+  static constexpr const char* GetName() { return ".perfetto.protos.DrmSchedJobAddDepFtraceEvent"; }
+
+
+  using FieldMetadata_FenceContext =
+    ::protozero::proto_utils::FieldMetadata<
+      1,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobAddDepFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceContext kFenceContext{};
+  void set_fence_context(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceContext::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_FenceSeqno =
+    ::protozero::proto_utils::FieldMetadata<
+      2,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobAddDepFtraceEvent>;
+
+  static constexpr FieldMetadata_FenceSeqno kFenceSeqno{};
+  void set_fence_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_FenceSeqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Ctx =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobAddDepFtraceEvent>;
+
+  static constexpr FieldMetadata_Ctx kCtx{};
+  void set_ctx(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Ctx::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_Seqno =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      DrmSchedJobAddDepFtraceEvent>;
+
+  static constexpr FieldMetadata_Seqno kSeqno{};
+  void set_seqno(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_Seqno::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+};
+
+class DrmSchedProcessJobFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   DrmSchedProcessJobFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DrmSchedProcessJobFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126613,7 +129344,7 @@ class DrmSchedProcessJobFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DrmRunJobFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DrmRunJobFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   DrmRunJobFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DrmRunJobFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126761,7 +129492,7 @@ class DrmRunJobFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DrmSchedJobFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DrmSchedJobFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   DrmSchedJobFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DrmSchedJobFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126933,7 +129664,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PsciMemProtectFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PsciMemProtectFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PsciMemProtectFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PsciMemProtectFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -126991,7 +129722,7 @@ class PsciMemProtectFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IommuIdmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IommuIdmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IommuIdmapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IommuIdmapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127070,7 +129801,7 @@ class IommuIdmapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HostFfaCallFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HostFfaCallFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   HostFfaCallFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HostFfaCallFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127233,7 +129964,7 @@ class HostFfaCallFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HostMemAbortFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HostMemAbortFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HostMemAbortFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HostMemAbortFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127291,7 +130022,7 @@ class HostMemAbortFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HostSmcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HostSmcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HostSmcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HostSmcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127349,7 +130080,7 @@ class HostSmcFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HostHcallFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HostHcallFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HostHcallFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HostHcallFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127407,7 +130138,7 @@ class HostHcallFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   HypExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127421,7 +130152,7 @@ class HypExitFtraceEvent : public ::protozero::Message {
 
 };
 
-class HypEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   HypEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127459,7 +130190,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class HypervisorVcpuIllegalTrapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorVcpuIllegalTrapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   HypervisorVcpuIllegalTrapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorVcpuIllegalTrapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127496,7 +130227,7 @@ class HypervisorVcpuIllegalTrapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypervisorIommuIdmapCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorIommuIdmapCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   HypervisorIommuIdmapCompleteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorIommuIdmapCompleteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127533,7 +130264,7 @@ class HypervisorIommuIdmapCompleteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypervisorHypEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorHypEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   HypervisorHypEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorHypEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127547,7 +130278,7 @@ class HypervisorHypEnterFtraceEvent : public ::protozero::Message {
 
 };
 
-class HypervisorHostMemAbortFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorHostMemAbortFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HypervisorHostMemAbortFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorHostMemAbortFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127605,7 +130336,7 @@ class HypervisorHostMemAbortFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypervisorPsciMemProtectFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorPsciMemProtectFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HypervisorPsciMemProtectFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorPsciMemProtectFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127663,7 +130394,7 @@ class HypervisorPsciMemProtectFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypervisorIommuIdmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorIommuIdmapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   HypervisorIommuIdmapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorIommuIdmapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127742,7 +130473,7 @@ class HypervisorIommuIdmapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypervisorHypExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorHypExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   HypervisorHypExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorHypExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127756,7 +130487,7 @@ class HypervisorHypExitFtraceEvent : public ::protozero::Message {
 
 };
 
-class HypervisorHostSmcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorHostSmcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HypervisorHostSmcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorHostSmcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127814,7 +130545,7 @@ class HypervisorHostSmcFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HypervisorHostHcallFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HypervisorHostHcallFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HypervisorHostHcallFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HypervisorHostHcallFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -127896,7 +130627,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SmbusReplyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SmbusReplyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   SmbusReplyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SmbusReplyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128038,7 +130769,7 @@ class SmbusReplyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SmbusResultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SmbusResultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   SmbusResultFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SmbusResultFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128201,7 +130932,7 @@ class SmbusResultFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SmbusWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SmbusWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   SmbusWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SmbusWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128343,7 +131074,7 @@ class SmbusWriteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SmbusReadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SmbusReadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SmbusReadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SmbusReadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128464,7 +131195,7 @@ class SmbusReadFtraceEvent : public ::protozero::Message {
   }
 };
 
-class I2cReplyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class I2cReplyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   I2cReplyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit I2cReplyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128606,7 +131337,7 @@ class I2cReplyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class I2cResultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class I2cResultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   I2cResultFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit I2cResultFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128685,7 +131416,7 @@ class I2cResultFtraceEvent : public ::protozero::Message {
   }
 };
 
-class I2cWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class I2cWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   I2cWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit I2cWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128827,7 +131558,7 @@ class I2cWriteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class I2cReadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class I2cReadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   I2cReadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit I2cReadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -128972,7 +131703,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class IonStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IonStatFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonStatFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129075,7 +131806,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class IpiRaiseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IpiRaiseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   IpiRaiseFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IpiRaiseFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129139,7 +131870,7 @@ class IpiRaiseFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IpiExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IpiExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   IpiExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IpiExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129182,7 +131913,7 @@ class IpiExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IpiEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IpiEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   IpiEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IpiEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129249,7 +131980,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class IrqHandlerExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IrqHandlerExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   IrqHandlerExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IrqHandlerExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129307,7 +132038,7 @@ class IrqHandlerExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IrqHandlerEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IrqHandlerEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IrqHandlerEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IrqHandlerEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129392,7 +132123,7 @@ class IrqHandlerEntryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SoftirqRaiseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SoftirqRaiseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   SoftirqRaiseFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SoftirqRaiseFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129429,7 +132160,7 @@ class SoftirqRaiseFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SoftirqExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SoftirqExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   SoftirqExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SoftirqExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129466,7 +132197,7 @@ class SoftirqExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SoftirqEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SoftirqEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   SoftirqEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SoftirqEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129527,7 +132258,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class LocalTimerExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LocalTimerExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   LocalTimerExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LocalTimerExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129564,7 +132295,7 @@ class LocalTimerExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class LocalTimerEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LocalTimerEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   LocalTimerEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LocalTimerEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129625,7 +132356,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class KgslAdrenoCmdbatchRetiredFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KgslAdrenoCmdbatchRetiredFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   KgslAdrenoCmdbatchRetiredFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KgslAdrenoCmdbatchRetiredFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -129998,7 +132729,7 @@ class KgslAdrenoCmdbatchRetiredFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KgslAdrenoCmdbatchSyncFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KgslAdrenoCmdbatchSyncFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KgslAdrenoCmdbatchSyncFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KgslAdrenoCmdbatchSyncFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130098,7 +132829,7 @@ class KgslAdrenoCmdbatchSyncFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KgslAdrenoCmdbatchSubmittedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KgslAdrenoCmdbatchSubmittedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/13> {
  public:
   KgslAdrenoCmdbatchSubmittedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KgslAdrenoCmdbatchSubmittedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130387,7 +133118,7 @@ class KgslAdrenoCmdbatchSubmittedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KgslAdrenoCmdbatchQueuedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KgslAdrenoCmdbatchQueuedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   KgslAdrenoCmdbatchQueuedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KgslAdrenoCmdbatchQueuedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130508,7 +133239,7 @@ class KgslAdrenoCmdbatchQueuedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KgslGpuFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KgslGpuFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KgslGpuFrequencyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KgslGpuFrequencyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130590,7 +133321,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DmabufRssStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmabufRssStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DmabufRssStatFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmabufRssStatFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130669,7 +133400,7 @@ class DmabufRssStatFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmAllocContigMigrateRangeInfoFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmAllocContigMigrateRangeInfoFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   MmAllocContigMigrateRangeInfoFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmAllocContigMigrateRangeInfoFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130811,7 +133542,7 @@ class MmAllocContigMigrateRangeInfoFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonBufferDestroyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonBufferDestroyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   IonBufferDestroyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonBufferDestroyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130869,7 +133600,7 @@ class IonBufferDestroyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonBufferCreateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonBufferCreateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   IonBufferCreateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonBufferCreateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -130927,7 +133658,7 @@ class IonBufferCreateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonHeapGrowFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonHeapGrowFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IonHeapGrowFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonHeapGrowFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131012,7 +133743,7 @@ class IonHeapGrowFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonHeapShrinkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonHeapShrinkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IonHeapShrinkFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonHeapShrinkFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131097,7 +133828,7 @@ class IonHeapShrinkFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RssStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RssStatFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   RssStatFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RssStatFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131197,7 +133928,7 @@ class RssStatFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmPagePcpuDrainFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmPagePcpuDrainFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmPagePcpuDrainFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmPagePcpuDrainFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131297,7 +134028,7 @@ class MmPagePcpuDrainFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmPageFreeBatchedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmPageFreeBatchedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MmPageFreeBatchedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmPageFreeBatchedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131376,7 +134107,7 @@ class MmPageFreeBatchedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmPageFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmPageFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MmPageFreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmPageFreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131455,7 +134186,7 @@ class MmPageFreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmPageAllocZoneLockedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmPageAllocZoneLockedFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmPageAllocZoneLockedFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmPageAllocZoneLockedFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131555,7 +134286,7 @@ class MmPageAllocZoneLockedFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmPageAllocExtfragFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmPageAllocExtfragFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   MmPageAllocExtfragFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmPageAllocExtfragFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131718,7 +134449,7 @@ class MmPageAllocExtfragFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmPageAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmPageAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MmPageAllocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmPageAllocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131839,7 +134570,7 @@ class MmPageAllocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MigrateRetryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MigrateRetryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MigrateRetryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MigrateRetryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131876,7 +134607,7 @@ class MigrateRetryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MigratePagesStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MigratePagesStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MigratePagesStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MigratePagesStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131913,7 +134644,7 @@ class MigratePagesStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MigratePagesEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MigratePagesEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MigratePagesEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MigratePagesEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -131950,7 +134681,7 @@ class MigratePagesEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KmemCacheFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KmemCacheFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KmemCacheFreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KmemCacheFreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132008,7 +134739,7 @@ class KmemCacheFreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KmemCacheAllocNodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KmemCacheAllocNodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   KmemCacheAllocNodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KmemCacheAllocNodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132150,7 +134881,7 @@ class KmemCacheAllocNodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KmemCacheAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KmemCacheAllocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   KmemCacheAllocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KmemCacheAllocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132271,7 +135002,7 @@ class KmemCacheAllocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KmallocNodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KmallocNodeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   KmallocNodeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KmallocNodeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132413,7 +135144,7 @@ class KmallocNodeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KmallocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KmallocFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   KmallocFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KmallocFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132534,7 +135265,7 @@ class KmallocFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KfreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KfreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KfreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KfreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132592,7 +135323,7 @@ class KfreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonSecureCmaShrinkPoolStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonSecureCmaShrinkPoolStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   IonSecureCmaShrinkPoolStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonSecureCmaShrinkPoolStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132650,7 +135381,7 @@ class IonSecureCmaShrinkPoolStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonSecureCmaShrinkPoolEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonSecureCmaShrinkPoolEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   IonSecureCmaShrinkPoolEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonSecureCmaShrinkPoolEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132708,7 +135439,7 @@ class IonSecureCmaShrinkPoolEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonSecureCmaAllocateStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonSecureCmaAllocateStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   IonSecureCmaAllocateStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonSecureCmaAllocateStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132814,7 +135545,7 @@ class IonSecureCmaAllocateStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonSecureCmaAllocateEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonSecureCmaAllocateEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   IonSecureCmaAllocateEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonSecureCmaAllocateEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132920,7 +135651,7 @@ class IonSecureCmaAllocateEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonSecureCmaAddToPoolStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonSecureCmaAddToPoolStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IonSecureCmaAddToPoolStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonSecureCmaAddToPoolStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -132999,7 +135730,7 @@ class IonSecureCmaAddToPoolStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonSecureCmaAddToPoolEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonSecureCmaAddToPoolEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   IonSecureCmaAddToPoolEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonSecureCmaAddToPoolEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133078,7 +135809,7 @@ class IonSecureCmaAddToPoolEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonPrefetchingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonPrefetchingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   IonPrefetchingFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonPrefetchingFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133115,7 +135846,7 @@ class IonPrefetchingFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonCpSecureBufferStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonCpSecureBufferStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   IonCpSecureBufferStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonCpSecureBufferStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133221,7 +135952,7 @@ class IonCpSecureBufferStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonCpSecureBufferEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonCpSecureBufferEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   IonCpSecureBufferEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonCpSecureBufferEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133327,7 +136058,7 @@ class IonCpSecureBufferEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonCpAllocRetryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonCpAllocRetryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   IonCpAllocRetryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonCpAllocRetryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133364,7 +136095,7 @@ class IonCpAllocRetryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonAllocBufferStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonAllocBufferStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   IonAllocBufferStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonAllocBufferStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133497,7 +136228,7 @@ class IonAllocBufferStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonAllocBufferFallbackFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonAllocBufferFallbackFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   IonAllocBufferFallbackFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonAllocBufferFallbackFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133651,7 +136382,7 @@ class IonAllocBufferFallbackFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonAllocBufferFailFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonAllocBufferFailFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   IonAllocBufferFailFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonAllocBufferFailFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133805,7 +136536,7 @@ class IonAllocBufferFailFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IonAllocBufferEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IonAllocBufferEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   IonAllocBufferEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IonAllocBufferEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -133938,7 +136669,7 @@ class IonAllocBufferEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IommuSecPtblMapRangeStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IommuSecPtblMapRangeStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   IommuSecPtblMapRangeStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IommuSecPtblMapRangeStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134059,7 +136790,7 @@ class IommuSecPtblMapRangeStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IommuSecPtblMapRangeEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IommuSecPtblMapRangeEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   IommuSecPtblMapRangeEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IommuSecPtblMapRangeEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134180,7 +136911,7 @@ class IommuSecPtblMapRangeEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class IommuMapRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class IommuMapRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   IommuMapRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit IommuMapRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134280,7 +137011,7 @@ class IommuMapRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DmaAllocContiguousRetryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DmaAllocContiguousRetryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   DmaAllocContiguousRetryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DmaAllocContiguousRetryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134317,7 +137048,7 @@ class DmaAllocContiguousRetryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AllocPagesSysStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AllocPagesSysStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AllocPagesSysStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AllocPagesSysStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134375,7 +137106,7 @@ class AllocPagesSysStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AllocPagesSysFailFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AllocPagesSysFailFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AllocPagesSysFailFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AllocPagesSysFailFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134433,7 +137164,7 @@ class AllocPagesSysFailFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AllocPagesSysEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AllocPagesSysEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AllocPagesSysEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AllocPagesSysEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134491,7 +137222,7 @@ class AllocPagesSysEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AllocPagesIommuStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AllocPagesIommuStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AllocPagesIommuStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AllocPagesIommuStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134549,7 +137280,7 @@ class AllocPagesIommuStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AllocPagesIommuFailFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AllocPagesIommuFailFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AllocPagesIommuFailFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AllocPagesIommuFailFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134607,7 +137338,7 @@ class AllocPagesIommuFailFtraceEvent : public ::protozero::Message {
   }
 };
 
-class AllocPagesIommuEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AllocPagesIommuEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AllocPagesIommuEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AllocPagesIommuEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134689,7 +137420,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class VgicUpdateIrqPendingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VgicUpdateIrqPendingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   VgicUpdateIrqPendingFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VgicUpdateIrqPendingFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134768,7 +137499,7 @@ class VgicUpdateIrqPendingFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrapRegFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrapRegFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TrapRegFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrapRegFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134874,7 +137605,7 @@ class TrapRegFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmWfxArm64FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmWfxArm64FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmWfxArm64FtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmWfxArm64FtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -134932,7 +137663,7 @@ class KvmWfxArm64FtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmVcpuWakeupFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmVcpuWakeupFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmVcpuWakeupFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmVcpuWakeupFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135011,7 +137742,7 @@ class KvmVcpuWakeupFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmUserspaceExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmUserspaceExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmUserspaceExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmUserspaceExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135048,7 +137779,7 @@ class KvmUserspaceExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmUnmapHvaRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmUnmapHvaRangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmUnmapHvaRangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmUnmapHvaRangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135106,7 +137837,7 @@ class KvmUnmapHvaRangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmToggleCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmToggleCacheFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmToggleCacheFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmToggleCacheFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135185,7 +137916,7 @@ class KvmToggleCacheFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmTimerUpdateIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmTimerUpdateIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmTimerUpdateIrqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmTimerUpdateIrqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135264,7 +137995,7 @@ class KvmTimerUpdateIrqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmTimerSaveStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmTimerSaveStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmTimerSaveStateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmTimerSaveStateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135343,7 +138074,7 @@ class KvmTimerSaveStateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmTimerRestoreStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmTimerRestoreStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmTimerRestoreStateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmTimerRestoreStateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135422,7 +138153,7 @@ class KvmTimerRestoreStateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmTimerHrtimerExpireFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmTimerHrtimerExpireFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmTimerHrtimerExpireFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmTimerHrtimerExpireFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135459,7 +138190,7 @@ class KvmTimerHrtimerExpireFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmTimerEmulateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmTimerEmulateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmTimerEmulateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmTimerEmulateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135517,7 +138248,7 @@ class KvmTimerEmulateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmTestAgeHvaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmTestAgeHvaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmTestAgeHvaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmTestAgeHvaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135554,7 +138285,7 @@ class KvmTestAgeHvaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmSysAccessFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmSysAccessFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   KvmSysAccessFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmSysAccessFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135744,7 +138475,7 @@ class KvmSysAccessFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmSetWayFlushFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmSetWayFlushFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmSetWayFlushFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmSetWayFlushFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135802,7 +138533,7 @@ class KvmSetWayFlushFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmSetSpteHvaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmSetSpteHvaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmSetSpteHvaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmSetSpteHvaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135839,7 +138570,7 @@ class KvmSetSpteHvaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmSetIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmSetIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmSetIrqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmSetIrqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135918,7 +138649,7 @@ class KvmSetIrqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmSetGuestDebugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmSetGuestDebugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmSetGuestDebugFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmSetGuestDebugFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -135976,7 +138707,7 @@ class KvmSetGuestDebugFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmMmioEmulateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmMmioEmulateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmMmioEmulateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmMmioEmulateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136055,7 +138786,7 @@ class KvmMmioEmulateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmMmioFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmMmioFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KvmMmioFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmMmioFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136155,7 +138886,7 @@ class KvmMmioFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmIrqLineFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmIrqLineFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KvmIrqLineFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmIrqLineFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136255,7 +138986,7 @@ class KvmIrqLineFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmHvcArm64FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmHvcArm64FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmHvcArm64FtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmHvcArm64FtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136334,7 +139065,7 @@ class KvmHvcArm64FtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmHandleSysRegFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmHandleSysRegFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmHandleSysRegFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmHandleSysRegFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136371,7 +139102,7 @@ class KvmHandleSysRegFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmGuestFaultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmGuestFaultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KvmGuestFaultFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmGuestFaultFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136471,7 +139202,7 @@ class KvmGuestFaultFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmGetTimerMapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmGetTimerMapFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KvmGetTimerMapFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmGetTimerMapFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136571,7 +139302,7 @@ class KvmGetTimerMapFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmFpuFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmFpuFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmFpuFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmFpuFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136608,7 +139339,7 @@ class KvmFpuFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KvmExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136687,7 +139418,7 @@ class KvmExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136724,7 +139455,7 @@ class KvmEntryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmArmSetupDebugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmArmSetupDebugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmArmSetupDebugFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmArmSetupDebugFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136782,7 +139513,7 @@ class KvmArmSetupDebugFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmArmSetRegsetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmArmSetRegsetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmArmSetRegsetFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmArmSetRegsetFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136846,7 +139577,7 @@ class KvmArmSetRegsetFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmArmSetDreg32FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmArmSetDreg32FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmArmSetDreg32FtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmArmSetDreg32FtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136910,7 +139641,7 @@ class KvmArmSetDreg32FtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmArmClearDebugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmArmClearDebugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmArmClearDebugFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmArmClearDebugFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -136947,7 +139678,7 @@ class KvmArmClearDebugFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmAgePageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmAgePageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   KvmAgePageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmAgePageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137047,7 +139778,7 @@ class KvmAgePageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmAgeHvaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmAgeHvaFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmAgeHvaFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmAgeHvaFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137105,7 +139836,7 @@ class KvmAgeHvaFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmAckIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmAckIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   KvmAckIrqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmAckIrqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137163,7 +139894,7 @@ class KvmAckIrqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class KvmAccessFaultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KvmAccessFaultFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   KvmAccessFaultFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KvmAccessFaultFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137224,7 +139955,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class LowmemoryKillFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LowmemoryKillFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   LowmemoryKillFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LowmemoryKillFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137375,7 +140106,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class LwisTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LwisTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   LwisTracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LwisTracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137532,7 +140263,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class MaliGpuPowerStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliGpuPowerStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliGpuPowerStateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliGpuPowerStateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137611,7 +140342,7 @@ class MaliGpuPowerStateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCURESETWAITFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCURESETWAITFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCURESETWAITFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCURESETWAITFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137690,7 +140421,7 @@ class MaliMaliPMMCURESETWAITFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUPOWERDOWNFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUPOWERDOWNFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUPOWERDOWNFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUPOWERDOWNFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137769,7 +140500,7 @@ class MaliMaliPMMCUPOWERDOWNFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUPENDONRELOADFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUPENDONRELOADFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUPENDONRELOADFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUPENDONRELOADFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137848,7 +140579,7 @@ class MaliMaliPMMCUPENDONRELOADFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUPENDOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUPENDOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUPENDOFFFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUPENDOFFFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -137927,7 +140658,7 @@ class MaliMaliPMMCUPENDOFFFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONSLEEPINITIATEFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONSLEEPINITIATEFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONSLEEPINITIATEFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONSLEEPINITIATEFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138006,7 +140737,7 @@ class MaliMaliPMMCUONSLEEPINITIATEFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONPENDSLEEPFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONPENDSLEEPFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONPENDSLEEPFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONPENDSLEEPFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138085,7 +140816,7 @@ class MaliMaliPMMCUONPENDSLEEPFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONPENDHALTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONPENDHALTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONPENDHALTFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONPENDHALTFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138164,7 +140895,7 @@ class MaliMaliPMMCUONPENDHALTFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONHWCNTENABLEFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONHWCNTENABLEFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONHWCNTENABLEFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONHWCNTENABLEFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138243,7 +140974,7 @@ class MaliMaliPMMCUONHWCNTENABLEFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONHWCNTDISABLEFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONHWCNTDISABLEFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONHWCNTDISABLEFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONHWCNTDISABLEFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138322,7 +141053,7 @@ class MaliMaliPMMCUONHWCNTDISABLEFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONHALTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONHALTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONHALTFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONHALTFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138401,7 +141132,7 @@ class MaliMaliPMMCUONHALTFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONGLBREINITPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONGLBREINITPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONGLBREINITPENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONGLBREINITPENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138480,7 +141211,7 @@ class MaliMaliPMMCUONGLBREINITPENDFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUONCOREATTRUPDATEPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONCOREATTRUPDATEPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONCOREATTRUPDATEPENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONCOREATTRUPDATEPENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138559,7 +141290,7 @@ class MaliMaliPMMCUONCOREATTRUPDATEPENDFtraceEvent : public ::protozero::Message
   }
 };
 
-class MaliMaliPMMCUONFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUONFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUONFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUONFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138638,7 +141369,7 @@ class MaliMaliPMMCUONFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUOFFFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUOFFFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138717,7 +141448,7 @@ class MaliMaliPMMCUOFFFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUINSLEEPFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUINSLEEPFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUINSLEEPFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUINSLEEPFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138796,7 +141527,7 @@ class MaliMaliPMMCUINSLEEPFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUHCTLSHADERSREADYOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLSHADERSREADYOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLSHADERSREADYOFFFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLSHADERSREADYOFFFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138875,7 +141606,7 @@ class MaliMaliPMMCUHCTLSHADERSREADYOFFFtraceEvent : public ::protozero::Message 
   }
 };
 
-class MaliMaliPMMCUHCTLSHADERSPENDONFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLSHADERSPENDONFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLSHADERSPENDONFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLSHADERSPENDONFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -138954,7 +141685,7 @@ class MaliMaliPMMCUHCTLSHADERSPENDONFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUHCTLSHADERSPENDOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLSHADERSPENDOFFFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLSHADERSPENDOFFFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLSHADERSPENDOFFFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139033,7 +141764,7 @@ class MaliMaliPMMCUHCTLSHADERSPENDOFFFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUHCTLSHADERSCOREOFFPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLSHADERSCOREOFFPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLSHADERSCOREOFFPENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLSHADERSCOREOFFPENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139112,7 +141843,7 @@ class MaliMaliPMMCUHCTLSHADERSCOREOFFPENDFtraceEvent : public ::protozero::Messa
   }
 };
 
-class MaliMaliPMMCUHCTLMCUONRECHECKFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLMCUONRECHECKFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLMCUONRECHECKFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLMCUONRECHECKFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139191,7 +141922,7 @@ class MaliMaliPMMCUHCTLMCUONRECHECKFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliPMMCUHCTLCOREINACTIVEPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLCOREINACTIVEPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLCOREINACTIVEPENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLCOREINACTIVEPENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139270,7 +142001,7 @@ class MaliMaliPMMCUHCTLCOREINACTIVEPENDFtraceEvent : public ::protozero::Message
   }
 };
 
-class MaliMaliPMMCUHCTLCORESNOTIFYPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLCORESNOTIFYPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLCORESNOTIFYPENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLCORESNOTIFYPENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139349,7 +142080,7 @@ class MaliMaliPMMCUHCTLCORESNOTIFYPENDFtraceEvent : public ::protozero::Message 
   }
 };
 
-class MaliMaliPMMCUHCTLCORESDOWNSCALENOTIFYPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliPMMCUHCTLCORESDOWNSCALENOTIFYPENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliPMMCUHCTLCORESDOWNSCALENOTIFYPENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliPMMCUHCTLCORESDOWNSCALENOTIFYPENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139428,7 +142159,7 @@ class MaliMaliPMMCUHCTLCORESDOWNSCALENOTIFYPENDFtraceEvent : public ::protozero:
   }
 };
 
-class MaliMaliCSFINTERRUPTENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliCSFINTERRUPTENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliCSFINTERRUPTENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliCSFINTERRUPTENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139507,7 +142238,7 @@ class MaliMaliCSFINTERRUPTENDFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliCSFINTERRUPTSTARTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliCSFINTERRUPTSTARTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MaliMaliCSFINTERRUPTSTARTFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliCSFINTERRUPTSTARTFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139586,7 +142317,7 @@ class MaliMaliCSFINTERRUPTSTARTFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliKCPUFENCEWAITENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliKCPUFENCEWAITENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MaliMaliKCPUFENCEWAITENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliKCPUFENCEWAITENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139707,7 +142438,7 @@ class MaliMaliKCPUFENCEWAITENDFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliKCPUFENCEWAITSTARTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliKCPUFENCEWAITSTARTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MaliMaliKCPUFENCEWAITSTARTFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliKCPUFENCEWAITSTARTFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139828,7 +142559,7 @@ class MaliMaliKCPUFENCEWAITSTARTFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliKCPUFENCESIGNALFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliKCPUFENCESIGNALFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MaliMaliKCPUFENCESIGNALFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliKCPUFENCESIGNALFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -139949,7 +142680,7 @@ class MaliMaliKCPUFENCESIGNALFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliKCPUCQSWAITENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliKCPUCQSWAITENDFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MaliMaliKCPUCQSWAITENDFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliKCPUCQSWAITENDFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140070,7 +142801,7 @@ class MaliMaliKCPUCQSWAITENDFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliKCPUCQSWAITSTARTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliKCPUCQSWAITSTARTFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MaliMaliKCPUCQSWAITSTARTFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliKCPUCQSWAITSTARTFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140191,7 +142922,7 @@ class MaliMaliKCPUCQSWAITSTARTFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliMaliKCPUCQSSETFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliMaliKCPUCQSSETFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MaliMaliKCPUCQSSETFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliMaliKCPUCQSSETFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140312,7 +143043,7 @@ class MaliMaliKCPUCQSSETFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MaliTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MaliTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MaliTracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MaliTracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140442,7 +143173,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class RotatorBwAoAsContextFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RotatorBwAoAsContextFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RotatorBwAoAsContextFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RotatorBwAoAsContextFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140479,7 +143210,7 @@ class RotatorBwAoAsContextFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpPerfUpdateBusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpPerfUpdateBusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MdpPerfUpdateBusFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpPerfUpdateBusFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140558,7 +143289,7 @@ class MdpPerfUpdateBusFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpPerfPrefillCalcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpPerfPrefillCalcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   MdpPerfPrefillCalcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpPerfPrefillCalcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140784,7 +143515,7 @@ class MdpPerfPrefillCalcFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCmdWaitPingpongFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCmdWaitPingpongFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   MdpCmdWaitPingpongFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCmdWaitPingpongFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140842,7 +143573,7 @@ class MdpCmdWaitPingpongFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpVideoUnderrunDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpVideoUnderrunDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   MdpVideoUnderrunDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpVideoUnderrunDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -140900,7 +143631,7 @@ class MdpVideoUnderrunDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpPerfSetWmLevelsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpPerfSetWmLevelsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   MdpPerfSetWmLevelsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpPerfSetWmLevelsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141084,7 +143815,7 @@ class MdpPerfSetWmLevelsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpMixerUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpMixerUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MdpMixerUpdateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpMixerUpdateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141121,7 +143852,7 @@ class MdpMixerUpdateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCmdReleaseBwFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCmdReleaseBwFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MdpCmdReleaseBwFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCmdReleaseBwFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141158,7 +143889,7 @@ class MdpCmdReleaseBwFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpTraceCounterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpTraceCounterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MdpTraceCounterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpTraceCounterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141243,7 +143974,7 @@ class MdpTraceCounterFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpPerfSetQosLutsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpPerfSetQosLutsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   MdpPerfSetQosLutsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpPerfSetQosLutsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141406,7 +144137,7 @@ class MdpPerfSetQosLutsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpMisrCrcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpMisrCrcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MdpMisrCrcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpMisrCrcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141485,7 +144216,7 @@ class MdpMisrCrcFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCmdReadptrDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCmdReadptrDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   MdpCmdReadptrDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCmdReadptrDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141543,7 +144274,7 @@ class MdpCmdReadptrDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpSsppSetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpSsppSetFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16> {
  public:
   MdpSsppSetFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpSsppSetFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -141895,7 +144626,7 @@ class MdpSsppSetFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpPerfSetPanicLutsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpPerfSetPanicLutsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MdpPerfSetPanicLutsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpPerfSetPanicLutsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142016,7 +144747,7 @@ class MdpPerfSetPanicLutsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCompareBwFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCompareBwFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   MdpCompareBwFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCompareBwFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142200,7 +144931,7 @@ class MdpCompareBwFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCmdPingpongDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCmdPingpongDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MdpCmdPingpongDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCmdPingpongDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142300,7 +145031,7 @@ class MdpCmdPingpongDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142385,7 +145116,7 @@ class TracingMarkWriteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpSsppChangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpSsppChangeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/16> {
  public:
   MdpSsppChangeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpSsppChangeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142737,7 +145468,7 @@ class MdpSsppChangeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpPerfSetOtFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpPerfSetOtFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MdpPerfSetOtFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpPerfSetOtFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142837,7 +145568,7 @@ class MdpPerfSetOtFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCommitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCommitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MdpCommitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCommitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -142937,7 +145668,7 @@ class MdpCommitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MdpCmdKickoffFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MdpCmdKickoffFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   MdpCmdKickoffFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MdpCmdKickoffFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143019,7 +145750,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class MmEventRecordFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmEventRecordFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MmEventRecordFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmEventRecordFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143143,7 +145874,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class NapiGroReceiveExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NapiGroReceiveExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   NapiGroReceiveExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NapiGroReceiveExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143180,7 +145911,7 @@ class NapiGroReceiveExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class NapiGroReceiveEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NapiGroReceiveEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19> {
  public:
   NapiGroReceiveEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NapiGroReceiveEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143601,7 +146332,7 @@ class NapiGroReceiveEntryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class NetDevXmitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NetDevXmitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   NetDevXmitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NetDevXmitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143707,7 +146438,7 @@ class NetDevXmitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class NetifReceiveSkbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class NetifReceiveSkbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   NetifReceiveSkbFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit NetifReceiveSkbFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143816,7 +146547,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class MarkVictimFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MarkVictimFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MarkVictimFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MarkVictimFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143853,7 +146584,7 @@ class MarkVictimFtraceEvent : public ::protozero::Message {
   }
 };
 
-class OomScoreAdjUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class OomScoreAdjUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   OomScoreAdjUpdateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit OomScoreAdjUpdateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -143962,7 +146693,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PanelWriteGenericFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PanelWriteGenericFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   PanelWriteGenericFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PanelWriteGenericFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144116,7 +146847,7 @@ class PanelWriteGenericFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DsiTxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DsiTxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DsiTxFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DsiTxFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144195,7 +146926,7 @@ class DsiTxFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DsiRxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DsiRxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DsiRxFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DsiRxFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144253,7 +146984,7 @@ class DsiRxFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DsiCmdFifoStatusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DsiCmdFifoStatusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   DsiCmdFifoStatusFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DsiCmdFifoStatusFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144335,7 +147066,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SchedSwitchWithCtrsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/23, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedSwitchWithCtrsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/23> {
  public:
   SchedSwitchWithCtrsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedSwitchWithCtrsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144870,7 +147601,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PixelMmKswapdDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PixelMmKswapdDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   PixelMmKswapdDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PixelMmKswapdDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144879,6 +147610,10 @@ class PixelMmKswapdDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecod
   uint64_t delta_nr_scanned() const { return at<1>().as_uint64(); }
   bool has_delta_nr_reclaimed() const { return at<2>().valid(); }
   uint64_t delta_nr_reclaimed() const { return at<2>().as_uint64(); }
+  bool has_delta_nr_allocated() const { return at<3>().valid(); }
+  uint64_t delta_nr_allocated() const { return at<3>().as_uint64(); }
+  bool has_duration_ns() const { return at<4>().valid(); }
+  uint64_t duration_ns() const { return at<4>().as_uint64(); }
 };
 
 class PixelMmKswapdDoneFtraceEvent : public ::protozero::Message {
@@ -144887,6 +147622,8 @@ class PixelMmKswapdDoneFtraceEvent : public ::protozero::Message {
   enum : int32_t {
     kDeltaNrScannedFieldNumber = 1,
     kDeltaNrReclaimedFieldNumber = 2,
+    kDeltaNrAllocatedFieldNumber = 3,
+    kDurationNsFieldNumber = 4,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.PixelMmKswapdDoneFtraceEvent"; }
 
@@ -144926,9 +147663,45 @@ class PixelMmKswapdDoneFtraceEvent : public ::protozero::Message {
       ::protozero::proto_utils::ProtoSchemaType::kUint64>
         ::Append(*this, field_id, value);
   }
+
+  using FieldMetadata_DeltaNrAllocated =
+    ::protozero::proto_utils::FieldMetadata<
+      3,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      PixelMmKswapdDoneFtraceEvent>;
+
+  static constexpr FieldMetadata_DeltaNrAllocated kDeltaNrAllocated{};
+  void set_delta_nr_allocated(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_DeltaNrAllocated::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_DurationNs =
+    ::protozero::proto_utils::FieldMetadata<
+      4,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      PixelMmKswapdDoneFtraceEvent>;
+
+  static constexpr FieldMetadata_DurationNs kDurationNs{};
+  void set_duration_ns(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_DurationNs::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
 };
 
-class PixelMmKswapdWakeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PixelMmKswapdWakeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   PixelMmKswapdWakeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PixelMmKswapdWakeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -144989,7 +147762,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DevicePmCallbackEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DevicePmCallbackEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DevicePmCallbackEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DevicePmCallbackEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145080,7 +147853,7 @@ class DevicePmCallbackEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class DevicePmCallbackStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class DevicePmCallbackStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   DevicePmCallbackStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DevicePmCallbackStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145225,7 +147998,7 @@ class DevicePmCallbackStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class GpuWorkPeriodFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuWorkPeriodFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   GpuWorkPeriodFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuWorkPeriodFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145346,7 +148119,7 @@ class GpuWorkPeriodFtraceEvent : public ::protozero::Message {
   }
 };
 
-class WakeupSourceDeactivateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WakeupSourceDeactivateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   WakeupSourceDeactivateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WakeupSourceDeactivateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145410,7 +148183,7 @@ class WakeupSourceDeactivateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class WakeupSourceActivateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WakeupSourceActivateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   WakeupSourceActivateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WakeupSourceActivateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145474,7 +148247,7 @@ class WakeupSourceActivateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class GpuFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GpuFrequencyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuFrequencyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145532,7 +148305,7 @@ class GpuFrequencyFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SuspendResumeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SuspendResumeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SuspendResumeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SuspendResumeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145617,7 +148390,7 @@ class SuspendResumeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ClockSetRateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClockSetRateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ClockSetRateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClockSetRateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145702,7 +148475,7 @@ class ClockSetRateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ClockDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClockDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ClockDisableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClockDisableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145787,7 +148560,7 @@ class ClockDisableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ClockEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ClockEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ClockEnableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ClockEnableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145872,7 +148645,7 @@ class ClockEnableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuIdleFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuIdleFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   CpuIdleFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuIdleFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -145930,7 +148703,7 @@ class CpuIdleFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuFrequencyLimitsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuFrequencyLimitsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   CpuFrequencyLimitsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuFrequencyLimitsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146009,7 +148782,7 @@ class CpuFrequencyLimitsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class CpuFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuFrequencyFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   CpuFrequencyFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuFrequencyFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146091,7 +148864,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ConsoleFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ConsoleFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ConsoleFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ConsoleFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146158,7 +148931,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SysExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146216,7 +148989,7 @@ class SysExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SysEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SysEnterFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysEnterFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysEnterFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146298,7 +149071,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class RegulatorSetVoltageCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorSetVoltageCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   RegulatorSetVoltageCompleteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorSetVoltageCompleteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146362,7 +149135,7 @@ class RegulatorSetVoltageCompleteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RegulatorSetVoltageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorSetVoltageFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   RegulatorSetVoltageFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorSetVoltageFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146447,7 +149220,7 @@ class RegulatorSetVoltageFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RegulatorEnableDelayFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorEnableDelayFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RegulatorEnableDelayFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorEnableDelayFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146490,7 +149263,7 @@ class RegulatorEnableDelayFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RegulatorEnableCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorEnableCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RegulatorEnableCompleteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorEnableCompleteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146533,7 +149306,7 @@ class RegulatorEnableCompleteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RegulatorEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorEnableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RegulatorEnableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorEnableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146576,7 +149349,7 @@ class RegulatorEnableFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RegulatorDisableCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorDisableCompleteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RegulatorDisableCompleteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorDisableCompleteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146619,7 +149392,7 @@ class RegulatorDisableCompleteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RegulatorDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RegulatorDisableFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RegulatorDisableFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RegulatorDisableFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146686,7 +149459,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class RpmStatusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RpmStatusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   RpmStatusFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RpmStatusFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146774,7 +149547,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SamsungTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SamsungTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SamsungTracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SamsungTracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -146925,7 +149698,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SchedWakeupTaskAttrFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedWakeupTaskAttrFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SchedWakeupTaskAttrFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedWakeupTaskAttrFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147046,7 +149819,7 @@ class SchedWakeupTaskAttrFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedMigrateTaskFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedMigrateTaskFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   SchedMigrateTaskFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedMigrateTaskFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147215,7 +149988,7 @@ class SchedMigrateTaskFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedCpuUtilCfsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedCpuUtilCfsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   SchedCpuUtilCfsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedCpuUtilCfsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147546,7 +150319,7 @@ class SchedCpuUtilCfsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedPiSetprioFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedPiSetprioFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   SchedPiSetprioFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedPiSetprioFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147652,7 +150425,7 @@ class SchedPiSetprioFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedProcessWaitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedProcessWaitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SchedProcessWaitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedProcessWaitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147737,7 +150510,7 @@ class SchedProcessWaitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedProcessHangFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedProcessHangFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SchedProcessHangFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedProcessHangFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147801,7 +150574,7 @@ class SchedProcessHangFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedProcessFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedProcessFreeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SchedProcessFreeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedProcessFreeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147886,7 +150659,7 @@ class SchedProcessFreeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedProcessForkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedProcessForkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   SchedProcessForkFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedProcessForkFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -147998,7 +150771,7 @@ class SchedProcessForkFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedProcessExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedProcessExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   SchedProcessExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedProcessExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148104,7 +150877,7 @@ class SchedProcessExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedProcessExecFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedProcessExecFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SchedProcessExecFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedProcessExecFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148189,7 +150962,7 @@ class SchedProcessExecFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedWakeupNewFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedWakeupNewFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SchedWakeupNewFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedWakeupNewFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148316,7 +151089,7 @@ class SchedWakeupNewFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedWakingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedWakingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SchedWakingFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedWakingFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148443,7 +151216,7 @@ class SchedWakingFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedCpuHotplugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedCpuHotplugFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SchedCpuHotplugFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedCpuHotplugFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148522,7 +151295,7 @@ class SchedCpuHotplugFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedBlockedReasonFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedBlockedReasonFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SchedBlockedReasonFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedBlockedReasonFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148601,7 +151374,7 @@ class SchedBlockedReasonFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedWakeupFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedWakeupFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SchedWakeupFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedWakeupFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148728,7 +151501,7 @@ class SchedWakeupFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SchedSwitchFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SchedSwitchFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   SchedSwitchFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SchedSwitchFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148927,7 +151700,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ScmCallEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ScmCallEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   ScmCallEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ScmCallEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -148941,7 +151714,7 @@ class ScmCallEndFtraceEvent : public ::protozero::Message {
 
 };
 
-class ScmCallStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ScmCallStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ScmCallStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ScmCallStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149044,7 +151817,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SdeSdePerfUpdateBusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SdeSdePerfUpdateBusFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   SdeSdePerfUpdateBusFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SdeSdePerfUpdateBusFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149144,7 +151917,7 @@ class SdeSdePerfUpdateBusFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SdeSdePerfSetQosLutsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SdeSdePerfSetQosLutsFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   SdeSdePerfSetQosLutsFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SdeSdePerfSetQosLutsFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149286,7 +152059,7 @@ class SdeSdePerfSetQosLutsFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SdeSdePerfCrtcUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SdeSdePerfCrtcUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   SdeSdePerfCrtcUpdateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SdeSdePerfCrtcUpdateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149554,7 +152327,7 @@ class SdeSdePerfCrtcUpdateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SdeSdePerfCalcCrtcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SdeSdePerfCalcCrtcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   SdeSdePerfCalcCrtcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SdeSdePerfCalcCrtcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149738,7 +152511,7 @@ class SdeSdePerfCalcCrtcFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SdeSdeEvtlogFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SdeSdeEvtlogFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SdeSdeEvtlogFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SdeSdeEvtlogFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149823,7 +152596,7 @@ class SdeSdeEvtlogFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SdeTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SdeTracingMarkWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   SdeTracingMarkWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SdeTracingMarkWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -149974,7 +152747,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SignalGenerateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SignalGenerateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   SignalGenerateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SignalGenerateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150122,7 +152895,7 @@ class SignalGenerateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SignalDeliverFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SignalDeliverFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SignalDeliverFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SignalDeliverFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150225,7 +152998,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class KfreeSkbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class KfreeSkbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   KfreeSkbFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit KfreeSkbFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150328,7 +153101,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class InetSockSetStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InetSockSetStateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   InetSockSetStateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InetSockSetStateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150557,7 +153330,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SyncWaitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SyncWaitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SyncWaitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SyncWaitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150642,7 +153415,7 @@ class SyncWaitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SyncTimelineFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SyncTimelineFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SyncTimelineFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SyncTimelineFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150712,7 +153485,7 @@ class SyncTimelineFtraceEvent : public ::protozero::Message {
   }
 };
 
-class SyncPtFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SyncPtFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SyncPtFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SyncPtFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150806,7 +153579,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SuspendResumeMinimalFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SuspendResumeMinimalFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   SuspendResumeMinimalFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SuspendResumeMinimalFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150843,7 +153616,7 @@ class SuspendResumeMinimalFtraceEvent : public ::protozero::Message {
   }
 };
 
-class RssStatThrottledFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RssStatThrottledFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   RssStatThrottledFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RssStatThrottledFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -150967,7 +153740,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ZeroFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ZeroFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ZeroFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ZeroFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151097,7 +153870,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TaskRenameFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TaskRenameFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TaskRenameFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TaskRenameFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151209,7 +153982,7 @@ class TaskRenameFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TaskNewtaskFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TaskNewtaskFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TaskNewtaskFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TaskNewtaskFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151339,7 +154112,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TcpRetransmitSkbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TcpRetransmitSkbFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   TcpRetransmitSkbFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TcpRetransmitSkbFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151526,7 +154299,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CdevUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CdevUpdateFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   CdevUpdateFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CdevUpdateFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151590,7 +154363,7 @@ class CdevUpdateFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ThermalTemperatureFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ThermalTemperatureFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ThermalTemperatureFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ThermalTemperatureFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151720,7 +154493,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ThermalExynosAcpmHighOverheadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ThermalExynosAcpmHighOverheadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   ThermalExynosAcpmHighOverheadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ThermalExynosAcpmHighOverheadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -151883,7 +154656,7 @@ class ThermalExynosAcpmHighOverheadFtraceEvent : public ::protozero::Message {
   }
 };
 
-class ThermalExynosAcpmBulkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ThermalExynosAcpmBulkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   ThermalExynosAcpmBulkFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ThermalExynosAcpmBulkFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152154,7 +154927,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TimerExpireExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TimerExpireExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TimerExpireExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TimerExpireExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152191,7 +154964,7 @@ class TimerExpireExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TimerExpireEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TimerExpireEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TimerExpireEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TimerExpireEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152291,7 +155064,7 @@ class TimerExpireEntryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TimerCancelFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TimerCancelFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TimerCancelFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TimerCancelFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152328,7 +155101,7 @@ class TimerCancelFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TimerStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TimerStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   TimerStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TimerStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152491,7 +155264,7 @@ class TimerStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HrtimerExpireExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HrtimerExpireExitFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   HrtimerExpireExitFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HrtimerExpireExitFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152528,7 +155301,7 @@ class HrtimerExpireExitFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HrtimerExpireEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HrtimerExpireEntryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   HrtimerExpireEntryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HrtimerExpireEntryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152607,7 +155380,7 @@ class HrtimerExpireEntryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HrtimerCancelFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HrtimerCancelFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   HrtimerCancelFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HrtimerCancelFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152644,7 +155417,7 @@ class HrtimerCancelFtraceEvent : public ::protozero::Message {
   }
 };
 
-class HrtimerStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HrtimerStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   HrtimerStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HrtimerStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152789,7 +155562,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TrustyEnqueueNopFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyEnqueueNopFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyEnqueueNopFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyEnqueueNopFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152868,7 +155641,7 @@ class TrustyEnqueueNopFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcRxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcRxFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyIpcRxFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcRxFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -152953,7 +155726,7 @@ class TrustyIpcRxFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcReadEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcReadEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TrustyIpcReadEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcReadEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153080,7 +155853,7 @@ class TrustyIpcReadEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcReadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcReadFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TrustyIpcReadFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcReadFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153144,7 +155917,7 @@ class TrustyIpcReadFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcPollFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcPollFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyIpcPollFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcPollFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153229,7 +156002,7 @@ class TrustyIpcPollFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcWriteFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   TrustyIpcWriteFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcWriteFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153377,7 +156150,7 @@ class TrustyIpcWriteFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcConnectEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcConnectEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyIpcConnectEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcConnectEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153456,7 +156229,7 @@ class TrustyIpcConnectEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcConnectFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcConnectFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyIpcConnectFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcConnectFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153541,7 +156314,7 @@ class TrustyIpcConnectFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIpcHandleEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIpcHandleEventFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyIpcHandleEventFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIpcHandleEventFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153626,7 +156399,7 @@ class TrustyIpcHandleEventFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyIrqFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TrustyIrqFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyIrqFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153663,7 +156436,7 @@ class TrustyIrqFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyReclaimMemoryDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyReclaimMemoryDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TrustyReclaimMemoryDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyReclaimMemoryDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153721,7 +156494,7 @@ class TrustyReclaimMemoryDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyReclaimMemoryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyReclaimMemoryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TrustyReclaimMemoryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyReclaimMemoryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153758,7 +156531,7 @@ class TrustyReclaimMemoryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyShareMemoryDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyShareMemoryDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TrustyShareMemoryDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyShareMemoryDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153879,7 +156652,7 @@ class TrustyShareMemoryDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyShareMemoryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyShareMemoryFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   TrustyShareMemoryFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyShareMemoryFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153958,7 +156731,7 @@ class TrustyShareMemoryFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyStdCall32DoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyStdCall32DoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TrustyStdCall32DoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyStdCall32DoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -153995,7 +156768,7 @@ class TrustyStdCall32DoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustyStdCall32FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustyStdCall32FtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TrustyStdCall32FtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustyStdCall32FtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -154095,7 +156868,7 @@ class TrustyStdCall32FtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustySmcDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustySmcDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TrustySmcDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustySmcDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -154132,7 +156905,7 @@ class TrustySmcDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class TrustySmcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrustySmcFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   TrustySmcFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrustySmcFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -154256,7 +157029,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class UfshcdClkGatingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class UfshcdClkGatingFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   UfshcdClkGatingFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UfshcdClkGatingFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -154320,7 +157093,7 @@ class UfshcdClkGatingFtraceEvent : public ::protozero::Message {
   }
 };
 
-class UfshcdCommandFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class UfshcdCommandFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   UfshcdCommandFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UfshcdCommandFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -154582,7 +157355,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Vb2V4l2DqbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Vb2V4l2DqbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   Vb2V4l2DqbufFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Vb2V4l2DqbufFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -154913,7 +157686,7 @@ class Vb2V4l2DqbufFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Vb2V4l2QbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Vb2V4l2QbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   Vb2V4l2QbufFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Vb2V4l2QbufFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -155244,7 +158017,7 @@ class Vb2V4l2QbufFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Vb2V4l2BufDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Vb2V4l2BufDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   Vb2V4l2BufDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Vb2V4l2BufDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -155575,7 +158348,7 @@ class Vb2V4l2BufDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class Vb2V4l2BufQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Vb2V4l2BufQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   Vb2V4l2BufQueueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Vb2V4l2BufQueueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -155906,7 +158679,7 @@ class Vb2V4l2BufQueueFtraceEvent : public ::protozero::Message {
   }
 };
 
-class V4l2DqbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V4l2DqbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18> {
  public:
   V4l2DqbufFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V4l2DqbufFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -156300,7 +159073,7 @@ class V4l2DqbufFtraceEvent : public ::protozero::Message {
   }
 };
 
-class V4l2QbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class V4l2QbufFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18> {
  public:
   V4l2QbufFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit V4l2QbufFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -156718,7 +159491,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class VirtioGpuCmdResponseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VirtioGpuCmdResponseFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   VirtioGpuCmdResponseFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VirtioGpuCmdResponseFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -156929,7 +159702,7 @@ class VirtioGpuCmdResponseFtraceEvent : public ::protozero::Message {
   }
 };
 
-class VirtioGpuCmdQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VirtioGpuCmdQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   VirtioGpuCmdQueueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VirtioGpuCmdQueueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -157164,7 +159937,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class VirtioVideoResourceQueueDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VirtioVideoResourceQueueDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   VirtioVideoResourceQueueDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VirtioVideoResourceQueueDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -157348,7 +160121,7 @@ class VirtioVideoResourceQueueDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class VirtioVideoResourceQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VirtioVideoResourceQueueFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   VirtioVideoResourceQueueFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VirtioVideoResourceQueueFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -157532,7 +160305,7 @@ class VirtioVideoResourceQueueFtraceEvent : public ::protozero::Message {
   }
 };
 
-class VirtioVideoCmdDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VirtioVideoCmdDoneFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   VirtioVideoCmdDoneFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VirtioVideoCmdDoneFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -157590,7 +160363,7 @@ class VirtioVideoCmdDoneFtraceEvent : public ::protozero::Message {
   }
 };
 
-class VirtioVideoCmdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VirtioVideoCmdFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   VirtioVideoCmdFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VirtioVideoCmdFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -157672,7 +160445,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class MmShrinkSlabEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmShrinkSlabEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   MmShrinkSlabEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmShrinkSlabEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -157835,7 +160608,7 @@ class MmShrinkSlabEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmShrinkSlabStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmShrinkSlabStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   MmShrinkSlabStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmShrinkSlabStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158082,7 +160855,7 @@ class MmShrinkSlabStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmVmscanKswapdSleepFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmVmscanKswapdSleepFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MmVmscanKswapdSleepFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmVmscanKswapdSleepFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158119,7 +160892,7 @@ class MmVmscanKswapdSleepFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmVmscanKswapdWakeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmVmscanKswapdWakeFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MmVmscanKswapdWakeFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmVmscanKswapdWakeFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158198,7 +160971,7 @@ class MmVmscanKswapdWakeFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmVmscanDirectReclaimEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmVmscanDirectReclaimEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   MmVmscanDirectReclaimEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmVmscanDirectReclaimEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158235,7 +161008,7 @@ class MmVmscanDirectReclaimEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class MmVmscanDirectReclaimBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MmVmscanDirectReclaimBeginFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MmVmscanDirectReclaimBeginFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MmVmscanDirectReclaimBeginFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158338,7 +161111,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class WorkqueueQueueWorkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WorkqueueQueueWorkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   WorkqueueQueueWorkFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WorkqueueQueueWorkFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158459,7 +161232,7 @@ class WorkqueueQueueWorkFtraceEvent : public ::protozero::Message {
   }
 };
 
-class WorkqueueExecuteStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WorkqueueExecuteStartFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   WorkqueueExecuteStartFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WorkqueueExecuteStartFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158517,7 +161290,7 @@ class WorkqueueExecuteStartFtraceEvent : public ::protozero::Message {
   }
 };
 
-class WorkqueueExecuteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WorkqueueExecuteEndFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   WorkqueueExecuteEndFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WorkqueueExecuteEndFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158575,7 +161348,7 @@ class WorkqueueExecuteEndFtraceEvent : public ::protozero::Message {
   }
 };
 
-class WorkqueueActivateWorkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class WorkqueueActivateWorkFtraceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   WorkqueueActivateWorkFtraceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit WorkqueueActivateWorkFtraceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158636,7 +161409,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GenericKernelCpuFrequencyEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GenericKernelCpuFrequencyEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GenericKernelCpuFrequencyEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericKernelCpuFrequencyEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158783,7 +161556,7 @@ const char* GenericKernelTaskStateEvent_TaskStateEnum_Name(::perfetto::protos::p
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class GenericKernelProcessTree_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GenericKernelProcessTree_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GenericKernelProcessTree_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericKernelProcessTree_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158835,7 +161608,7 @@ class GenericKernelProcessTree : public ::protozero::Message {
 
 };
 
-class GenericKernelProcessTree_Process_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GenericKernelProcessTree_Process_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GenericKernelProcessTree_Process_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericKernelProcessTree_Process_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -158920,7 +161693,7 @@ class GenericKernelProcessTree_Process : public ::protozero::Message {
   }
 };
 
-class GenericKernelProcessTree_Thread_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GenericKernelProcessTree_Thread_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   GenericKernelProcessTree_Thread_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericKernelProcessTree_Thread_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159026,7 +161799,7 @@ class GenericKernelProcessTree_Thread : public ::protozero::Message {
   }
 };
 
-class GenericKernelTaskRenameEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GenericKernelTaskRenameEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GenericKernelTaskRenameEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericKernelTaskRenameEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159090,7 +161863,7 @@ class GenericKernelTaskRenameEvent : public ::protozero::Message {
   }
 };
 
-class GenericKernelTaskStateEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GenericKernelTaskStateEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   GenericKernelTaskStateEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GenericKernelTaskStateEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159263,7 +162036,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class GpuCounterEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuCounterEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuCounterEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuCounterEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159335,7 +162108,7 @@ class GpuCounterEvent : public ::protozero::Message {
   }
 };
 
-class GpuCounterEvent_GpuCounter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuCounterEvent_GpuCounter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuCounterEvent_GpuCounter_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuCounterEvent_GpuCounter_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159489,7 +162262,7 @@ const char* GpuLog_Severity_Name(::perfetto::protos::pbzero::GpuLog_Severity val
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class GpuLog_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuLog_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuLog_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuLog_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159695,7 +162468,7 @@ const char* InternedGraphicsContext_Api_Name(::perfetto::protos::pbzero::Interne
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class InternedGpuRenderStageSpecification_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedGpuRenderStageSpecification_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   InternedGpuRenderStageSpecification_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedGpuRenderStageSpecification_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159815,7 +162588,7 @@ class InternedGpuRenderStageSpecification : public ::protozero::Message {
   }
 };
 
-class InternedGraphicsContext_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedGraphicsContext_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   InternedGraphicsContext_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedGraphicsContext_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -159903,7 +162676,7 @@ class InternedGraphicsContext : public ::protozero::Message {
   }
 };
 
-class GpuRenderStageEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/100, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuRenderStageEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/100> {
  public:
   GpuRenderStageEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuRenderStageEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160249,7 +163022,7 @@ class GpuRenderStageEvent : public ::protozero::Message {
   }
 };
 
-class GpuRenderStageEvent_Specifications_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class GpuRenderStageEvent_Specifications_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   GpuRenderStageEvent_Specifications_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuRenderStageEvent_Specifications_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160318,7 +163091,7 @@ class GpuRenderStageEvent_Specifications : public ::protozero::Message {
 
 };
 
-class GpuRenderStageEvent_Specifications_Description_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuRenderStageEvent_Specifications_Description_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GpuRenderStageEvent_Specifications_Description_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuRenderStageEvent_Specifications_Description_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160388,7 +163161,7 @@ class GpuRenderStageEvent_Specifications_Description : public ::protozero::Messa
   }
 };
 
-class GpuRenderStageEvent_Specifications_ContextSpec_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuRenderStageEvent_Specifications_ContextSpec_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GpuRenderStageEvent_Specifications_ContextSpec_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuRenderStageEvent_Specifications_ContextSpec_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160446,7 +163219,7 @@ class GpuRenderStageEvent_Specifications_ContextSpec : public ::protozero::Messa
   }
 };
 
-class GpuRenderStageEvent_ExtraData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class GpuRenderStageEvent_ExtraData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   GpuRenderStageEvent_ExtraData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit GpuRenderStageEvent_ExtraData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160548,7 +163321,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class VulkanApiEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VulkanApiEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   VulkanApiEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VulkanApiEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160600,7 +163373,7 @@ class VulkanApiEvent : public ::protozero::Message {
 
 };
 
-class VulkanApiEvent_VkQueueSubmit_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class VulkanApiEvent_VkQueueSubmit_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   VulkanApiEvent_VkQueueSubmit_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VulkanApiEvent_VkQueueSubmit_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -160742,7 +163515,7 @@ class VulkanApiEvent_VkQueueSubmit : public ::protozero::Message {
   }
 };
 
-class VulkanApiEvent_VkDebugUtilsObjectName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VulkanApiEvent_VkDebugUtilsObjectName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   VulkanApiEvent_VkDebugUtilsObjectName_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VulkanApiEvent_VkDebugUtilsObjectName_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -161035,7 +163808,7 @@ const char* VulkanMemoryEvent_AllocationScope_Name(::perfetto::protos::pbzero::V
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class VulkanMemoryEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class VulkanMemoryEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/20> {
  public:
   VulkanMemoryEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VulkanMemoryEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -161374,7 +164147,7 @@ class VulkanMemoryEvent : public ::protozero::Message {
   }
 };
 
-class VulkanMemoryEventAnnotation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class VulkanMemoryEventAnnotation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   VulkanMemoryEventAnnotation_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit VulkanMemoryEventAnnotation_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -161506,7 +164279,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class DeobfuscationMapping_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class DeobfuscationMapping_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   DeobfuscationMapping_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit DeobfuscationMapping_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -161587,7 +164360,7 @@ class DeobfuscationMapping : public ::protozero::Message {
 
 };
 
-class ObfuscatedClass_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ObfuscatedClass_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ObfuscatedClass_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ObfuscatedClass_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -161691,7 +164464,7 @@ class ObfuscatedClass : public ::protozero::Message {
 
 };
 
-class ObfuscatedMember_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ObfuscatedMember_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ObfuscatedMember_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ObfuscatedMember_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -161983,7 +164756,7 @@ const char* HeapGraphRoot_Type_Name(::perfetto::protos::pbzero::HeapGraphRoot_Ty
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class HeapGraph_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class HeapGraph_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   HeapGraph_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HeapGraph_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -162147,7 +164920,7 @@ class HeapGraph : public ::protozero::Message {
   }
 };
 
-class HeapGraphObject_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HeapGraphObject_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/10> {
  public:
   HeapGraphObject_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HeapGraphObject_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -162370,7 +165143,7 @@ class HeapGraphObject : public ::protozero::Message {
   }
 };
 
-class HeapGraphType_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HeapGraphType_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   HeapGraphType_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HeapGraphType_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -162573,7 +165346,7 @@ class HeapGraphType : public ::protozero::Message {
   }
 };
 
-class HeapGraphRoot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HeapGraphRoot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HeapGraphRoot_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HeapGraphRoot_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -162679,7 +165452,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Callstack_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class Callstack_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   Callstack_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Callstack_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -162737,7 +165510,7 @@ class Callstack : public ::protozero::Message {
   }
 };
 
-class Frame_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Frame_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   Frame_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Frame_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -162750,6 +165523,10 @@ class Frame_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, 
   uint64_t mapping_id() const { return at<3>().as_uint64(); }
   bool has_rel_pc() const { return at<4>().valid(); }
   uint64_t rel_pc() const { return at<4>().as_uint64(); }
+  bool has_source_path_iid() const { return at<5>().valid(); }
+  uint64_t source_path_iid() const { return at<5>().as_uint64(); }
+  bool has_line_number() const { return at<6>().valid(); }
+  uint32_t line_number() const { return at<6>().as_uint32(); }
 };
 
 class Frame : public ::protozero::Message {
@@ -162760,6 +165537,8 @@ class Frame : public ::protozero::Message {
     kFunctionNameIdFieldNumber = 2,
     kMappingIdFieldNumber = 3,
     kRelPcFieldNumber = 4,
+    kSourcePathIidFieldNumber = 5,
+    kLineNumberFieldNumber = 6,
   };
   static constexpr const char* GetName() { return ".perfetto.protos.Frame"; }
 
@@ -162835,9 +165614,45 @@ class Frame : public ::protozero::Message {
       ::protozero::proto_utils::ProtoSchemaType::kUint64>
         ::Append(*this, field_id, value);
   }
+
+  using FieldMetadata_SourcePathIid =
+    ::protozero::proto_utils::FieldMetadata<
+      5,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint64,
+      uint64_t,
+      Frame>;
+
+  static constexpr FieldMetadata_SourcePathIid kSourcePathIid{};
+  void set_source_path_iid(uint64_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_SourcePathIid::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint64>
+        ::Append(*this, field_id, value);
+  }
+
+  using FieldMetadata_LineNumber =
+    ::protozero::proto_utils::FieldMetadata<
+      6,
+      ::protozero::proto_utils::RepetitionType::kNotRepeated,
+      ::protozero::proto_utils::ProtoSchemaType::kUint32,
+      uint32_t,
+      Frame>;
+
+  static constexpr FieldMetadata_LineNumber kLineNumber{};
+  void set_line_number(uint32_t value) {
+    static constexpr uint32_t field_id = FieldMetadata_LineNumber::kFieldId;
+    // Call the appropriate protozero::Message::Append(field_id, ...)
+    // method based on the type of the field.
+    ::protozero::internal::FieldWriter<
+      ::protozero::proto_utils::ProtoSchemaType::kUint32>
+        ::Append(*this, field_id, value);
+  }
 };
 
-class Mapping_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class Mapping_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   Mapping_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Mapping_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163021,7 +165836,7 @@ class Mapping : public ::protozero::Message {
   }
 };
 
-class ModuleSymbols_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ModuleSymbols_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ModuleSymbols_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ModuleSymbols_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163108,7 +165923,7 @@ class ModuleSymbols : public ::protozero::Message {
 
 };
 
-class AddressSymbols_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AddressSymbols_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AddressSymbols_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AddressSymbols_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163162,7 +165977,7 @@ class AddressSymbols : public ::protozero::Message {
 
 };
 
-class Line_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Line_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   Line_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Line_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163253,7 +166068,7 @@ class Line : public ::protozero::Message {
   }
 };
 
-class InternedString_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class InternedString_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   InternedString_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit InternedString_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163592,7 +166407,7 @@ const char* ProfilePacket_ProcessHeapSamples_ClientError_Name(::perfetto::protos
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class PerfSampleDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PerfSampleDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   PerfSampleDefaults_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfSampleDefaults_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163684,7 +166499,7 @@ class PerfSampleDefaults : public ::protozero::Message {
   }
 };
 
-class PerfSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PerfSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/19> {
  public:
   PerfSample_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfSample_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163938,7 +166753,7 @@ class PerfSample : public ::protozero::Message {
 
 };
 
-class PerfSample_ProducerEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfSample_ProducerEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   PerfSample_ProducerEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfSample_ProducerEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -163982,7 +166797,7 @@ class PerfSample_ProducerEvent : public ::protozero::Message {
   }
 };
 
-class Profiling_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Profiling_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   Profiling_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Profiling_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164028,7 +166843,7 @@ class Profiling : public ::protozero::Message {
   static inline const StackUnwindError UNWIND_ERROR_PTRACE_CALL = StackUnwindError::UNWIND_ERROR_PTRACE_CALL;
 };
 
-class StreamingProfilePacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class StreamingProfilePacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   StreamingProfilePacket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StreamingProfilePacket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164107,7 +166922,7 @@ class StreamingProfilePacket : public ::protozero::Message {
   }
 };
 
-class StreamingFree_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class StreamingFree_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   StreamingFree_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StreamingFree_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164186,7 +167001,7 @@ class StreamingFree : public ::protozero::Message {
   }
 };
 
-class StreamingAllocation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class StreamingAllocation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   StreamingAllocation_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StreamingAllocation_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164328,7 +167143,7 @@ class StreamingAllocation : public ::protozero::Message {
   }
 };
 
-class ProfilePacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProfilePacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   ProfilePacket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProfilePacket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164475,7 +167290,7 @@ class ProfilePacket : public ::protozero::Message {
   }
 };
 
-class ProfilePacket_ProcessHeapSamples_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/14, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProfilePacket_ProcessHeapSamples_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/14> {
  public:
   ProfilePacket_ProcessHeapSamples_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProfilePacket_ProcessHeapSamples_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164791,7 +167606,7 @@ class ProfilePacket_ProcessHeapSamples : public ::protozero::Message {
 
 };
 
-class ProfilePacket_ProcessStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProfilePacket_ProcessStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   ProfilePacket_ProcessStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProfilePacket_ProcessStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164929,7 +167744,7 @@ class ProfilePacket_ProcessStats : public ::protozero::Message {
   }
 };
 
-class ProfilePacket_Histogram_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProfilePacket_Histogram_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ProfilePacket_Histogram_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProfilePacket_Histogram_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -164963,7 +167778,7 @@ class ProfilePacket_Histogram : public ::protozero::Message {
 
 };
 
-class ProfilePacket_Histogram_Bucket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProfilePacket_Histogram_Bucket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ProfilePacket_Histogram_Bucket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProfilePacket_Histogram_Bucket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -165042,7 +167857,7 @@ class ProfilePacket_Histogram_Bucket : public ::protozero::Message {
   }
 };
 
-class ProfilePacket_HeapSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProfilePacket_HeapSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   ProfilePacket_HeapSample_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProfilePacket_HeapSample_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -165257,7 +168072,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SmapsPacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SmapsPacket_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SmapsPacket_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SmapsPacket_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -165311,7 +168126,7 @@ class SmapsPacket : public ::protozero::Message {
 
 };
 
-class SmapsEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SmapsEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/15> {
  public:
   SmapsEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SmapsEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -165690,7 +168505,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeActiveProcesses_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeActiveProcesses_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeActiveProcesses_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeActiveProcesses_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -165798,7 +168613,7 @@ const char* ChromeApplicationStateInfo_ChromeApplicationState_Name(::perfetto::p
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeApplicationStateInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeApplicationStateInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeApplicationStateInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeApplicationStateInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -166296,7 +169111,7 @@ const char* ChromeCompositorSchedulerState_BeginImplFrameDeadlineMode_Name(::per
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class CompositorTimingHistory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CompositorTimingHistory_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   CompositorTimingHistory_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CompositorTimingHistory_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -166459,7 +169274,7 @@ class CompositorTimingHistory : public ::protozero::Message {
   }
 };
 
-class BeginFrameSourceState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BeginFrameSourceState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   BeginFrameSourceState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BeginFrameSourceState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -166555,7 +169370,7 @@ class BeginFrameSourceState : public ::protozero::Message {
 
 };
 
-class BeginFrameObserverState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BeginFrameObserverState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   BeginFrameObserverState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BeginFrameObserverState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -166609,7 +169424,7 @@ class BeginFrameObserverState : public ::protozero::Message {
 
 };
 
-class BeginImplFrameArgs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BeginImplFrameArgs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   BeginImplFrameArgs_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BeginImplFrameArgs_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -166747,7 +169562,7 @@ class BeginImplFrameArgs : public ::protozero::Message {
 
 };
 
-class BeginImplFrameArgs_TimestampsInUs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BeginImplFrameArgs_TimestampsInUs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BeginImplFrameArgs_TimestampsInUs_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BeginImplFrameArgs_TimestampsInUs_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -166910,7 +169725,7 @@ class BeginImplFrameArgs_TimestampsInUs : public ::protozero::Message {
   }
 };
 
-class BeginFrameArgs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BeginFrameArgs_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/12> {
  public:
   BeginFrameArgs_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BeginFrameArgs_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -167162,7 +169977,7 @@ class BeginFrameArgs : public ::protozero::Message {
   }
 };
 
-class ChromeCompositorStateMachine_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeCompositorStateMachine_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeCompositorStateMachine_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeCompositorStateMachine_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -167214,7 +170029,7 @@ class ChromeCompositorStateMachine : public ::protozero::Message {
 
 };
 
-class ChromeCompositorStateMachine_MinorState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/46, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeCompositorStateMachine_MinorState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/46> {
  public:
   ChromeCompositorStateMachine_MinorState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeCompositorStateMachine_MinorState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -168192,7 +171007,7 @@ class ChromeCompositorStateMachine_MinorState : public ::protozero::Message {
   }
 };
 
-class ChromeCompositorStateMachine_MajorState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeCompositorStateMachine_MajorState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   ChromeCompositorStateMachine_MajorState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeCompositorStateMachine_MajorState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -168352,7 +171167,7 @@ class ChromeCompositorStateMachine_MajorState : public ::protozero::Message {
   }
 };
 
-class ChromeCompositorSchedulerState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeCompositorSchedulerState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   ChromeCompositorSchedulerState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeCompositorSchedulerState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -168719,7 +171534,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeContentSettingsEventInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeContentSettingsEventInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeContentSettingsEventInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeContentSettingsEventInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -168930,7 +171745,7 @@ const char* ChromeFrameReporter_FrameType_Name(::perfetto::protos::pbzero::Chrom
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeFrameReporter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeFrameReporter_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/18> {
  public:
   ChromeFrameReporter_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeFrameReporter_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -169389,7 +172204,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeHistogramSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeHistogramSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ChromeHistogramSample_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeHistogramSample_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -169495,7 +172310,7 @@ class ChromeHistogramSample : public ::protozero::Message {
   }
 };
 
-class HistogramName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class HistogramName_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   HistogramName_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit HistogramName_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -169583,7 +172398,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeKeyedService_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeKeyedService_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeKeyedService_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeKeyedService_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -169856,7 +172671,7 @@ const char* ChromeLatencyInfo_InputType_Name(::perfetto::protos::pbzero::ChromeL
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeLatencyInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeLatencyInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/8> {
  public:
   ChromeLatencyInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeLatencyInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -170086,7 +172901,7 @@ class ChromeLatencyInfo : public ::protozero::Message {
   }
 };
 
-class ChromeLatencyInfo_ComponentInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeLatencyInfo_ComponentInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeLatencyInfo_ComponentInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeLatencyInfo_ComponentInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -170347,7 +173162,7 @@ const char* ChromeLegacyIpc_MessageClass_Name(::perfetto::protos::pbzero::Chrome
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeLegacyIpc_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeLegacyIpc_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeLegacyIpc_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeLegacyIpc_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -170472,7 +173287,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeMessagePump_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeMessagePump_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeMessagePump_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeMessagePump_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -170554,7 +173369,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeMojoEventInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeMojoEventInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   ChromeMojoEventInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeMojoEventInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -170753,7 +173568,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeProcessDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeProcessDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   ChromeProcessDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeProcessDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -170944,7 +173759,7 @@ const char* ChromeRAILMode_Name(::perfetto::protos::pbzero::ChromeRAILMode value
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class ChromeRendererSchedulerState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeRendererSchedulerState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ChromeRendererSchedulerState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeRendererSchedulerState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171047,7 +173862,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeThreadDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeThreadDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ChromeThreadDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeThreadDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171150,7 +173965,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeUserEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeUserEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeUserEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeUserEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171238,7 +174053,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeWindowHandleEventInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeWindowHandleEventInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ChromeWindowHandleEventInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeWindowHandleEventInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171400,7 +174215,7 @@ const char* LogMessage_Priority_Name(::perfetto::protos::pbzero::LogMessage_Prio
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class LogMessageBody_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LogMessageBody_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   LogMessageBody_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LogMessageBody_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171464,7 +174279,7 @@ class LogMessageBody : public ::protozero::Message {
   }
 };
 
-class LogMessage_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class LogMessage_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   LogMessage_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit LogMessage_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171580,7 +174395,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TrackEventRangeOfInterest_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TrackEventRangeOfInterest_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TrackEventRangeOfInterest_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TrackEventRangeOfInterest_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171641,7 +174456,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Screenshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Screenshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   Screenshot_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Screenshot_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171708,7 +174523,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class SourceLocation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SourceLocation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   SourceLocation_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SourceLocation_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171820,7 +174635,7 @@ class SourceLocation : public ::protozero::Message {
   }
 };
 
-class UnsymbolizedSourceLocation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class UnsymbolizedSourceLocation_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   UnsymbolizedSourceLocation_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UnsymbolizedSourceLocation_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171923,7 +174738,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TaskExecution_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TaskExecution_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TaskExecution_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TaskExecution_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -171992,7 +174807,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PerfettoMetatrace_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PerfettoMetatrace_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   PerfettoMetatrace_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfettoMetatrace_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172245,7 +175060,7 @@ class PerfettoMetatrace : public ::protozero::Message {
 
 };
 
-class PerfettoMetatrace_InternedString_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfettoMetatrace_InternedString_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   PerfettoMetatrace_InternedString_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfettoMetatrace_InternedString_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172309,7 +175124,7 @@ class PerfettoMetatrace_InternedString : public ::protozero::Message {
   }
 };
 
-class PerfettoMetatrace_Arg_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PerfettoMetatrace_Arg_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   PerfettoMetatrace_Arg_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PerfettoMetatrace_Arg_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172453,7 +175268,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TracingServiceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracingServiceEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/11> {
  public:
   TracingServiceEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172693,7 +175508,7 @@ class TracingServiceEvent : public ::protozero::Message {
   }
 };
 
-class TracingServiceEvent_DataSources_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TracingServiceEvent_DataSources_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   TracingServiceEvent_DataSources_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceEvent_DataSources_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172727,7 +175542,7 @@ class TracingServiceEvent_DataSources : public ::protozero::Message {
 
 };
 
-class TracingServiceEvent_DataSources_DataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracingServiceEvent_DataSources_DataSource_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   TracingServiceEvent_DataSources_DataSource_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracingServiceEvent_DataSources_DataSource_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172829,7 +175644,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class AndroidEnergyEstimationBreakdown_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class AndroidEnergyEstimationBreakdown_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   AndroidEnergyEstimationBreakdown_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidEnergyEstimationBreakdown_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -172922,7 +175737,7 @@ class AndroidEnergyEstimationBreakdown : public ::protozero::Message {
 
 };
 
-class AndroidEnergyEstimationBreakdown_EnergyUidBreakdown_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class AndroidEnergyEstimationBreakdown_EnergyUidBreakdown_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   AndroidEnergyEstimationBreakdown_EnergyUidBreakdown_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit AndroidEnergyEstimationBreakdown_EnergyUidBreakdown_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173012,7 +175827,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class EntityStateResidency_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class EntityStateResidency_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   EntityStateResidency_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EntityStateResidency_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173064,7 +175879,7 @@ class EntityStateResidency : public ::protozero::Message {
 
 };
 
-class EntityStateResidency_StateResidency_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EntityStateResidency_StateResidency_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   EntityStateResidency_StateResidency_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EntityStateResidency_StateResidency_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173185,7 +176000,7 @@ class EntityStateResidency_StateResidency : public ::protozero::Message {
   }
 };
 
-class EntityStateResidency_PowerEntityState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EntityStateResidency_PowerEntityState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   EntityStateResidency_PowerEntityState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EntityStateResidency_PowerEntityState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173321,7 +176136,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class BatteryCounters_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class BatteryCounters_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   BatteryCounters_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit BatteryCounters_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173522,7 +176337,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class PowerRails_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class PowerRails_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   PowerRails_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PowerRails_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173595,7 +176410,7 @@ class PowerRails : public ::protozero::Message {
   }
 };
 
-class PowerRails_EnergyData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PowerRails_EnergyData_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   PowerRails_EnergyData_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PowerRails_EnergyData_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173674,7 +176489,7 @@ class PowerRails_EnergyData : public ::protozero::Message {
   }
 };
 
-class PowerRails_RailDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class PowerRails_RailDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   PowerRails_RailDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit PowerRails_RailDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173819,7 +176634,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ProcessStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ProcessStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -173876,7 +176691,7 @@ class ProcessStats : public ::protozero::Message {
   }
 };
 
-class ProcessStats_Process_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/24, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessStats_Process_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/24> {
  public:
   ProcessStats_Process_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessStats_Process_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174388,7 +177203,7 @@ class ProcessStats_Process : public ::protozero::Message {
   }
 };
 
-class ProcessStats_FDInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProcessStats_FDInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ProcessStats_FDInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessStats_FDInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174452,7 +177267,7 @@ class ProcessStats_FDInfo : public ::protozero::Message {
   }
 };
 
-class ProcessStats_Thread_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProcessStats_Thread_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ProcessStats_Thread_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessStats_Thread_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174521,7 +177336,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ProcessTree_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessTree_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   ProcessTree_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessTree_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174594,7 +177409,7 @@ class ProcessTree : public ::protozero::Message {
   }
 };
 
-class ProcessTree_Process_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessTree_Process_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   ProcessTree_Process_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessTree_Process_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174784,7 +177599,7 @@ class ProcessTree_Process : public ::protozero::Message {
   }
 };
 
-class ProcessTree_Thread_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessTree_Thread_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   ProcessTree_Thread_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessTree_Thread_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174921,7 +177736,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class StatsdAtom_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class StatsdAtom_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   StatsdAtom_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit StatsdAtom_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -174975,7 +177790,7 @@ class StatsdAtom : public ::protozero::Message {
   }
 };
 
-class Atom_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class Atom_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/0> {
  public:
   Atom_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Atom_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175081,7 +177896,7 @@ const char* SysStats_PsiSample_PsiResource_Name(::perfetto::protos::pbzero::SysS
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class SysStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SysStats_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/17> {
  public:
   SysStats_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175421,7 +178236,7 @@ class SysStats : public ::protozero::Message {
   }
 };
 
-class SysStats_CpuIdleState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SysStats_CpuIdleState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_CpuIdleState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_CpuIdleState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175475,7 +178290,7 @@ class SysStats_CpuIdleState : public ::protozero::Message {
 
 };
 
-class SysStats_CpuIdleStateEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_CpuIdleStateEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_CpuIdleStateEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_CpuIdleStateEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175539,7 +178354,7 @@ class SysStats_CpuIdleStateEntry : public ::protozero::Message {
   }
 };
 
-class SysStats_ThermalZone_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_ThermalZone_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SysStats_ThermalZone_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_ThermalZone_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175630,7 +178445,7 @@ class SysStats_ThermalZone : public ::protozero::Message {
   }
 };
 
-class SysStats_PsiSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_PsiSample_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_PsiSample_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_PsiSample_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175700,7 +178515,7 @@ class SysStats_PsiSample : public ::protozero::Message {
   }
 };
 
-class SysStats_DiskStat_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_DiskStat_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   SysStats_DiskStat_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_DiskStat_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -175911,7 +178726,7 @@ class SysStats_DiskStat : public ::protozero::Message {
   }
 };
 
-class SysStats_BuddyInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SysStats_BuddyInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   SysStats_BuddyInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_BuddyInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176002,7 +178817,7 @@ class SysStats_BuddyInfo : public ::protozero::Message {
   }
 };
 
-class SysStats_DevfreqValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_DevfreqValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_DevfreqValue_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_DevfreqValue_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176066,7 +178881,7 @@ class SysStats_DevfreqValue : public ::protozero::Message {
   }
 };
 
-class SysStats_InterruptCount_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_InterruptCount_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_InterruptCount_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_InterruptCount_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176124,7 +178939,7 @@ class SysStats_InterruptCount : public ::protozero::Message {
   }
 };
 
-class SysStats_CpuTimes_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_CpuTimes_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/9> {
  public:
   SysStats_CpuTimes_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_CpuTimes_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176329,7 +179144,7 @@ class SysStats_CpuTimes : public ::protozero::Message {
   }
 };
 
-class SysStats_VmstatValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_VmstatValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_VmstatValue_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_VmstatValue_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176387,7 +179202,7 @@ class SysStats_VmstatValue : public ::protozero::Message {
   }
 };
 
-class SysStats_MeminfoValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SysStats_MeminfoValue_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SysStats_MeminfoValue_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SysStats_MeminfoValue_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176477,7 +179292,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class CpuInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class CpuInfo_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   CpuInfo_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuInfo_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176512,7 +179327,7 @@ class CpuInfo : public ::protozero::Message {
 
 };
 
-class CpuInfo_Cpu_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class CpuInfo_Cpu_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CpuInfo_Cpu_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuInfo_Cpu_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176635,7 +179450,7 @@ class CpuInfo_Cpu : public ::protozero::Message {
   }
 };
 
-class CpuInfo_ArmCpuIdentifier_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class CpuInfo_ArmCpuIdentifier_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   CpuInfo_ArmCpuIdentifier_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit CpuInfo_ArmCpuIdentifier_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176799,7 +179614,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ChromeStudyTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeStudyTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeStudyTranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeStudyTranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176833,7 +179648,7 @@ class ChromeStudyTranslationTable : public ::protozero::Message {
 
 };
 
-class ChromeStudyTranslationTable_HashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeStudyTranslationTable_HashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeStudyTranslationTable_HashToNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeStudyTranslationTable_HashToNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176897,7 +179712,7 @@ class ChromeStudyTranslationTable_HashToNameEntry : public ::protozero::Message 
   }
 };
 
-class ProcessTrackNameTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ProcessTrackNameTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ProcessTrackNameTranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessTrackNameTranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -176931,7 +179746,7 @@ class ProcessTrackNameTranslationTable : public ::protozero::Message {
 
 };
 
-class ProcessTrackNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ProcessTrackNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ProcessTrackNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ProcessTrackNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177001,7 +179816,7 @@ class ProcessTrackNameTranslationTable_RawToDeobfuscatedNameEntry : public ::pro
   }
 };
 
-class SliceNameTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class SliceNameTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   SliceNameTranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SliceNameTranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177035,7 +179850,7 @@ class SliceNameTranslationTable : public ::protozero::Message {
 
 };
 
-class SliceNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class SliceNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   SliceNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit SliceNameTranslationTable_RawToDeobfuscatedNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177105,7 +179920,7 @@ class SliceNameTranslationTable_RawToDeobfuscatedNameEntry : public ::protozero:
   }
 };
 
-class ChromePerformanceMarkTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromePerformanceMarkTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromePerformanceMarkTranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromePerformanceMarkTranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177157,7 +179972,7 @@ class ChromePerformanceMarkTranslationTable : public ::protozero::Message {
 
 };
 
-class ChromePerformanceMarkTranslationTable_MarkHashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromePerformanceMarkTranslationTable_MarkHashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromePerformanceMarkTranslationTable_MarkHashToNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromePerformanceMarkTranslationTable_MarkHashToNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177221,7 +180036,7 @@ class ChromePerformanceMarkTranslationTable_MarkHashToNameEntry : public ::proto
   }
 };
 
-class ChromePerformanceMarkTranslationTable_SiteHashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromePerformanceMarkTranslationTable_SiteHashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromePerformanceMarkTranslationTable_SiteHashToNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromePerformanceMarkTranslationTable_SiteHashToNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177285,7 +180100,7 @@ class ChromePerformanceMarkTranslationTable_SiteHashToNameEntry : public ::proto
   }
 };
 
-class ChromeUserEventTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeUserEventTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeUserEventTranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeUserEventTranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177319,7 +180134,7 @@ class ChromeUserEventTranslationTable : public ::protozero::Message {
 
 };
 
-class ChromeUserEventTranslationTable_ActionHashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeUserEventTranslationTable_ActionHashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeUserEventTranslationTable_ActionHashToNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeUserEventTranslationTable_ActionHashToNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177383,7 +180198,7 @@ class ChromeUserEventTranslationTable_ActionHashToNameEntry : public ::protozero
   }
 };
 
-class ChromeHistorgramTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class ChromeHistorgramTranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ChromeHistorgramTranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeHistorgramTranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177417,7 +180232,7 @@ class ChromeHistorgramTranslationTable : public ::protozero::Message {
 
 };
 
-class ChromeHistorgramTranslationTable_HashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ChromeHistorgramTranslationTable_HashToNameEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   ChromeHistorgramTranslationTable_HashToNameEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ChromeHistorgramTranslationTable_HashToNameEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177481,7 +180296,7 @@ class ChromeHistorgramTranslationTable_HashToNameEntry : public ::protozero::Mes
   }
 };
 
-class TranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TranslationTable_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/6> {
  public:
   TranslationTable_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TranslationTable_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177631,7 +180446,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class RemoteClockSync_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class RemoteClockSync_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   RemoteClockSync_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RemoteClockSync_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177665,7 +180480,7 @@ class RemoteClockSync : public ::protozero::Message {
 
 };
 
-class RemoteClockSync_SyncedClocks_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class RemoteClockSync_SyncedClocks_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   RemoteClockSync_SyncedClocks_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit RemoteClockSync_SyncedClocks_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177748,7 +180563,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TracePacketDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/99, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TracePacketDefaults_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/99> {
  public:
   TracePacketDefaults_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TracePacketDefaults_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177868,7 +180683,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TestEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class TestEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   TestEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TestEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -177992,7 +180807,7 @@ class TestEvent : public ::protozero::Message {
 
 };
 
-class TestEvent_TestPayload_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TestEvent_TestPayload_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/7> {
  public:
   TestEvent_TestPayload_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TestEvent_TestPayload_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178192,7 +181007,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class TestExtensionChild_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/99, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class TestExtensionChild_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/99> {
  public:
   TestExtensionChild_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit TestExtensionChild_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178416,7 +181231,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class Trace_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class Trace_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   Trace_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit Trace_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178480,7 +181295,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class ExtensionDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class ExtensionDescriptor_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/1> {
  public:
   ExtensionDescriptor_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit ExtensionDescriptor_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178613,7 +181428,7 @@ const char* MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_MemoryNodeEntry_Uni
   return "PBZERO_UNKNOWN_ENUM_VALUE";
 }
 
-class MemoryTrackerSnapshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class MemoryTrackerSnapshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MemoryTrackerSnapshot_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MemoryTrackerSnapshot_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178697,7 +181512,7 @@ class MemoryTrackerSnapshot : public ::protozero::Message {
 
 };
 
-class MemoryTrackerSnapshot_ProcessSnapshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class MemoryTrackerSnapshot_ProcessSnapshot_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   MemoryTrackerSnapshot_ProcessSnapshot_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MemoryTrackerSnapshot_ProcessSnapshot_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178770,7 +181585,7 @@ class MemoryTrackerSnapshot_ProcessSnapshot : public ::protozero::Message {
 
 };
 
-class MemoryTrackerSnapshot_ProcessSnapshot_MemoryEdge_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MemoryTrackerSnapshot_ProcessSnapshot_MemoryEdge_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MemoryTrackerSnapshot_ProcessSnapshot_MemoryEdge_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MemoryTrackerSnapshot_ProcessSnapshot_MemoryEdge_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178870,7 +181685,7 @@ class MemoryTrackerSnapshot_ProcessSnapshot_MemoryEdge : public ::protozero::Mes
   }
 };
 
-class MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5, /*HAS_NONPACKED_REPEATED_FIELDS=*/true> {
+class MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/5> {
  public:
   MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -178994,7 +181809,7 @@ class MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode : public ::protozero::Mes
 
 };
 
-class MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_MemoryNodeEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_MemoryNodeEntry_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_MemoryNodeEntry_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit MemoryTrackerSnapshot_ProcessSnapshot_MemoryNode_MemoryNodeEntry_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -179145,7 +181960,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class UiState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class UiState_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/3> {
  public:
   UiState_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UiState_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -179221,7 +182036,7 @@ class UiState : public ::protozero::Message {
 
 };
 
-class UiState_HighlightProcess_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class UiState_HighlightProcess_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   UiState_HighlightProcess_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit UiState_HighlightProcess_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -179316,7 +182131,7 @@ namespace perfetto {
 namespace protos {
 namespace pbzero {
 
-class EvdevEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EvdevEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/2> {
  public:
   EvdevEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EvdevEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -179371,7 +182186,7 @@ class EvdevEvent : public ::protozero::Message {
 
 };
 
-class EvdevEvent_InputEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4, /*HAS_NONPACKED_REPEATED_FIELDS=*/false> {
+class EvdevEvent_InputEvent_Decoder : public ::protozero::TypedProtoDecoder</*MAX_FIELD_ID=*/4> {
  public:
   EvdevEvent_InputEvent_Decoder(const uint8_t* data, size_t len) : TypedProtoDecoder(data, len) {}
   explicit EvdevEvent_InputEvent_Decoder(const std::string& raw) : TypedProtoDecoder(reinterpret_cast<const uint8_t*>(raw.data()), raw.size()) {}
@@ -183148,6 +185963,8 @@ class LogMessage;
 class TaskExecution;
 class DebugAnnotation;
 class DebugAnnotation_NestedValue;
+class TrackEvent_Callstack;
+class TrackEvent_Callstack_Frame;
 enum TrackEvent_Type : int;
 enum TrackEvent_LegacyEvent_FlowDirection : int;
 enum TrackEvent_LegacyEvent_InstantEventScope : int;
@@ -183341,6 +186158,7 @@ class PERFETTO_EXPORT_COMPONENT TrackEventDefaults : public ::protozero::CppMess
 
 class PERFETTO_EXPORT_COMPONENT TrackEvent : public ::protozero::CppMessageObj {
  public:
+  using Callstack = TrackEvent_Callstack;
   using LegacyEvent = TrackEvent_LegacyEvent;
   using Type = TrackEvent_Type;
   static constexpr auto TYPE_UNSPECIFIED = TrackEvent_Type_TYPE_UNSPECIFIED;
@@ -183370,6 +186188,8 @@ class PERFETTO_EXPORT_COMPONENT TrackEvent : public ::protozero::CppMessageObj {
     kCorrelationIdFieldNumber = 52,
     kCorrelationIdStrFieldNumber = 53,
     kCorrelationIdStrIidFieldNumber = 54,
+    kCallstackFieldNumber = 55,
+    kCallstackIidFieldNumber = 56,
     kDebugAnnotationsFieldNumber = 4,
     kTaskExecutionFieldNumber = 5,
     kLogMessageFieldNumber = 21,
@@ -183519,6 +186339,14 @@ class PERFETTO_EXPORT_COMPONENT TrackEvent : public ::protozero::CppMessageObj {
   uint64_t correlation_id_str_iid() const { return correlation_id_str_iid_; }
   void set_correlation_id_str_iid(uint64_t value) { correlation_id_str_iid_ = value; _has_field_.set(54); }
 
+  bool has_callstack() const { return _has_field_[55]; }
+  const TrackEvent_Callstack& callstack() const { return *callstack_; }
+  TrackEvent_Callstack* mutable_callstack() { _has_field_.set(55); return callstack_.get(); }
+
+  bool has_callstack_iid() const { return _has_field_[56]; }
+  uint64_t callstack_iid() const { return callstack_iid_; }
+  void set_callstack_iid(uint64_t value) { callstack_iid_ = value; _has_field_.set(56); }
+
   const std::vector<DebugAnnotation>& debug_annotations() const { return debug_annotations_; }
   std::vector<DebugAnnotation>* mutable_debug_annotations() { return &debug_annotations_; }
   int debug_annotations_size() const;
@@ -183649,6 +186477,8 @@ class PERFETTO_EXPORT_COMPONENT TrackEvent : public ::protozero::CppMessageObj {
   uint64_t correlation_id_{};
   std::string correlation_id_str_{};
   uint64_t correlation_id_str_iid_{};
+  ::protozero::CopyablePtr<TrackEvent_Callstack> callstack_;
+  uint64_t callstack_iid_{};
   std::vector<DebugAnnotation> debug_annotations_;
   ::protozero::CopyablePtr<TaskExecution> task_execution_;
   ::protozero::CopyablePtr<LogMessage> log_message_;
@@ -183681,7 +186511,7 @@ class PERFETTO_EXPORT_COMPONENT TrackEvent : public ::protozero::CppMessageObj {
   // with future versions of .proto files.
   std::string unknown_fields_;
 
-  std::bitset<55> _has_field_{};
+  std::bitset<57> _has_field_{};
 };
 
 
@@ -183823,6 +186653,91 @@ class PERFETTO_EXPORT_COMPONENT TrackEvent_LegacyEvent : public ::protozero::Cpp
   std::bitset<20> _has_field_{};
 };
 
+
+class PERFETTO_EXPORT_COMPONENT TrackEvent_Callstack : public ::protozero::CppMessageObj {
+ public:
+  using Frame = TrackEvent_Callstack_Frame;
+  enum FieldNumbers {
+    kFramesFieldNumber = 1,
+  };
+
+  TrackEvent_Callstack();
+  ~TrackEvent_Callstack() override;
+  TrackEvent_Callstack(TrackEvent_Callstack&&) noexcept;
+  TrackEvent_Callstack& operator=(TrackEvent_Callstack&&);
+  TrackEvent_Callstack(const TrackEvent_Callstack&);
+  TrackEvent_Callstack& operator=(const TrackEvent_Callstack&);
+  bool operator==(const TrackEvent_Callstack&) const;
+  bool operator!=(const TrackEvent_Callstack& other) const { return !(*this == other); }
+
+  bool ParseFromArray(const void*, size_t) override;
+  std::string SerializeAsString() const override;
+  std::vector<uint8_t> SerializeAsArray() const override;
+  void Serialize(::protozero::Message*) const;
+
+  const std::vector<TrackEvent_Callstack_Frame>& frames() const { return frames_; }
+  std::vector<TrackEvent_Callstack_Frame>* mutable_frames() { return &frames_; }
+  int frames_size() const;
+  void clear_frames();
+  TrackEvent_Callstack_Frame* add_frames();
+
+ private:
+  std::vector<TrackEvent_Callstack_Frame> frames_;
+
+  // Allows to preserve unknown protobuf fields for compatibility
+  // with future versions of .proto files.
+  std::string unknown_fields_;
+
+  std::bitset<2> _has_field_{};
+};
+
+
+class PERFETTO_EXPORT_COMPONENT TrackEvent_Callstack_Frame : public ::protozero::CppMessageObj {
+ public:
+  enum FieldNumbers {
+    kFunctionNameFieldNumber = 1,
+    kSourceFileFieldNumber = 2,
+    kLineNumberFieldNumber = 3,
+  };
+
+  TrackEvent_Callstack_Frame();
+  ~TrackEvent_Callstack_Frame() override;
+  TrackEvent_Callstack_Frame(TrackEvent_Callstack_Frame&&) noexcept;
+  TrackEvent_Callstack_Frame& operator=(TrackEvent_Callstack_Frame&&);
+  TrackEvent_Callstack_Frame(const TrackEvent_Callstack_Frame&);
+  TrackEvent_Callstack_Frame& operator=(const TrackEvent_Callstack_Frame&);
+  bool operator==(const TrackEvent_Callstack_Frame&) const;
+  bool operator!=(const TrackEvent_Callstack_Frame& other) const { return !(*this == other); }
+
+  bool ParseFromArray(const void*, size_t) override;
+  std::string SerializeAsString() const override;
+  std::vector<uint8_t> SerializeAsArray() const override;
+  void Serialize(::protozero::Message*) const;
+
+  bool has_function_name() const { return _has_field_[1]; }
+  const std::string& function_name() const { return function_name_; }
+  void set_function_name(const std::string& value) { function_name_ = value; _has_field_.set(1); }
+
+  bool has_source_file() const { return _has_field_[2]; }
+  const std::string& source_file() const { return source_file_; }
+  void set_source_file(const std::string& value) { source_file_ = value; _has_field_.set(2); }
+
+  bool has_line_number() const { return _has_field_[3]; }
+  uint32_t line_number() const { return line_number_; }
+  void set_line_number(uint32_t value) { line_number_ = value; _has_field_.set(3); }
+
+ private:
+  std::string function_name_{};
+  std::string source_file_{};
+  uint32_t line_number_{};
+
+  // Allows to preserve unknown protobuf fields for compatibility
+  // with future versions of .proto files.
+  std::string unknown_fields_;
+
+  std::bitset<4> _has_field_{};
+};
+
 }  // namespace perfetto
 }  // namespace protos
 }  // namespace gen
@@ -183949,6 +186864,7 @@ class PERFETTO_EXPORT_COMPONENT CloneSessionResponse : public ::protozero::CppMe
     kErrorFieldNumber = 2,
     kUuidMsbFieldNumber = 3,
     kUuidLsbFieldNumber = 4,
+    kWasWriteIntoFileFieldNumber = 5,
   };
 
   CloneSessionResponse();
@@ -183981,17 +186897,22 @@ class PERFETTO_EXPORT_COMPONENT CloneSessionResponse : public ::protozero::CppMe
   int64_t uuid_lsb() const { return uuid_lsb_; }
   void set_uuid_lsb(int64_t value) { uuid_lsb_ = value; _has_field_.set(4); }
 
+  bool has_was_write_into_file() const { return _has_field_[5]; }
+  bool was_write_into_file() const { return was_write_into_file_; }
+  void set_was_write_into_file(bool value) { was_write_into_file_ = value; _has_field_.set(5); }
+
  private:
   bool success_{};
   std::string error_{};
   int64_t uuid_msb_{};
   int64_t uuid_lsb_{};
+  bool was_write_into_file_{};
 
   // Allows to preserve unknown protobuf fields for compatibility
   // with future versions of .proto files.
   std::string unknown_fields_;
 
-  std::bitset<5> _has_field_{};
+  std::bitset<6> _has_field_{};
 };
 
 

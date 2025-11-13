@@ -292,7 +292,7 @@ class FnvHasher {
   uint64_t result_ = kFnv1a64OffsetBasis;
 };
 
-// base::FnvHash uses base::FnvHasher for integer values and falls base to
+// base::FnvHash uses base::FnvHasher for integer values and falls back to
 // std::hash for other types. This is needed as std::hash for integers is just
 // the identity function and Perfetto uses open-addressing hash table, which are
 // very sensitive to hash quality and are known to degrade in performance
@@ -1937,8 +1937,7 @@ class ScopedResource {
   static constexpr T kInvalid = InvalidValue;
 
   explicit ScopedResource(T t = InvalidValue) : t_(t) {}
-  ScopedResource(ScopedResource&& other) noexcept {
-    t_ = other.t_;
+  ScopedResource(ScopedResource&& other) noexcept : t_(other.t_) {
     other.t_ = InvalidValue;
   }
   ScopedResource& operator=(ScopedResource&& other) {
@@ -2418,12 +2417,17 @@ ssize_t Read(int fd, void* dst, size_t dst_size);
 //   succeeds, and returns the number of bytes written.
 ssize_t WriteAll(int fd, const void* buf, size_t count);
 
+// Copies all data from |fd_in| to |fd_out|. Saves the offset of |fd_in|,
+// rewinds it to the beginning, copies the content, and restores the offset.
+// |fd_in| can't be a pipe, socket of FIFO.
+base::Status CopyFileContents(int fd_in, int fd_out);
+
 ssize_t WriteAllHandle(PlatformHandle, const void* buf, size_t count);
 
 ScopedFile OpenFile(const std::string& path,
                     int flags,
                     FileOpenMode = kFileModeInvalid);
-ScopedFstream OpenFstream(const char* path, const char* mode);
+ScopedFstream OpenFstream(const std::string& path, const std::string& mode);
 
 // This is an alias for close(). It's to avoid leaking windows.h in headers.
 // Exported because ScopedFile is used in the /include/ext API by Chromium
@@ -2519,6 +2523,7 @@ std::optional<uint64_t> GetFileSize(PlatformHandle fd);
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 #define PERFETTO_SET_FILE_PERMISSIONS
 #include <fcntl.h>
@@ -2539,7 +2544,7 @@ int CloseFindHandle(HANDLE h) {
   return FindClose(h) ? 0 : -1;
 }
 
-std::optional<std::wstring> ToUtf16(const std::string str) {
+std::optional<std::wstring> ToUtf16(const std::string& str) {
   int len = MultiByteToWideChar(CP_UTF8, 0, str.data(),
                                 static_cast<int>(str.size()), nullptr, 0);
   if (len < 0) {
@@ -2659,6 +2664,49 @@ ssize_t WriteAll(int fd, const void* buf, size_t count) {
   return static_cast<ssize_t>(written);
 }
 
+base::Status CopyFileContents(int fd_in, int fd_out) {
+  off_t original_offset = lseek(fd_in, 0, SEEK_CUR);
+  if (original_offset == -1) {
+    return base::ErrStatus(
+        "Can't get offset in 'fd_in', lseek error: %s (errno: %d)",
+        strerror(errno), errno);
+  }
+
+  if (lseek(fd_in, 0, SEEK_SET) == -1) {
+    return base::ErrStatus(
+        "Can't change the offset in 'fd_in', lseek error: %s (errno: %d)",
+        strerror(errno), errno);
+  }
+
+  auto restore_offset_on_exit = OnScopeExit([fd_in, original_offset] {
+    // 'lseek' should never fail here, but if it fails, we crash, to prevent
+    // possible data loss/overwrite in the 'fd_in'.
+    PERFETTO_CHECK(lseek(fd_in, original_offset, SEEK_SET) >= 0);
+  });
+
+  // Use bigger buffer when copy files.
+  constexpr size_t kCopyFileBufSize = 32 * 1024;  // 32KB.
+  static_assert(kCopyFileBufSize > kBufSize);
+  // Don't allocate that much memory on stack.
+  std::vector<char> buffer(kCopyFileBufSize);
+  for (;;) {
+    ssize_t bytes_read = Read(fd_in, buffer.data(), buffer.size());
+    if (bytes_read == 0)
+      break;
+    if (bytes_read < 0) {
+      return base::ErrStatus("Read failed: %s (errno: %d)", strerror(errno),
+                             errno);
+    }
+    ssize_t written =
+        WriteAll(fd_out, buffer.data(), static_cast<size_t>(bytes_read));
+    if (written != bytes_read) {
+      return base::ErrStatus("Write failed: %s (errno: %d)", strerror(errno),
+                             errno);
+    }
+  }
+  return base::OkStatus();
+}
+
 ssize_t WriteAllHandle(PlatformHandle h, const void* buf, size_t count) {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
   DWORD wsize = 0;
@@ -2718,19 +2766,33 @@ ScopedFile OpenFile(const std::string& path, int flags, FileOpenMode mode) {
   return fd;
 }
 
-ScopedFstream OpenFstream(const char* path, const char* mode) {
+ScopedFstream OpenFstream(const std::string& path, const std::string& mode) {
   ScopedFstream file;
-// On Windows fopen interprets filename using the ANSI or OEM codepage but
-// sqlite3_value_text returns a UTF-8 string. To make sure we interpret the
-// filename correctly we use _wfopen and a UTF-16 string on windows.
+  // On Windows fopen interprets filename using the ANSI or OEM codepage but
+  // sqlite3_value_text returns a UTF-8 string. To make sure we interpret the
+  // filename correctly we use _wfopen and a UTF-16 string on windows.
+  //
+  // On Windows fopen also open files in the text mode by default, but we want
+  // to open them in the binary mode, to avoid silly EOL translations (and to be
+  // consistent with base::OpenFile). So we check the mode first and append 'b'
+  // mode only when it makes sense.
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+  std::string s_mode(mode);
+  // Windows supports non-standard mode extension that sets encoding in text
+  // mode. If you need to open a FILE* in text mode, use the fopen API directly.
+  bool is_text_mode = Contains(s_mode, "ccs=") || Contains(s_mode, "t");
+  PERFETTO_CHECK(!is_text_mode);
+  bool is_binary_mode = Contains(s_mode, 'b');
+  if (!is_binary_mode)
+    s_mode += 'b';
+
   auto w_path = ToUtf16(path);
-  auto w_mode = ToUtf16(mode);
+  auto w_mode = ToUtf16(s_mode);
   if (w_path && w_mode) {
     file.reset(_wfopen(w_path->c_str(), w_mode->c_str()));
   }
 #else
-  file.reset(fopen(path, mode));
+  file.reset(fopen(path.c_str(), mode.c_str()));
 #endif
   return file;
 }
@@ -2886,8 +2948,8 @@ std::optional<uint64_t> GetFileSize(const std::string& file_path) {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
   // This does not use base::OpenFile to avoid getting an exclusive lock.
   base::ScopedPlatformHandle fd(
-      CreateFileA(file_path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
-                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+      CreateFileA(file_path.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ,
+                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 #else
   base::ScopedFile fd(base::OpenFile(file_path, O_RDONLY | O_CLOEXEC));
 #endif
@@ -5731,6 +5793,7 @@ class PeriodicTask {
 // gen_amalgamated expanded: #include "perfetto/ext/base/file_utils.h"
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) ||           \
     (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)
 #include <sys/timerfd.h>
 #endif
@@ -5751,6 +5814,7 @@ uint32_t GetNextDelayMs(const TimeMillis& now_ms,
 
 ScopedPlatformHandle CreateTimerFd(const PeriodicTask::Args& args) {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) ||           \
     (PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ >= 19)
   ScopedPlatformHandle tfd(
       timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK));
@@ -6001,13 +6065,21 @@ namespace perfetto::base::flags {
 // in `perfetto_flags.aconfig`.
 // The second argument is the default value of the flag in non-Android platform
 // contexts.
+//
+// Note: For rt_mutex and rt_futex, the source of truth for non-Android platform
+// is in rt_mutex.h
 #define PERFETTO_READ_ONLY_FLAGS(X)                                    \
   X(test_read_only_flag, NonAndroidPlatformDefault_FALSE)              \
   X(use_murmur_hash_for_flat_hash_map, NonAndroidPlatformDefault_TRUE) \
   X(ftrace_clear_offline_cpus_only, NonAndroidPlatformDefault_TRUE)    \
-  X(use_rt_mutex, PERFETTO_BUILDFLAG(PERFETTO_ENABLE_RT_MUTEX)         \
-                      ? NonAndroidPlatformDefault_TRUE                 \
-                      : NonAndroidPlatformDefault_FALSE)
+  X(use_lockfree_taskrunner,                                           \
+    PERFETTO_BUILDFLAG(PERFETTO_ENABLE_LOCKFREE_TASKRUNNER)            \
+        ? NonAndroidPlatformDefault_TRUE                               \
+        : NonAndroidPlatformDefault_FALSE)                             \
+  X(use_rt_mutex, NonAndroidPlatformDefault_FALSE)                     \
+  X(use_rt_futex, NonAndroidPlatformDefault_FALSE)                     \
+  X(buffer_clone_preserve_read_iter, NonAndroidPlatformDefault_TRUE)   \
+  X(sma_prevent_duplicate_immediate_flushes, NonAndroidPlatformDefault_TRUE)
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
@@ -6057,8 +6129,8 @@ PERFETTO_READ_ONLY_FLAGS(PERFETTO_FLAGS_DEF_GETTER)
 // In the contended case RtMutex is generally slower than a std::mutex (or any
 // non-RT implementation).
 // Under the hoods this class does the following:
-// - Linux/Android: it uses PI futexes.
-// - MacOS/iOS: it uses pthread_mutex with PTHREAD_PRIO_INHERIT.
+// - Android: it uses PI futexes.
+// - Linux/MacOS/iOS: it uses pthread_mutex with PTHREAD_PRIO_INHERIT.
 // - Other platforms: falls back on a standard std::mutex. On Windows 11+
 //   std::mutex has effectively PI semantics due to AutoBoost
 //   https://github.com/MicrosoftDocs/win32/commit/a43cb3b5039c5cfc53642bfcea174003a2f1168f
@@ -6068,13 +6140,49 @@ PERFETTO_READ_ONLY_FLAGS(PERFETTO_FLAGS_DEF_GETTER)
 // gen_amalgamated expanded: #include "perfetto/ext/base/flags.h"
 // gen_amalgamated expanded: #include "perfetto/public/compiler.h"
 
-#if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
-    PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
-    PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
-#define PERFETTO_HAS_POSIX_RT_MUTEX() true
-#else
-#define PERFETTO_HAS_POSIX_RT_MUTEX() false
+#define _PERFETTO_MUTEX_MODE_STD 0
+#define _PERFETTO_MUTEX_MODE_RT_FUTEX 1
+#define _PERFETTO_MUTEX_MODE_RT_MUTEX 2
+
+// The logic below determines which mutex implementation to use.
+// For Android platform builds, the choice is controlled by aconfig flags.
+// For other builds, it's determined by OS support and GN build arguments.
+//
+// Rationale for platform-specific choices:
+// 1. `RtFutex` is enabled only on Android because it relies on `gettid()` being
+//    a cheap thread-local storage access provided by Bionic. On Linux with
+//    glibc, `gettid()` is a full syscall, making the pthread-based
+//    implementation faster.
+// 2. The pthread-based `RtPosixMutex` is not viable on all Android versions, as
+//    `pthread_mutexattr_setprotocol` was introduced in API level 28. Using
+//    `dlsym` to backport it can lead to deadlocks with the loader lock if
+//    tracing is initialized from a static constructor (see b/443178555).
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && \
+    PERFETTO_BUILDFLAG(PERFETTO_ANDROID_BUILD)
+#if PERFETTO_FLAGS_USE_RT_FUTEX
+#define _PERFETTO_MUTEX_MODE _PERFETTO_MUTEX_MODE_RT_FUTEX
+#elif PERFETTO_FLAGS_USE_RT_MUTEX
+#define _PERFETTO_MUTEX_MODE _PERFETTO_MUTEX_MODE_RT_MUTEX
 #endif
+#elif PERFETTO_BUILDFLAG(PERFETTO_ENABLE_RT_MUTEX)
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
+#define _PERFETTO_MUTEX_MODE _PERFETTO_MUTEX_MODE_RT_FUTEX
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+#define _PERFETTO_MUTEX_MODE _PERFETTO_MUTEX_MODE_RT_MUTEX
+#endif
+#endif
+
+// If no RT implementation was selected, default to std::mutex.
+#ifndef _PERFETTO_MUTEX_MODE
+#define _PERFETTO_MUTEX_MODE _PERFETTO_MUTEX_MODE_STD
+#endif
+
+// Public macros for conditional compilation based on the selected mutex type.
+#define PERFETTO_HAS_POSIX_RT_MUTEX() \
+  (_PERFETTO_MUTEX_MODE == _PERFETTO_MUTEX_MODE_RT_MUTEX)
+#define PERFETTO_HAS_RT_FUTEX() \
+  (_PERFETTO_MUTEX_MODE == _PERFETTO_MUTEX_MODE_RT_FUTEX)
 
 #include <atomic>
 #include <mutex>
@@ -6084,9 +6192,94 @@ PERFETTO_READ_ONLY_FLAGS(PERFETTO_FLAGS_DEF_GETTER)
 #include <pthread.h>
 #endif
 
+#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+#include <unistd.h>  // For gettid().
+#endif
+
 namespace perfetto::base {
 
 namespace internal {
+
+#if PERFETTO_HAS_RT_FUTEX()
+// A wrapper around PI Futexes. A futex is a wrapper around an atomic integer
+// with an ABI shared with the kernel to handle the slowpath in the cases when
+// the mutex is held, or we find out that there are waiters queued when we
+// unlock. The operating principle is the following:
+// - In the no-contention case, a futex boils down to an atomic
+//   compare-and-exchange, without involving the kernel.
+// - If a lock is contented at acquire time, we have to enter the kernel to
+//   suspend our execution and join a wait chain.
+// - It could still happen that we acquire the mutex via the fastpath (without
+//   involving the kernel) but other waiters might queue up while we hold the
+//   mutex. In that case the kernel will add a bit to the atomic int. That bit
+//   will cause the unlock() compare-and-exchange to fail (because it no longer
+//   matches our tid) which in turn will signal us to do a syscall to notify the
+//   waiters.
+class PERFETTO_LOCKABLE RtFutex {
+ public:
+  RtFutex() { PERFETTO_TSAN_MUTEX_CREATE(this, __tsan_mutex_not_static); }
+  ~RtFutex() { PERFETTO_TSAN_MUTEX_DESTROY(this, __tsan_mutex_not_static); }
+
+  // Disable copy or move. Copy doesn't make sense. Move isn't feasible because
+  // the pointer to the atomic integer is the handle used by the kernel to setup
+  // the wait chain. A movable futex would require the atomic integer to be heap
+  // allocated, but that would create an indirection layer that is not needed in
+  // most cases. If you really need a movable RtMutex, wrap it in a unique_ptr.
+  RtFutex(const RtFutex&) = delete;
+  RtFutex& operator=(const RtFutex&) = delete;
+  RtFutex(RtFutex&&) = delete;
+  RtFutex& operator=(RtFutex&&) = delete;
+
+  inline bool TryLockFastpath() noexcept {
+    int expected = 0;
+    return lock_.compare_exchange_strong(expected, ::gettid(),
+                                         std::memory_order_acquire,
+                                         std::memory_order_relaxed);
+  }
+
+  bool try_lock() noexcept PERFETTO_EXCLUSIVE_TRYLOCK_FUNCTION(true) {
+    PERFETTO_TSAN_MUTEX_PRE_LOCK(this, __tsan_mutex_try_lock);
+    if (PERFETTO_LIKELY(TryLockFastpath()) || TryLockSlowpath()) {
+      PERFETTO_TSAN_MUTEX_POST_LOCK(this, __tsan_mutex_try_lock, 0);
+      return true;
+    }
+    PERFETTO_TSAN_MUTEX_POST_LOCK(
+        this, __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed, 0);
+    return false;
+  }
+
+  void lock() PERFETTO_EXCLUSIVE_LOCK_FUNCTION() {
+    PERFETTO_TSAN_MUTEX_PRE_LOCK(this, 0);
+    if (!PERFETTO_LIKELY(TryLockFastpath())) {
+      LockSlowpath();
+    }
+    PERFETTO_TSAN_MUTEX_POST_LOCK(this, 0, 0);
+  }
+
+  void unlock() noexcept PERFETTO_UNLOCK_FUNCTION() {
+    PERFETTO_TSAN_MUTEX_PRE_UNLOCK(this, 0);
+    int expected = ::gettid();
+    // If the current value is our tid, we can unlock without a syscall since
+    // there are no current waiters.
+    if (!PERFETTO_LIKELY(lock_.compare_exchange_strong(
+            expected, 0, std::memory_order_release,
+            std::memory_order_relaxed))) {
+      // The tid doesn't match because the kernel appended the FUTEX_WAITERS
+      // bit. There are waiters, tell the kernel to notify them and unlock.
+      UnlockSlowpath();
+    }
+    PERFETTO_TSAN_MUTEX_POST_UNLOCK(this, 0);
+  }
+
+ private:
+  std::atomic<int> lock_{};
+
+  void LockSlowpath();
+  bool TryLockSlowpath();
+  void UnlockSlowpath();
+};
+
+#endif  // PERFETTO_HAS_RT_FUTEX
 
 #if PERFETTO_HAS_POSIX_RT_MUTEX()
 class PERFETTO_LOCKABLE RtPosixMutex {
@@ -6110,16 +6303,15 @@ class PERFETTO_LOCKABLE RtPosixMutex {
 #endif  // PERFETTO_HAS_POSIX_RT_MUTEX
 }  // namespace internal
 
-// Pick the best implementation for the target platform.
-// See comments in the top of the doc.
-#if PERFETTO_HAS_POSIX_RT_MUTEX()
-using RtMutex = internal::RtPosixMutex;
+// Select the best real-time mutex implementation for the target platform, or
+// fall back to std::mutex if none is available.
+#if PERFETTO_HAS_RT_FUTEX()
+using MaybeRtMutex = internal::RtFutex;
+#elif PERFETTO_HAS_POSIX_RT_MUTEX()
+using MaybeRtMutex = internal::RtPosixMutex;
 #else
-using RtMutex = std::mutex;
+using MaybeRtMutex = std::mutex;
 #endif
-
-using MaybeRtMutex =
-    std::conditional_t<base::flags::use_rt_mutex, RtMutex, std::mutex>;
 
 }  // namespace perfetto::base
 
@@ -6147,37 +6339,53 @@ using MaybeRtMutex =
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/utils.h"
 
-#if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
-#include <dlfcn.h>
+#if PERFETTO_HAS_RT_FUTEX()
+#include <linux/futex.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 #endif
 
 namespace perfetto::base {
 
 namespace internal {
 
+#if PERFETTO_HAS_RT_FUTEX()
+
+void RtFutex::LockSlowpath() {
+  auto res = PERFETTO_EINTR(
+      syscall(SYS_futex, &lock_, FUTEX_LOCK_PI_PRIVATE, 0, nullptr));
+  PERFETTO_CHECK(res == 0);
+}
+
+bool RtFutex::TryLockSlowpath() {
+  auto res = PERFETTO_EINTR(
+      syscall(SYS_futex, &lock_, FUTEX_TRYLOCK_PI_PRIVATE, 0, nullptr));
+  if (res == 0)
+    return true;
+  if (errno == EBUSY || errno == EDEADLK)
+    return false;
+  PERFETTO_FATAL("FUTEX_TRYLOCK_PI_PRIVATE failed");
+}
+
+void RtFutex::UnlockSlowpath() {
+  auto res = PERFETTO_EINTR(
+      syscall(SYS_futex, &lock_, FUTEX_UNLOCK_PI_PRIVATE, 0, nullptr));
+  PERFETTO_CHECK(res == 0);
+}
+
+#endif  // PERFETTO_HAS_RT_FUTEX
+
 #if PERFETTO_HAS_POSIX_RT_MUTEX()
 
 RtPosixMutex::RtPosixMutex() noexcept {
-  pthread_mutexattr_t at{};
-  PERFETTO_CHECK(pthread_mutexattr_init(&at) == 0);
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) && __ANDROID_API__ < 28
   // pthread_mutexattr_setprotocol is only available on API 28.
-  using SetprotocolFuncT = int (*)(pthread_mutexattr_t*, int);
-  static auto setprotocol_func = reinterpret_cast<SetprotocolFuncT>(
-      dlsym(RTLD_DEFAULT, "pthread_mutexattr_setprotocol"));
-  if (setprotocol_func) {
-    PERFETTO_CHECK(setprotocol_func(&at, PTHREAD_PRIO_INHERIT) == 0);
-  } else {
-    static uint64_t log_once = 0;
-    if (log_once++ == 0) {
-      PERFETTO_LOG(
-          "Priority-inheritance RtMutex is not available in this version of "
-          "Android.");
-    }
-  }
-#else  // Not Android (but POSIX RT)
-  PERFETTO_CHECK(pthread_mutexattr_setprotocol(&at, PTHREAD_PRIO_INHERIT) == 0);
+#error \
+    "Priority-inheritance RtMutex is not available in this version of Android."
 #endif
+  pthread_mutexattr_t at{};
+  PERFETTO_CHECK(pthread_mutexattr_init(&at) == 0);
+  PERFETTO_CHECK(pthread_mutexattr_setprotocol(&at, PTHREAD_PRIO_INHERIT) == 0);
   PERFETTO_CHECK(pthread_mutex_init(&mutex_, &at) == 0);
 }
 
@@ -6236,6 +6444,7 @@ void RtPosixMutex::unlock() noexcept {
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) ||   \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
 #define PERFETTO_HAS_MMAP() 1
@@ -6275,6 +6484,7 @@ class ScopedMmap {
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
   // Takes ownership of an mmap()d area that starts at `data`, `size` bytes
   // long. `data` should not be MAP_FAILED.
@@ -6293,11 +6503,11 @@ class ScopedMmap {
 #endif
 };
 
-// Tries to open `fname` and maps its first `length` bytes in memory.
-ScopedMmap ReadMmapFilePart(const char* fname, size_t length);
+// Tries to open `file_path` and maps its first `length` bytes in memory.
+ScopedMmap ReadMmapFilePart(const std::string& file_path, size_t length);
 
-// Tries to open `fname` and maps the whole file into memory.
-ScopedMmap ReadMmapWholeFile(const char* fname);
+// Tries to open `file_path` and maps the whole file into memory.
+ScopedMmap ReadMmapWholeFile(const std::string& file_path);
 
 }  // namespace perfetto::base
 
@@ -6327,6 +6537,7 @@ ScopedMmap ReadMmapWholeFile(const char* fname);
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 #include <sys/mman.h>
 #include <unistd.h>
@@ -6337,19 +6548,20 @@ ScopedMmap ReadMmapWholeFile(const char* fname);
 namespace perfetto::base {
 namespace {
 
-ScopedPlatformHandle OpenFileForMmap(const char* fname) {
+ScopedPlatformHandle OpenFileForMmap(const std::string& file_path) {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
-  return OpenFile(fname, O_RDONLY);
+  return OpenFile(file_path, O_RDONLY);
 #elif PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
   // This does not use base::OpenFile to avoid getting an exclusive lock.
-  return ScopedPlatformHandle(CreateFileA(fname, GENERIC_READ, FILE_SHARE_READ,
-                                          nullptr, OPEN_EXISTING,
-                                          FILE_ATTRIBUTE_NORMAL, nullptr));
+  return ScopedPlatformHandle(
+      CreateFileA(file_path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 #else
   // mmap is not supported. Do not even open the file.
-  base::ignore_result(fname);
+  base::ignore_result(file_path);
   return ScopedPlatformHandle();
 #endif
 }
@@ -6387,6 +6599,7 @@ ScopedMmap ScopedMmap::FromHandle(base::ScopedPlatformHandle file,
   }
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
   void* ptr = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, *file, 0);
   if (ptr != MAP_FAILED) {
@@ -6417,6 +6630,7 @@ bool ScopedMmap::reset() noexcept {
   bool ret = true;
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
   if (ptr_ != nullptr) {
     ret = munmap(ptr_, length_) == 0;
@@ -6435,6 +6649,7 @@ bool ScopedMmap::reset() noexcept {
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 // static
 ScopedMmap ScopedMmap::InheritMmappedRange(void* data, size_t size) {
@@ -6445,11 +6660,11 @@ ScopedMmap ScopedMmap::InheritMmappedRange(void* data, size_t size) {
 }
 #endif
 
-ScopedMmap ReadMmapFilePart(const char* fname, size_t length) {
+ScopedMmap ReadMmapFilePart(const std::string& fname, size_t length) {
   return ScopedMmap::FromHandle(OpenFileForMmap(fname), length);
 }
 
-ScopedMmap ReadMmapWholeFile(const char* fname) {
+ScopedMmap ReadMmapWholeFile(const std::string& fname) {
   ScopedPlatformHandle file = OpenFileForMmap(fname);
   if (!file) {
     return ScopedMmap();
@@ -8155,9 +8370,8 @@ ThreadChecker::ThreadChecker() {
 
 ThreadChecker::~ThreadChecker() = default;
 
-ThreadChecker::ThreadChecker(const ThreadChecker& other) {
-  thread_id_ = other.thread_id_.load();
-}
+ThreadChecker::ThreadChecker(const ThreadChecker& other)
+    : thread_id_(other.thread_id_.load()) {}
 
 ThreadChecker& ThreadChecker::operator=(const ThreadChecker& other) {
   thread_id_ = other.thread_id_.load();
@@ -8615,15 +8829,20 @@ std::optional<int32_t> GetTimezoneOffsetMins() {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) ||   \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA)
 #include <limits.h>
 #include <stdlib.h>  // For _exit()
-#include <unistd.h>  // For getpagesize() and geteuid() & fork()
+#include <unistd.h>  // For getpagesize() and geteuid() & fork() & sysconf()
 #endif
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 #include <mach-o/dyld.h>
 #include <mach/vm_page_size.h>
+#endif
+
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
+#include <sys/sysctl.h>
 #endif
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
@@ -8763,6 +8982,8 @@ uint32_t GetSysPageSizeSlowpath() {
   page_size = static_cast<uint32_t>(page_size_int > 0 ? page_size_int : 4096);
 #elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
   page_size = static_cast<uint32_t>(vm_page_size);
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
+  page_size = static_cast<uint32_t>(sysconf(_SC_PAGESIZE));
 #else
   page_size = 4096;
 #endif
@@ -8796,6 +9017,7 @@ void MaybeReleaseAllocatorMemToOS() {
 uid_t GetCurrentUserId() {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
   return geteuid();
 #else
@@ -8826,6 +9048,7 @@ void UnsetEnv(const std::string& key) {
 void Daemonize(std::function<int()> parent_cb) {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     (PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) &&  \
      !PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE_TVOS))
   Pipe pipe = Pipe::Create(Pipe::kBothBlock);
@@ -8890,6 +9113,18 @@ std::string GetCurExecutablePath() {
   char buf[MAX_PATH];
   auto len = ::GetModuleFileNameA(nullptr /*current*/, buf, sizeof(buf));
   self_path = std::string(buf, len);
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
+  char buf[PATH_MAX];
+  int mib[4], ret;
+  size_t len = sizeof(buf);
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_PROC;
+  mib[2] = KERN_PROC_PATHNAME;
+  mib[3] = -1;
+  ret = sysctl(mib, 4, buf, &len, NULL, 0);
+  PERFETTO_CHECK(ret == 0);
+  // This returns the full path; need to trim the executable
+  self_path = std::string(buf);
 #else
   PERFETTO_FATAL(
       "GetCurExecutableDir() not implemented on the current platform");
@@ -10384,6 +10619,11 @@ class ScopedRefcount {
 };
 }  // namespace task_runner_internal
 
+using MaybeLockFreeTaskRunner =
+    std::conditional_t<base::flags::use_lockfree_taskrunner,
+                       LockFreeTaskRunner,
+                       UnixTaskRunner>;
+
 }  // namespace base
 }  // namespace perfetto
 
@@ -10509,10 +10749,14 @@ constexpr bool AllBitsSet(T v) {
 
 // gen_amalgamated expanded: #include "perfetto/base/build_config.h"
 
-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
-#include <poll.h>
-#else
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
 #include <windows.h>
+
+// Keep the \n before to prevent clang-format reordering.
+#include <synchapi.h>
+#else
+#include <poll.h>
+#include <unistd.h>
 #endif
 
 #include <thread>
@@ -10693,6 +10937,19 @@ void LockFreeTaskRunner::Run() {
       errno = 0;
       RunTaskWithWatchdogGuard(std::move(delayed_task));
     }
+  }
+
+  // Wait for all other threads to have finished the Quit's PostTask().
+  // This is to prevent the following race in tests:
+  // - Thread1 (!= main thread) invokes Quit, which in turn becomes a PostTask.
+  // - This function sees quit_=true and returns from Run().
+  // - The owner of the LFTR at that point is entitled to destroy LFTR.
+  // - Thread1 is still executing the epilogue of the PostTask, decrementing the
+  //   refcount, and ends up operating on invalid memory.
+  while (
+      std::any_of(refcounts_.begin(), refcounts_.end(),
+                  [](std::atomic<int32_t>& bucket) { return bucket.load(); })) {
+    std::this_thread::yield();
   }
 }
 
@@ -11031,17 +11288,19 @@ bool LockFreeTaskRunner::RunsTasksOnCurrentThread() const {
 #include <functional>
 #include <thread>
 
-// gen_amalgamated expanded: #include "perfetto/ext/base/unix_task_runner.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/lock_free_task_runner.h"
 
 namespace perfetto {
 namespace base {
 
-// A UnixTaskRunner backed by a dedicated task thread. Shuts down the runner and
-// joins the thread upon destruction. Can be moved to transfer ownership.
+// A MaybeLockFreeTaskRunner backed by a dedicated task thread. Shuts down the
+// runner and joins the thread upon destruction. Can be moved to transfer
+// ownership.
 //
 // Guarantees that:
-// * the UnixTaskRunner will be constructed and destructed on the task thread.
-// * the task thread will live for the lifetime of the UnixTaskRunner.
+// * the MaybeLockFreeTaskRunner will be constructed and destructed on the task
+// thread.
+// * the task thread will live for the lifetime of the MaybeLockFreeTaskRunner.
 //
 class PERFETTO_EXPORT_COMPONENT ThreadTaskRunner : public TaskRunner {
  public:
@@ -11066,14 +11325,14 @@ class PERFETTO_EXPORT_COMPONENT ThreadTaskRunner : public TaskRunner {
 
   PlatformThreadId GetThreadIdForTesting();
 
-  // Returns a pointer to the UnixTaskRunner, which is valid for the lifetime of
-  // this ThreadTaskRunner object (unless this object is moved-from, in which
-  // case the pointer remains valid for the lifetime of the new owning
+  // Returns a pointer to the MaybeLockFreeTaskRunner, which is valid for the
+  // lifetime of this ThreadTaskRunner object (unless this object is moved-from,
+  // in which case the pointer remains valid for the lifetime of the new owning
   // ThreadTaskRunner).
   //
   // Warning: do not call Quit() on the returned runner pointer, the termination
   // should be handled exclusively by this class' destructor.
-  UnixTaskRunner* get() const { return task_runner_; }
+  MaybeLockFreeTaskRunner* get() const { return task_runner_; }
 
   // TaskRunner implementation.
   // These methods just proxy to the underlying task_runner_.
@@ -11085,11 +11344,11 @@ class PERFETTO_EXPORT_COMPONENT ThreadTaskRunner : public TaskRunner {
 
  private:
   explicit ThreadTaskRunner(const std::string& name);
-  void RunTaskThread(std::function<void(UnixTaskRunner*)> initializer);
+  void RunTaskThread(std::function<void(MaybeLockFreeTaskRunner*)> initializer);
 
   std::thread thread_;
   std::string name_;
-  UnixTaskRunner* task_runner_ = nullptr;
+  MaybeLockFreeTaskRunner* task_runner_ = nullptr;
 };
 
 }  // namespace base
@@ -11122,8 +11381,8 @@ class PERFETTO_EXPORT_COMPONENT ThreadTaskRunner : public TaskRunner {
 #include <thread>
 
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/lock_free_task_runner.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/thread_utils.h"
-// gen_amalgamated expanded: #include "perfetto/ext/base/unix_task_runner.h"
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX_BUT_NOT_QNX) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID)
@@ -11146,7 +11405,6 @@ ThreadTaskRunner& ThreadTaskRunner::operator=(ThreadTaskRunner&& other) {
 
 ThreadTaskRunner::~ThreadTaskRunner() {
   if (task_runner_) {
-    PERFETTO_CHECK(!task_runner_->QuitCalled());
     task_runner_->Quit();
 
     PERFETTO_DCHECK(thread_.joinable());
@@ -11159,8 +11417,8 @@ ThreadTaskRunner::ThreadTaskRunner(const std::string& name) : name_(name) {
   std::mutex init_lock;
   std::condition_variable init_cv;
 
-  std::function<void(UnixTaskRunner*)> initializer =
-      [this, &init_lock, &init_cv](UnixTaskRunner* task_runner) {
+  std::function<void(MaybeLockFreeTaskRunner*)> initializer =
+      [this, &init_lock, &init_cv](MaybeLockFreeTaskRunner* task_runner) {
         std::lock_guard<std::mutex> lock(init_lock);
         task_runner_ = task_runner;
         // Notify while still holding the lock, as init_cv ceases to exist as
@@ -11178,12 +11436,12 @@ ThreadTaskRunner::ThreadTaskRunner(const std::string& name) : name_(name) {
 }
 
 void ThreadTaskRunner::RunTaskThread(
-    std::function<void(UnixTaskRunner*)> initializer) {
+    std::function<void(MaybeLockFreeTaskRunner*)> initializer) {
   if (!name_.empty()) {
     base::MaybeSetThreadName(name_);
   }
 
-  UnixTaskRunner task_runner;
+  MaybeLockFreeTaskRunner task_runner;
   task_runner.PostTask(std::bind(std::move(initializer), &task_runner));
   task_runner.Run();
 }
@@ -11828,7 +12086,7 @@ class Subprocess {
   };
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
-  static void StdinThread(MovableState*, std::string input);
+  static void StdinThread(MovableState*, const std::string& input);
   static void StdoutErrThread(MovableState*);
 #else
   void TryPushStdin();
@@ -11947,6 +12205,7 @@ std::string Subprocess::Args::GetCmdString() const {
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 
 #include <fcntl.h>
@@ -12551,7 +12810,7 @@ void Subprocess::Start() {
 }
 
 // static
-void Subprocess::StdinThread(MovableState* s, std::string input) {
+void Subprocess::StdinThread(MovableState* s, const std::string& input) {
   size_t input_written = 0;
   while (input_written < input.size()) {
     DWORD wsize = 0;
@@ -13292,12 +13551,6 @@ ParseFieldResult ParseOneField(const uint8_t* const buffer,
                                const uint8_t* const end) {
   ParseFieldResult res{ParseFieldResult::kAbort, buffer, Field{}};
 
-  // The first byte of a proto field is structured as follows:
-  // The least 3 significant bits determine the field type.
-  // The most 5 significant bits determine the field id. If MSB == 1, the
-  // field id continues on the next bytes following the VarInt encoding.
-  const uint8_t kFieldTypeNumBits = 3;
-  const uint64_t kFieldTypeMask = (1 << kFieldTypeNumBits) - 1;  // 0000 0111;
   const uint8_t* pos = buffer;
 
   // If we've already hit the end, just return an invalid field.
@@ -13314,11 +13567,13 @@ ParseFieldResult ParseOneField(const uint8_t* const buffer,
     pos = next;
   }
 
-  uint32_t field_id = static_cast<uint32_t>(preamble >> kFieldTypeNumBits);
+  uint32_t field_id =
+      static_cast<uint32_t>(proto_utils::GetTagFieldId(preamble));
   if (field_id == 0 || pos >= end)
     return res;
 
-  auto field_type = static_cast<uint8_t>(preamble & kFieldTypeMask);
+  auto field_type =
+      static_cast<uint8_t>(proto_utils::GetTagFieldType(preamble));
   const uint8_t* new_pos = pos;
   uint64_t int_value = 0;
   uint64_t size = 0;
@@ -16485,10 +16740,12 @@ bool FollowerEvent::operator==(const FollowerEvent& other) const {
    && ::protozero::internal::gen_helpers::EqualsField(counter_, other.counter_)
    && ::protozero::internal::gen_helpers::EqualsField(tracepoint_, other.tracepoint_)
    && ::protozero::internal::gen_helpers::EqualsField(raw_event_, other.raw_event_)
+   && ::protozero::internal::gen_helpers::EqualsField(modifiers_, other.modifiers_)
    && ::protozero::internal::gen_helpers::EqualsField(name_, other.name_);
 }
 
 bool FollowerEvent::ParseFromArray(const void* raw, size_t size) {
+  modifiers_.clear();
   unknown_fields_.clear();
   bool packed_error = false;
 
@@ -16506,6 +16763,10 @@ bool FollowerEvent::ParseFromArray(const void* raw, size_t size) {
         break;
       case 3 /* raw_event */:
         (*raw_event_).ParseFromArray(field.data(), field.size());
+        break;
+      case 5 /* modifiers */:
+        modifiers_.emplace_back();
+        field.get(&modifiers_.back());
         break;
       case 4 /* name */:
         ::protozero::internal::gen_helpers::DeserializeString(field, &name_);
@@ -16544,6 +16805,11 @@ void FollowerEvent::Serialize(::protozero::Message* msg) const {
   // Field 3: raw_event
   if (_has_field_[3]) {
     (*raw_event_).Serialize(msg->BeginNestedMessage<::protozero::Message>(3));
+  }
+
+  // Field 5: modifiers
+  for (auto& it : modifiers_) {
+    ::protozero::internal::gen_helpers::SerializeVarInt(5, it, msg);
   }
 
   // Field 4: name
@@ -16762,11 +17028,13 @@ bool PerfEvents_Timebase::operator==(const PerfEvents_Timebase& other) const {
    && ::protozero::internal::gen_helpers::EqualsField(counter_, other.counter_)
    && ::protozero::internal::gen_helpers::EqualsField(tracepoint_, other.tracepoint_)
    && ::protozero::internal::gen_helpers::EqualsField(raw_event_, other.raw_event_)
+   && ::protozero::internal::gen_helpers::EqualsField(modifiers_, other.modifiers_)
    && ::protozero::internal::gen_helpers::EqualsField(timestamp_clock_, other.timestamp_clock_)
    && ::protozero::internal::gen_helpers::EqualsField(name_, other.name_);
 }
 
 bool PerfEvents_Timebase::ParseFromArray(const void* raw, size_t size) {
+  modifiers_.clear();
   unknown_fields_.clear();
   bool packed_error = false;
 
@@ -16793,6 +17061,10 @@ bool PerfEvents_Timebase::ParseFromArray(const void* raw, size_t size) {
         break;
       case 5 /* raw_event */:
         (*raw_event_).ParseFromArray(field.data(), field.size());
+        break;
+      case 12 /* modifiers */:
+        modifiers_.emplace_back();
+        field.get(&modifiers_.back());
         break;
       case 11 /* timestamp_clock */:
         field.get(&timestamp_clock_);
@@ -16849,6 +17121,11 @@ void PerfEvents_Timebase::Serialize(::protozero::Message* msg) const {
   // Field 5: raw_event
   if (_has_field_[5]) {
     (*raw_event_).Serialize(msg->BeginNestedMessage<::protozero::Message>(5));
+  }
+
+  // Field 12: modifiers
+  for (auto& it : modifiers_) {
+    ::protozero::internal::gen_helpers::SerializeVarInt(12, it, msg);
   }
 
   // Field 11: timestamp_clock
@@ -25296,13 +25573,15 @@ bool EtwConfig::operator==(const EtwConfig& other) const {
   return ::protozero::internal::gen_helpers::EqualsField(unknown_fields_, other.unknown_fields_)
    && ::protozero::internal::gen_helpers::EqualsField(kernel_flags_, other.kernel_flags_)
    && ::protozero::internal::gen_helpers::EqualsField(scheduler_provider_events_, other.scheduler_provider_events_)
-   && ::protozero::internal::gen_helpers::EqualsField(memory_provider_events_, other.memory_provider_events_);
+   && ::protozero::internal::gen_helpers::EqualsField(memory_provider_events_, other.memory_provider_events_)
+   && ::protozero::internal::gen_helpers::EqualsField(file_provider_events_, other.file_provider_events_);
 }
 
 bool EtwConfig::ParseFromArray(const void* raw, size_t size) {
   kernel_flags_.clear();
   scheduler_provider_events_.clear();
   memory_provider_events_.clear();
+  file_provider_events_.clear();
   unknown_fields_.clear();
   bool packed_error = false;
 
@@ -25323,6 +25602,10 @@ bool EtwConfig::ParseFromArray(const void* raw, size_t size) {
       case 3 /* memory_provider_events */:
         memory_provider_events_.emplace_back();
         ::protozero::internal::gen_helpers::DeserializeString(field, &memory_provider_events_.back());
+        break;
+      case 4 /* file_provider_events */:
+        file_provider_events_.emplace_back();
+        ::protozero::internal::gen_helpers::DeserializeString(field, &file_provider_events_.back());
         break;
       default:
         field.SerializeAndAppendTo(&unknown_fields_);
@@ -25358,6 +25641,11 @@ void EtwConfig::Serialize(::protozero::Message* msg) const {
   // Field 3: memory_provider_events
   for (auto& it : memory_provider_events_) {
     ::protozero::internal::gen_helpers::SerializeString(3, it, msg);
+  }
+
+  // Field 4: file_provider_events
+  for (auto& it : file_provider_events_) {
+    ::protozero::internal::gen_helpers::SerializeString(4, it, msg);
   }
 
   protozero::internal::gen_helpers::SerializeUnknownFields(unknown_fields_, msg);
@@ -26165,7 +26453,8 @@ bool TraceConfig::operator==(const TraceConfig& other) const {
    && ::protozero::internal::gen_helpers::EqualsField(cmd_trace_start_delay_, other.cmd_trace_start_delay_)
    && ::protozero::internal::gen_helpers::EqualsField(session_semaphores_, other.session_semaphores_)
    && ::protozero::internal::gen_helpers::EqualsField(priority_boost_, other.priority_boost_)
-   && ::protozero::internal::gen_helpers::EqualsField(exclusive_prio_, other.exclusive_prio_);
+   && ::protozero::internal::gen_helpers::EqualsField(exclusive_prio_, other.exclusive_prio_)
+   && ::protozero::internal::gen_helpers::EqualsField(no_flush_before_write_into_file_, other.no_flush_before_write_into_file_);
 }
 
 int TraceConfig::buffers_size() const { return static_cast<int>(buffers_.size()); }
@@ -26310,6 +26599,9 @@ bool TraceConfig::ParseFromArray(const void* raw, size_t size) {
         break;
       case 41 /* exclusive_prio */:
         field.get(&exclusive_prio_);
+        break;
+      case 42 /* no_flush_before_write_into_file */:
+        field.get(&no_flush_before_write_into_file_);
         break;
       default:
         field.SerializeAndAppendTo(&unknown_fields_);
@@ -26515,6 +26807,11 @@ void TraceConfig::Serialize(::protozero::Message* msg) const {
   // Field 41: exclusive_prio
   if (_has_field_[41]) {
     ::protozero::internal::gen_helpers::SerializeVarInt(41, exclusive_prio_, msg);
+  }
+
+  // Field 42: no_flush_before_write_into_file
+  if (_has_field_[42]) {
+    ::protozero::internal::gen_helpers::SerializeTinyVarInt(42, no_flush_before_write_into_file_, msg);
   }
 
   protozero::internal::gen_helpers::SerializeUnknownFields(unknown_fields_, msg);
@@ -33036,6 +33333,8 @@ bool TrackEvent::operator==(const TrackEvent& other) const {
    && ::protozero::internal::gen_helpers::EqualsField(correlation_id_, other.correlation_id_)
    && ::protozero::internal::gen_helpers::EqualsField(correlation_id_str_, other.correlation_id_str_)
    && ::protozero::internal::gen_helpers::EqualsField(correlation_id_str_iid_, other.correlation_id_str_iid_)
+   && ::protozero::internal::gen_helpers::EqualsField(callstack_, other.callstack_)
+   && ::protozero::internal::gen_helpers::EqualsField(callstack_iid_, other.callstack_iid_)
    && ::protozero::internal::gen_helpers::EqualsField(debug_annotations_, other.debug_annotations_)
    && ::protozero::internal::gen_helpers::EqualsField(task_execution_, other.task_execution_)
    && ::protozero::internal::gen_helpers::EqualsField(log_message_, other.log_message_)
@@ -33155,6 +33454,12 @@ bool TrackEvent::ParseFromArray(const void* raw, size_t size) {
         break;
       case 54 /* correlation_id_str_iid */:
         field.get(&correlation_id_str_iid_);
+        break;
+      case 55 /* callstack */:
+        (*callstack_).ParseFromArray(field.data(), field.size());
+        break;
+      case 56 /* callstack_iid */:
+        field.get(&callstack_iid_);
         break;
       case 4 /* debug_annotations */:
         debug_annotations_.emplace_back();
@@ -33352,6 +33657,16 @@ void TrackEvent::Serialize(::protozero::Message* msg) const {
   // Field 54: correlation_id_str_iid
   if (_has_field_[54]) {
     ::protozero::internal::gen_helpers::SerializeVarInt(54, correlation_id_str_iid_, msg);
+  }
+
+  // Field 55: callstack
+  if (_has_field_[55]) {
+    (*callstack_).Serialize(msg->BeginNestedMessage<::protozero::Message>(55));
+  }
+
+  // Field 56: callstack_iid
+  if (_has_field_[56]) {
+    ::protozero::internal::gen_helpers::SerializeVarInt(56, callstack_iid_, msg);
   }
 
   // Field 4: debug_annotations
@@ -33682,6 +33997,139 @@ void TrackEvent_LegacyEvent::Serialize(::protozero::Message* msg) const {
   protozero::internal::gen_helpers::SerializeUnknownFields(unknown_fields_, msg);
 }
 
+
+TrackEvent_Callstack::TrackEvent_Callstack() = default;
+TrackEvent_Callstack::~TrackEvent_Callstack() = default;
+TrackEvent_Callstack::TrackEvent_Callstack(const TrackEvent_Callstack&) = default;
+TrackEvent_Callstack& TrackEvent_Callstack::operator=(const TrackEvent_Callstack&) = default;
+TrackEvent_Callstack::TrackEvent_Callstack(TrackEvent_Callstack&&) noexcept = default;
+TrackEvent_Callstack& TrackEvent_Callstack::operator=(TrackEvent_Callstack&&) = default;
+
+bool TrackEvent_Callstack::operator==(const TrackEvent_Callstack& other) const {
+  return ::protozero::internal::gen_helpers::EqualsField(unknown_fields_, other.unknown_fields_)
+   && ::protozero::internal::gen_helpers::EqualsField(frames_, other.frames_);
+}
+
+int TrackEvent_Callstack::frames_size() const { return static_cast<int>(frames_.size()); }
+void TrackEvent_Callstack::clear_frames() { frames_.clear(); }
+TrackEvent_Callstack_Frame* TrackEvent_Callstack::add_frames() { frames_.emplace_back(); return &frames_.back(); }
+bool TrackEvent_Callstack::ParseFromArray(const void* raw, size_t size) {
+  frames_.clear();
+  unknown_fields_.clear();
+  bool packed_error = false;
+
+  ::protozero::ProtoDecoder dec(raw, size);
+  for (auto field = dec.ReadField(); field.valid(); field = dec.ReadField()) {
+    if (field.id() < _has_field_.size()) {
+      _has_field_.set(field.id());
+    }
+    switch (field.id()) {
+      case 1 /* frames */:
+        frames_.emplace_back();
+        frames_.back().ParseFromArray(field.data(), field.size());
+        break;
+      default:
+        field.SerializeAndAppendTo(&unknown_fields_);
+        break;
+    }
+  }
+  return !packed_error && !dec.bytes_left();
+}
+
+std::string TrackEvent_Callstack::SerializeAsString() const {
+  ::protozero::internal::gen_helpers::MessageSerializer msg;
+  Serialize(msg.get());
+  return msg.SerializeAsString();
+}
+
+std::vector<uint8_t> TrackEvent_Callstack::SerializeAsArray() const {
+  ::protozero::internal::gen_helpers::MessageSerializer msg;
+  Serialize(msg.get());
+  return msg.SerializeAsArray();
+}
+
+void TrackEvent_Callstack::Serialize(::protozero::Message* msg) const {
+  // Field 1: frames
+  for (auto& it : frames_) {
+    it.Serialize(msg->BeginNestedMessage<::protozero::Message>(1));
+  }
+
+  protozero::internal::gen_helpers::SerializeUnknownFields(unknown_fields_, msg);
+}
+
+
+TrackEvent_Callstack_Frame::TrackEvent_Callstack_Frame() = default;
+TrackEvent_Callstack_Frame::~TrackEvent_Callstack_Frame() = default;
+TrackEvent_Callstack_Frame::TrackEvent_Callstack_Frame(const TrackEvent_Callstack_Frame&) = default;
+TrackEvent_Callstack_Frame& TrackEvent_Callstack_Frame::operator=(const TrackEvent_Callstack_Frame&) = default;
+TrackEvent_Callstack_Frame::TrackEvent_Callstack_Frame(TrackEvent_Callstack_Frame&&) noexcept = default;
+TrackEvent_Callstack_Frame& TrackEvent_Callstack_Frame::operator=(TrackEvent_Callstack_Frame&&) = default;
+
+bool TrackEvent_Callstack_Frame::operator==(const TrackEvent_Callstack_Frame& other) const {
+  return ::protozero::internal::gen_helpers::EqualsField(unknown_fields_, other.unknown_fields_)
+   && ::protozero::internal::gen_helpers::EqualsField(function_name_, other.function_name_)
+   && ::protozero::internal::gen_helpers::EqualsField(source_file_, other.source_file_)
+   && ::protozero::internal::gen_helpers::EqualsField(line_number_, other.line_number_);
+}
+
+bool TrackEvent_Callstack_Frame::ParseFromArray(const void* raw, size_t size) {
+  unknown_fields_.clear();
+  bool packed_error = false;
+
+  ::protozero::ProtoDecoder dec(raw, size);
+  for (auto field = dec.ReadField(); field.valid(); field = dec.ReadField()) {
+    if (field.id() < _has_field_.size()) {
+      _has_field_.set(field.id());
+    }
+    switch (field.id()) {
+      case 1 /* function_name */:
+        ::protozero::internal::gen_helpers::DeserializeString(field, &function_name_);
+        break;
+      case 2 /* source_file */:
+        ::protozero::internal::gen_helpers::DeserializeString(field, &source_file_);
+        break;
+      case 3 /* line_number */:
+        field.get(&line_number_);
+        break;
+      default:
+        field.SerializeAndAppendTo(&unknown_fields_);
+        break;
+    }
+  }
+  return !packed_error && !dec.bytes_left();
+}
+
+std::string TrackEvent_Callstack_Frame::SerializeAsString() const {
+  ::protozero::internal::gen_helpers::MessageSerializer msg;
+  Serialize(msg.get());
+  return msg.SerializeAsString();
+}
+
+std::vector<uint8_t> TrackEvent_Callstack_Frame::SerializeAsArray() const {
+  ::protozero::internal::gen_helpers::MessageSerializer msg;
+  Serialize(msg.get());
+  return msg.SerializeAsArray();
+}
+
+void TrackEvent_Callstack_Frame::Serialize(::protozero::Message* msg) const {
+  // Field 1: function_name
+  if (_has_field_[1]) {
+    ::protozero::internal::gen_helpers::SerializeString(1, function_name_, msg);
+  }
+
+  // Field 2: source_file
+  if (_has_field_[2]) {
+    ::protozero::internal::gen_helpers::SerializeString(2, source_file_, msg);
+  }
+
+  // Field 3: line_number
+  if (_has_field_[3]) {
+    ::protozero::internal::gen_helpers::SerializeVarInt(3, line_number_, msg);
+  }
+
+  protozero::internal::gen_helpers::SerializeUnknownFields(unknown_fields_, msg);
+}
+
 }  // namespace perfetto
 }  // namespace protos
 }  // namespace gen
@@ -33851,6 +34299,8 @@ void TrackEvent_LegacyEvent::Serialize(::protozero::Message* msg) const {
 // gen_amalgamated begin source: gen/protos/perfetto/trace/ftrace/fs.pbzero.cc
 // Intentionally empty (crbug.com/998165)
 // gen_amalgamated begin source: gen/protos/perfetto/trace/ftrace/ftrace.pbzero.cc
+// Intentionally empty (crbug.com/998165)
+// gen_amalgamated begin source: gen/protos/perfetto/trace/ftrace/fwtp_ftrace.pbzero.cc
 // Intentionally empty (crbug.com/998165)
 // gen_amalgamated begin source: gen/protos/perfetto/trace/ftrace/g2d.pbzero.cc
 // Intentionally empty (crbug.com/998165)
@@ -34423,9 +34873,10 @@ inline void GetProducerAndWriterID(ProducerAndWriterID x,
 // open in the service.
 static constexpr ProducerID kMaxProducerID = static_cast<ProducerID>(-1);
 
-// 1024 Writers per producer seems a resonable bound. This reduces the ability
-// to memory-DoS the service by having to keep track of too many writer IDs.
-static constexpr WriterID kMaxWriterID = static_cast<WriterID>((1 << 10) - 1);
+// 32k Writers per producer seems a resonable bound. This reduces the ability
+// to memory-DoS the service by having to keep track of too many writer IDs,
+// but enough to run certain known benchmark workloads.
+static constexpr WriterID kMaxWriterID = static_cast<WriterID>((1 << 15) - 1);
 
 // Unique within the scope of a {ProducerID, WriterID} tuple.
 using ChunkID = uint32_t;
@@ -36086,6 +36537,11 @@ class PERFETTO_EXPORT_COMPONENT ConsumerEndpoint {
     // If not zero, this is stored in the trace as the configured delay (in
     // milliseconds) of the trigger that caused the clone.
     uint64_t clone_trigger_delay_ms = 0;
+
+    // If valid, and the session that should be cloned is 'write_into_file'
+    // session, traced writes the cloned session content to this file
+    // descriptor, instead of writing it in the cloned session buffers.
+    base::ScopedFile output_file_fd;
   };
   virtual void CloneSession(CloneSessionArgs) = 0;
 
@@ -36871,6 +37327,13 @@ class SharedMemoryArbiterImpl : public SharedMemoryArbiter {
   // batching period.
   bool delayed_flush_scheduled_ = false;
 
+  // Indicates whether we have already scheduled an immediate flush due to the
+  // shared memory buffer being more than half full. Set to true when the first
+  // immediate flush is posted and cleared when the flush completes. This
+  // prevents posting multiple immediate flush tasks when chunks continue to be
+  // committed while the buffer remains over 50% full.
+  bool immediate_flush_scheduled_ = false;
+
   // Stores target buffer reservations for writers created via
   // CreateStartupTraceWriter(). A bound reservation sets
   // TargetBufferReservation::resolved to true and is associated with the actual
@@ -37262,6 +37725,7 @@ class TraceWriterImpl : public TraceWriter,
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
 // gen_amalgamated expanded: #include "perfetto/base/task_runner.h"
 // gen_amalgamated expanded: #include "perfetto/base/time.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/flags.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/commit_data_request.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/shared_memory.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/shared_memory_abi.h"
@@ -37624,9 +38088,20 @@ void SharedMemoryArbiterImpl::UpdateCommitDataRequest(
     // trace.
     if (fully_bound_ &&
         (last_patch_req || bytes_pending_commit_ >= shmem_abi_.size() / 2)) {
-      weak_this = weak_ptr_factory_.GetWeakPtr();
-      task_runner_to_post_delayed_callback_on = task_runner_;
-      flush_delay_ms = 0;
+      bool should_post_immediate_flush = true;
+      if (base::flags::sma_prevent_duplicate_immediate_flushes) {
+        // Only post an immediate flush task if we haven't already posted one.
+        // This prevents spamming the task runner with immediate flushes when
+        // the buffer remains over 50% full while chunks continue to be
+        // committed. See b/330580374.
+        should_post_immediate_flush = !immediate_flush_scheduled_;
+      }
+      if (should_post_immediate_flush) {
+        weak_this = weak_ptr_factory_.GetWeakPtr();
+        task_runner_to_post_delayed_callback_on = task_runner_;
+        flush_delay_ms = 0;
+        immediate_flush_scheduled_ = true;
+      }
     }
 
     // When using shmem emulation we commit the completed chunks immediately
@@ -37640,15 +38115,30 @@ void SharedMemoryArbiterImpl::UpdateCommitDataRequest(
         // Allow next call to UpdateCommitDataRequest to start
         // another batching period.
         delayed_flush_scheduled_ = false;
+        // We're flushing synchronously, so any scheduled immediate flush is
+        // no longer needed.
+        immediate_flush_scheduled_ = false;
         // We can't flush while holding the lock
         scoped_lock.unlock();
         FlushPendingCommitDataRequests();
       } else {
+        bool should_post_immediate_flush = true;
+        if (base::flags::sma_prevent_duplicate_immediate_flushes) {
+          // Only post an immediate flush task if we haven't already posted one.
+          // This prevents spamming the task runner with immediate flushes when
+          // the buffer remains over 50% full while chunks continue to be
+          // committed. See b/330580374.
+          should_post_immediate_flush = !immediate_flush_scheduled_;
+        }
+
         // Since we aren't on the |task_runner_| thread post a task instead,
         // in order to prevent non-overlaping commit data request flushes.
-        weak_this = weak_ptr_factory_.GetWeakPtr();
-        task_runner_to_post_delayed_callback_on = task_runner_;
-        flush_delay_ms = 0;
+        if (should_post_immediate_flush) {
+          weak_this = weak_ptr_factory_.GetWeakPtr();
+          task_runner_to_post_delayed_callback_on = task_runner_;
+          flush_delay_ms = 0;
+          immediate_flush_scheduled_ = true;
+        }
       }
     }
   }  // scoped_lock(lock_)
@@ -37663,9 +38153,11 @@ void SharedMemoryArbiterImpl::UpdateCommitDataRequest(
             return;
           {
             std::lock_guard<base::MaybeRtMutex> scoped_lock(weak_this->lock_);
-            // Clear |delayed_flush_scheduled_|, allowing the next call to
+            // Clear |delayed_flush_scheduled_| and
+            // |immediate_flush_scheduled_|, allowing the next call to
             // UpdateCommitDataRequest to start another batching period.
             weak_this->delayed_flush_scheduled_ = false;
+            weak_this->immediate_flush_scheduled_ = false;
           }
           weak_this->FlushPendingCommitDataRequests();
         },
@@ -38960,6 +39452,7 @@ class PERFETTO_EXPORT_COMPONENT Consumer {
     bool success;
     std::string error;
     base::Uuid uuid;  // UUID of the cloned session.
+    bool was_write_into_file;
   };
   virtual void OnSessionCloned(const OnSessionClonedArgs&);
 };
@@ -41266,6 +41759,7 @@ class TracingMuxerImpl : public TracingMuxer {
 // gen_amalgamated expanded: #include "perfetto/base/time.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/fnv_hash.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/thread_checker.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/utils.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/waitable_event.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/shared_memory_arbiter.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/trace_packet.h"
@@ -41702,7 +42196,7 @@ void TracingMuxerImpl::ConsumerImpl::OnConnect() {
     muxer_->QueryServiceState(session_id_, std::move(callback));
   }
   if (session_to_clone_) {
-    service_->CloneSession(*session_to_clone_);
+    service_->CloneSession(std::move(*session_to_clone_));
     session_to_clone_ = std::nullopt;
   }
 
@@ -42903,6 +43397,7 @@ void TracingMuxerImpl::StopDataSource_AsyncEnd(TracingBackendId backend_id,
       producer->service_->NotifyDataSourceStopped(instance_id);
   }
   producer->SweepDeadServices();
+  base::MaybeReleaseAllocatorMemToOS();
 }
 
 void TracingMuxerImpl::ClearDataSourceIncrementalState(
@@ -43227,14 +43722,14 @@ void TracingMuxerImpl::CloneTracingSession(
   // Multiple concurrent cloning isn't supported.
   PERFETTO_DCHECK(!consumer->clone_trace_callback_);
   consumer->clone_trace_callback_ = std::move(callback);
-  ConsumerEndpoint::CloneSessionArgs consumer_args{};
+  ConsumerEndpoint::CloneSessionArgs consumer_args;
   consumer_args.unique_session_name = args.unique_session_name;
   if (!consumer->connected_) {
     consumer->session_to_clone_ = std::move(consumer_args);
     return;
   }
   consumer->session_to_clone_ = std::nullopt;
-  consumer->service_->CloneSession(consumer_args);
+  consumer->service_->CloneSession(std::move(consumer_args));
 }
 
 void TracingMuxerImpl::ChangeTracingSessionConfig(
@@ -44933,6 +45428,7 @@ base::PlatformProcessId Platform::process_id_ = 0;
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 
 // gen_amalgamated expanded: #include "perfetto/ext/base/file_utils.h"
@@ -45029,7 +45525,8 @@ std::string PlatformPosix::GetCurrentProcessName() {
   std::string cmdline;
   base::ReadFile("/proc/self/cmdline", &cmdline);
   return cmdline.substr(0, cmdline.find('\0'));
-#elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
   return std::string(getprogname());
 #else
   return "unknown_producer";
@@ -45727,7 +46224,7 @@ protos::gen::TrackDescriptor ProcessTrack::Serialize() const {
           std::string(splitter.cur_token(), splitter.cur_token_size()));
     }
   }
-  // TODO(skyostil): Record command line on Windows and Mac.
+  // TODO(skyostil): Record command line on Windows, FreeBSD and Mac.
 #endif
   return desc;
 }
@@ -46718,9 +47215,10 @@ namespace perfetto::base {
 
 ClockSnapshotVector CaptureClockSnapshots() {
   ClockSnapshotVector snapshot_data;
-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) && \
-    !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) &&   \
-    !PERFETTO_BUILDFLAG(PERFETTO_OS_NACL) &&  \
+#if !PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) &&   \
+    !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN) &&     \
+    !PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) && \
+    !PERFETTO_BUILDFLAG(PERFETTO_OS_NACL) &&    \
     !PERFETTO_BUILDFLAG(PERFETTO_OS_QNX)
   struct {
     clockid_t id;
@@ -46826,8 +47324,8 @@ const char* GetVersionCode();
 #ifndef GEN_PERFETTO_VERSION_GEN_H_
 #define GEN_PERFETTO_VERSION_GEN_H_
 
-#define PERFETTO_VERSION_STRING() "v52.0-6942f195e"
-#define PERFETTO_VERSION_SCM_REVISION() "6942f195eeade191e52f08da68e5bcdfff17205c"
+#define PERFETTO_VERSION_STRING() "v53.0-20d8cb80b"
+#define PERFETTO_VERSION_SCM_REVISION() "20d8cb80b4d69967554f1033e7f49592ac639a3c"
 
 #endif  // GEN_PERFETTO_VERSION_GEN_H_
 /*
@@ -48904,691 +49402,8 @@ double RandomImpl::GetValue() {
 }
 
 }  // namespace perfetto::tracing_service
-// gen_amalgamated begin source: src/tracing/service/trace_buffer.cc
-// gen_amalgamated begin header: src/tracing/service/trace_buffer.h
-// gen_amalgamated begin header: include/perfetto/ext/base/flat_hash_map.h
-// gen_amalgamated begin header: include/perfetto/ext/base/murmur_hash.h
-/*
- * Copyright (C) 2019 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef INCLUDE_PERFETTO_EXT_BASE_MURMUR_HASH_H_
-#define INCLUDE_PERFETTO_EXT_BASE_MURMUR_HASH_H_
-
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <functional>
-#include <limits>
-#include <string>
-#include <type_traits>
-
-// gen_amalgamated expanded: #include "perfetto/public/compiler.h"
-
-// This file provides an implementation of the 64-bit MurmurHash2 algorithm,
-// also known as MurmurHash64A. This algorithm, created by Austin Appleby, is a
-// fast, non-cryptographic hash function with excellent distribution properties,
-// making it ideal for use in hash tables.
-//
-// The file also includes related hashing utilities:
-// - A standalone `fmix64` finalizer from MurmurHash3, used for hashing
-//   individual numeric types.
-// - A hash combiner for creating a single hash from a sequence of values.
-//
-// NOTE: This implementation is NOT cryptographically secure. It must not be
-// used for security-sensitive applications like password storage or digital
-// signatures, as it is not designed to be resistant to malicious attacks.
-
-namespace perfetto::base {
-
-namespace murmur_internal {
-
-// Finalizes an intermediate hash value using the `fmix64` routine from
-// MurmurHash3.
-//
-// This function's purpose is to thoroughly mix the bits of the hash state to
-// ensure the final result is well-distributed, which is critical for avoiding
-// collisions in hash tables.
-//
-// Args:
-//   h: The intermediate hash value to be finalized.
-//
-// Returns:
-//   The final, well-mixed 64-bit hash value.
-inline uint64_t MurmurHashMix(uint64_t h) {
-  h ^= h >> 33;
-  h *= 0xff51afd7ed558ccdULL;
-  h ^= h >> 33;
-  h *= 0xc4ceb9fe1a85ec53ULL;
-  h ^= h >> 33;
-  return h;
-}
-
-// Computes a 64-bit hash for a block of memory using the MurmurHash64A
-// algorithm.
-//
-// The process involves four main steps:
-// 1. Initialization: The hash state is seeded with a value derived from the
-//    input length.
-// 2. Main Loop: Data is processed in 8-byte chunks, with each chunk being
-//    mixed into the hash state.
-// 3. Tail Processing: The final 1-7 bytes of data are handled.
-// 4. Finalization: The hash state is passed through a final mixing sequence to
-//    ensure good bit distribution.
-//
-// Args:
-//   input: A pointer to the data to be hashed.
-//   len:   The length of the data in bytes.
-//
-// Returns:
-//   The 64-bit MurmurHash64A hash of the input data.
-inline uint64_t MurmurHashBytes(const void* input, size_t len) {
-  // This implementation follows the canonical MurmurHash64A algorithm.
-  // The constants `kMulConstant` (m) and the shift value `47` (r) are from
-  // the original specification.
-  // The seed is inspired by the one used in DuckDB.
-  static constexpr uint64_t kSeed = 0xe17a1465U;
-  static constexpr uint64_t kMulConstant = 0xc6a4a7935bd1e995;
-  static constexpr int kShift = 47;
-
-  uint64_t h = kSeed ^ (len * kMulConstant);
-  const auto* data = static_cast<const uint8_t*>(input);
-  const size_t num_blocks = len / 8;
-
-  // Process 8-byte (64-bit) chunks
-  for (size_t i = 0; i < num_blocks; ++i) {
-    uint64_t k;
-    memcpy(&k, data, sizeof(k));
-    data += sizeof(k);  // Advance the pointer by 8 bytes
-
-    k *= kMulConstant;
-    k ^= k >> kShift;
-    k *= kMulConstant;
-
-    h ^= k;
-    h *= kMulConstant;
-  }
-
-  // Process the remaining 1 to 7 bytes
-  // The 'byte_ptr' now points to the beginning of the tail.
-  switch (len & 7) {
-    case 7:
-      h ^= static_cast<uint64_t>(data[6]) << 48;
-      [[fallthrough]];
-    case 6:
-      h ^= static_cast<uint64_t>(data[5]) << 40;
-      [[fallthrough]];
-    case 5:
-      h ^= static_cast<uint64_t>(data[4]) << 32;
-      [[fallthrough]];
-    case 4:
-      h ^= static_cast<uint64_t>(data[3]) << 24;
-      [[fallthrough]];
-    case 3:
-      h ^= static_cast<uint64_t>(data[2]) << 16;
-      [[fallthrough]];
-    case 2:
-      h ^= static_cast<uint64_t>(data[1]) << 8;
-      [[fallthrough]];
-    case 1:
-      h ^= static_cast<uint64_t>(data[0]);
-      h *= kMulConstant;
-  }
-
-  // Final mixing stage
-  h ^= h >> kShift;
-  h *= kMulConstant;
-  h ^= h >> kShift;
-
-  return h;
-}
-
-template <typename Float, typename Int>
-Int NormalizeFloatToInt(Float value) {
-  static_assert(std::is_floating_point_v<Float>);
-  static_assert(std::is_integral_v<Int>);
-
-  // Normalize floating point representations which can vary.
-  if (PERFETTO_UNLIKELY(value == 0.0)) {
-    // Turn negative zero into positive zero
-    value = 0.0;
-  } else if (PERFETTO_UNLIKELY(std::isnan(value))) {
-    // Turn arbtirary NaN representations to a consistent NaN repr.
-    value = std::numeric_limits<Float>::quiet_NaN();
-  }
-  Int res;
-  static_assert(sizeof(Float) == sizeof(Int));
-  memcpy(&res, &value, sizeof(Float));
-  return res;
-}
-
-}  // namespace murmur_internal
-
-// std::hash<T> drop-in class which uses the core MurmurHash functions above to
-// produce a hash.
-//
-// Uses:
-//  1) MurmurHashMix for fixed size numeric types (integers, floats, doubles).
-//  2) MurmurHashBytes for string types (string, string_view) etc.
-//  3) Falls back to std::hash<T> for all other types.
-//     TODO(lalitm): create a absl-like API for allowing aribtrary types
-//     to be hashed without needing to override std::hash<T>.
-template <typename T>
-struct MurmurHash {
-  uint64_t operator()(const T& value) const {
-    if constexpr (std::is_integral_v<T>) {
-      return murmur_internal::MurmurHashMix(static_cast<uint64_t>(value));
-    } else if constexpr (std::is_same_v<T, double>) {
-      return murmur_internal::MurmurHashMix(
-          murmur_internal::NormalizeFloatToInt<double, uint64_t>(value));
-    } else if constexpr (std::is_same_v<T, float>) {
-      return murmur_internal::MurmurHashMix(
-          murmur_internal::NormalizeFloatToInt<float, uint32_t>(value));
-    } else if constexpr (std::is_same_v<T, std::string> ||
-                         std::is_same_v<T, std::string_view>) {
-      return murmur_internal::MurmurHashBytes(value.data(), value.size());
-    } else {
-      return std::hash<T>{}(value);
-    }
-  }
-};
-
-// Simple wrapper function around MurmurHash to improve clarity in callsites
-// to not have to instantiate the class and then call operator().
-template <typename T>
-uint64_t MurmurHashValue(const T& value) {
-  return MurmurHash<T>{}(value);
-}
-
-// A helper class to create a 64-bit MurmurHash from a series of
-// structured fields.
-//
-// IMPORTANT: This is NOT a true streaming hash. It is an order-dependent
-// combiner. It does not guarantee that hashing two concatenated chunks of data
-// will produce the same result as hashing them separately in sequence. It is
-// designed exclusively for creating a hash from a fixed set of fields.
-class MurmurHashCombiner {
- public:
-  MurmurHashCombiner() : hash_(kSeed) {}
-
-  // Combines the hash of one or more arguments into the combiner's state.
-  //
-  // This function uses a C++17 fold expression to hash each argument with
-  // `MurmurHashValue` and then mixes it into the current state via the private
-  // `Update` method. The combination is order-dependent.
-  template <typename... Args>
-  void Combine(const Args&... args) {
-    // A C++17 fold expression that calls our private Update for each hashed
-    // arg.
-    (Update(MurmurHashValue(args)), ...);
-  }
-
-  // Returns the digest (i.e. current state of the combiner).
-  inline uint64_t digest() const { return hash_; }
-
- private:
-  // Low-level update with a pre-computed hash value. This uses a fast,
-  // order-dependent combination step inspired by the `hash_combine` function
-  // in the Boost C++ libraries.
-  inline void Update(uint64_t piece_hash) {
-    hash_ ^= piece_hash + 0x9e3779b9 + (hash_ << 6) + (hash_ >> 2);
-  }
-
-  static constexpr uint64_t kSeed = 0xe17a1465U;
-  uint64_t hash_;
-};
-
-// Simple wrapper function around MurmurHashCombiner to improve clarity in
-// callsites to not have to instantiate the class, call Combine() then digest().
-template <typename... Args>
-uint64_t MurmurHashCombine(const Args&... value) {
-  MurmurHashCombiner combiner;
-  combiner.Combine(value...);
-  return combiner.digest();
-}
-
-}  // namespace perfetto::base
-
-#endif  // INCLUDE_PERFETTO_EXT_BASE_MURMUR_HASH_H_
-/*
- * Copyright (C) 2021 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-#ifndef INCLUDE_PERFETTO_EXT_BASE_FLAT_HASH_MAP_H_
-#define INCLUDE_PERFETTO_EXT_BASE_FLAT_HASH_MAP_H_
-
-// gen_amalgamated expanded: #include "perfetto/base/logging.h"
-// gen_amalgamated expanded: #include "perfetto/ext/base/flags.h"
-// gen_amalgamated expanded: #include "perfetto/ext/base/fnv_hash.h"
-// gen_amalgamated expanded: #include "perfetto/ext/base/murmur_hash.h"
-// gen_amalgamated expanded: #include "perfetto/ext/base/utils.h"
-
-#include <algorithm>
-#include <limits>
-
-namespace perfetto {
-namespace base {
-
-// An open-addressing hashmap implementation.
-// Pointers are not stable, neither for keys nor values.
-// Has similar performances of a RobinHood hash (without the complications)
-// and 2x an unordered map.
-// Doc: http://go/perfetto-hashtables .
-//
-// When used to implement a string pool in TraceProcessor, the performance
-// characteristics obtained by replaying the set of strings seeen in a 4GB trace
-// (226M strings, 1M unique) are the following (see flat_hash_map_benchmark.cc):
-// This(Linear+AppendOnly)    879,383,676 ns    258.013M insertions/s
-// This(LinearProbe):         909,206,047 ns    249.546M insertions/s
-// This(QuadraticProbe):    1,083,844,388 ns    209.363M insertions/s
-// std::unordered_map:      6,203,351,870 ns    36.5811M insertions/s
-// tsl::robin_map:            931,403,397 ns    243.622M insertions/s
-// absl::flat_hash_map:       998,013,459 ns    227.379M insertions/s
-// FollyF14FastMap:         1,181,480,602 ns    192.074M insertions/s
-//
-// The structs below define the probing algorithm used to probe slots upon a
-// collision. They are guaranteed to visit all slots as our table size is always
-// a power of two (see https://en.wikipedia.org/wiki/Quadratic_probing).
-
-// Linear probing can be faster if the hashing is well distributed and the load
-// is not high. For TraceProcessor's StringPool this is the fastest. It can
-// degenerate badly if the hashing doesn't spread (e.g., if using directly pids
-// as keys, with a no-op hashing function).
-struct LinearProbe {
-  static inline size_t Calc(size_t key_hash, size_t step, size_t capacity) {
-    return (key_hash + step) & (capacity - 1);  // Linear probe
-  }
-};
-
-// Generates the sequence: 0, 3, 10, 21, 36, 55, ...
-// Can be a bit (~5%) slower than LinearProbe because it's less cache hot, but
-// avoids degenerating badly if the hash function is bad and causes clusters.
-// A good default choice unless benchmarks prove otherwise.
-struct QuadraticProbe {
-  static inline size_t Calc(size_t key_hash, size_t step, size_t capacity) {
-    return (key_hash + 2 * step * step + step) & (capacity - 1);
-  }
-};
-
-// Tends to perform in the middle between linear and quadratic.
-// It's a bit more cache-effective than the QuadraticProbe but can create more
-// clustering if the hash function doesn't spread well.
-// Generates the sequence: 0, 1, 3, 6, 10, 15, 21, ...
-struct QuadraticHalfProbe {
-  static inline size_t Calc(size_t key_hash, size_t step, size_t capacity) {
-    return (key_hash + (step * step + step) / 2) & (capacity - 1);
-  }
-};
-
-template <typename Key,
-          typename Value,
-          typename Hasher =
-              std::conditional_t<base::flags::use_murmur_hash_for_flat_hash_map,
-                                 base::MurmurHash<Key>,
-                                 base::FnvHash<Key>>,
-          typename Probe = QuadraticProbe,
-          bool AppendOnly = false>
-class FlatHashMap {
- public:
-  class Iterator {
-   public:
-    explicit Iterator(const FlatHashMap* map) : map_(map) { FindNextNonFree(); }
-    ~Iterator() = default;
-    Iterator(const Iterator&) = default;
-    Iterator& operator=(const Iterator&) = default;
-    Iterator(Iterator&&) noexcept = default;
-    Iterator& operator=(Iterator&&) noexcept = default;
-
-    Key& key() { return map_->keys_[idx_]; }
-    Value& value() { return map_->values_[idx_]; }
-    const Key& key() const { return map_->keys_[idx_]; }
-    const Value& value() const { return map_->values_[idx_]; }
-
-    explicit operator bool() const { return idx_ != kEnd; }
-    Iterator& operator++() {
-      PERFETTO_DCHECK(idx_ < map_->capacity_);
-      ++idx_;
-      FindNextNonFree();
-      return *this;
-    }
-
-   private:
-    static constexpr size_t kEnd = std::numeric_limits<size_t>::max();
-
-    void FindNextNonFree() {
-      const auto& tags = map_->tags_;
-      for (; idx_ < map_->capacity_; idx_++) {
-        if (tags[idx_] != kFreeSlot && (AppendOnly || tags[idx_] != kTombstone))
-          return;
-      }
-      idx_ = kEnd;
-    }
-
-    const FlatHashMap* map_ = nullptr;
-    size_t idx_ = 0;
-  };  // Iterator
-
-  static constexpr int kDefaultLoadLimitPct = 75;
-  explicit FlatHashMap(size_t initial_capacity = 0,
-                       int load_limit_pct = kDefaultLoadLimitPct)
-      : load_limit_percent_(load_limit_pct) {
-    if (initial_capacity > 0)
-      Reset(initial_capacity, true);
-  }
-
-  // We are calling Clear() so that the destructors for the inserted entries are
-  // called (unless they are trivial, in which case it will be a no-op).
-  ~FlatHashMap() { Clear(); }
-
-  FlatHashMap(FlatHashMap&& other) noexcept {
-    tags_ = std::move(other.tags_);
-    keys_ = std::move(other.keys_);
-    values_ = std::move(other.values_);
-    capacity_ = other.capacity_;
-    size_ = other.size_;
-    tombstones_ = other.tombstones_;
-    max_probe_length_ = other.max_probe_length_;
-    load_limit_ = other.load_limit_;
-    load_limit_percent_ = other.load_limit_percent_;
-
-    new (&other) FlatHashMap();
-  }
-
-  FlatHashMap& operator=(FlatHashMap&& other) noexcept {
-    this->~FlatHashMap();
-    new (this) FlatHashMap(std::move(other));
-    return *this;
-  }
-
-  FlatHashMap(const FlatHashMap&) = delete;
-  FlatHashMap& operator=(const FlatHashMap&) = delete;
-
-  std::pair<Value*, bool> Insert(Key key, Value value) {
-    const size_t key_hash = Hasher{}(key);
-    const uint8_t tag = HashToTag(key_hash);
-    static constexpr size_t kSlotNotFound = std::numeric_limits<size_t>::max();
-
-    // This for loop does in reality at most two attempts:
-    // The first iteration either:
-    //  - Early-returns, because the key exists already,
-    //  - Finds an insertion slot and proceeds because the load is < limit.
-    // The second iteration is only hit in the unlikely case of this insertion
-    // bringing the table beyond the target |load_limit_| (or the edge case
-    // of the HT being full, if |load_limit_pct_| = 100).
-    // We cannot simply pre-grow the table before insertion, because we must
-    // guarantee that calling Insert() with a key that already exists doesn't
-    // invalidate iterators.
-    size_t insertion_slot;
-    size_t probe_len;
-    for (;;) {
-      PERFETTO_DCHECK((capacity_ & (capacity_ - 1)) == 0);  // Must be a pow2.
-      insertion_slot = kSlotNotFound;
-      // Start the iteration at the desired slot (key_hash % capacity_)
-      // searching either for a free slot or a tombstone. In the worst case we
-      // might end up scanning the whole array of slots. The Probe functions are
-      // guaranteed to visit all the slots within |capacity_| steps. If we find
-      // a free slot, we can stop the search immediately (a free slot acts as an
-      // "end of chain for entries having the same hash". If we find a
-      // tombstones (a deleted slot) we remember its position, but have to keep
-      // searching until a free slot to make sure we don't insert a duplicate
-      // key.
-      for (probe_len = 0; probe_len < capacity_;) {
-        const size_t idx = Probe::Calc(key_hash, probe_len, capacity_);
-        PERFETTO_DCHECK(idx < capacity_);
-        const uint8_t tag_idx = tags_[idx];
-        ++probe_len;
-        if (tag_idx == kFreeSlot) {
-          // Rationale for "insertion_slot == kSlotNotFound": if we encountered
-          // a tombstone while iterating we should reuse that rather than
-          // taking another slot.
-          if (AppendOnly || insertion_slot == kSlotNotFound)
-            insertion_slot = idx;
-          break;
-        }
-        // We should never encounter tombstones in AppendOnly mode.
-        PERFETTO_DCHECK(!(tag_idx == kTombstone && AppendOnly));
-        if (!AppendOnly && tag_idx == kTombstone) {
-          insertion_slot = idx;
-          continue;
-        }
-        if (tag_idx == tag && keys_[idx] == key) {
-          // The key is already in the map.
-          return std::make_pair(&values_[idx], false);
-        }
-      }  // for (idx)
-
-      // If we got to this point the key does not exist (otherwise we would have
-      // hit the return above) and we are going to insert a new entry.
-      // Before doing so, ensure we stay under the target load limit.
-      if (PERFETTO_UNLIKELY(size_ >= load_limit_)) {
-        MaybeGrowAndRehash(/*grow=*/true);
-        continue;
-      }
-      // If there are too many tombstones, it's worth doing a rehash to
-      // clean them up. This is to avoid the case where we have a table full
-      // of tombstones which would cause lookups to be very slow.
-      bool is_many_tombstones = tombstones_ > size_ && size_ > 128;
-      bool is_tombstones_plus_size_too_high = tombstones_ + size_ > load_limit_;
-      if (PERFETTO_UNLIKELY(is_many_tombstones ||
-                            is_tombstones_plus_size_too_high)) {
-        MaybeGrowAndRehash(/*grow=*/false);
-        continue;
-      }
-      PERFETTO_DCHECK(insertion_slot != kSlotNotFound);
-      break;
-    }  // for (attempt)
-
-    PERFETTO_CHECK(insertion_slot < capacity_);
-
-    // We found a free slot (or a tombstone). Proceed with the insertion.
-    if (tags_[insertion_slot] == kTombstone) {
-      PERFETTO_DCHECK(tombstones_ > 0);
-      tombstones_--;
-    }
-    Value* value_idx = &values_[insertion_slot];
-    new (&keys_[insertion_slot]) Key(std::move(key));
-    new (value_idx) Value(std::move(value));
-    tags_[insertion_slot] = tag;
-    PERFETTO_DCHECK(probe_len > 0 && probe_len <= capacity_);
-    max_probe_length_ = std::max(max_probe_length_, probe_len);
-    size_++;
-
-    return std::make_pair(value_idx, true);
-  }
-
-  Value* Find(const Key& key) const {
-    const size_t idx = FindInternal(key);
-    if (idx == kNotFound)
-      return nullptr;
-    return &values_[idx];
-  }
-
-  bool Erase(const Key& key) {
-    if (AppendOnly)
-      PERFETTO_FATAL("Erase() not supported because AppendOnly=true");
-    size_t idx = FindInternal(key);
-    if (idx == kNotFound)
-      return false;
-    EraseInternal(idx);
-    return true;
-  }
-
-  void Clear() {
-    // Avoid trivial heap operations on zero-capacity std::move()-d objects.
-    if (PERFETTO_UNLIKELY(capacity_ == 0))
-      return;
-
-    for (size_t i = 0; i < capacity_; ++i) {
-      const uint8_t tag = tags_[i];
-      if (tag != kFreeSlot && (AppendOnly || tag != kTombstone)) {
-        keys_[i].~Key();
-        values_[i].~Value();
-      }
-    }
-    Reset(capacity_, false);
-  }
-
-  Value& operator[](Key key) {
-    auto it_and_inserted = Insert(std::move(key), Value{});
-    return *it_and_inserted.first;
-  }
-
-  Iterator GetIterator() { return Iterator(this); }
-  const Iterator GetIterator() const { return Iterator(this); }
-
-  size_t size() const { return size_; }
-  size_t capacity() const { return capacity_; }
-
-  // "protected" here is only for the flat_hash_map_benchmark.cc. Everything
-  // below is by all means private.
- protected:
-  enum ReservedTags : uint8_t { kFreeSlot = 0, kTombstone = 1 };
-  static constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
-
-  size_t FindInternal(const Key& key) const {
-    const size_t key_hash = Hasher{}(key);
-    const uint8_t tag = HashToTag(key_hash);
-    PERFETTO_DCHECK((capacity_ & (capacity_ - 1)) == 0);  // Must be a pow2.
-    PERFETTO_DCHECK(max_probe_length_ <= capacity_);
-    for (size_t i = 0; i < max_probe_length_; ++i) {
-      const size_t idx = Probe::Calc(key_hash, i, capacity_);
-      const uint8_t tag_idx = tags_[idx];
-
-      if (tag_idx == kFreeSlot)
-        return kNotFound;
-      // HashToTag() never returns kTombstone, so the tag-check below cannot
-      // possibly match. Also we just want to skip tombstones.
-      if (tag_idx == tag && keys_[idx] == key) {
-        PERFETTO_DCHECK(tag_idx > kTombstone);
-        return idx;
-      }
-    }  // for (idx)
-    return kNotFound;
-  }
-
-  void EraseInternal(size_t idx) {
-    PERFETTO_DCHECK(tags_[idx] > kTombstone);
-    PERFETTO_DCHECK(size_ > 0);
-    tags_[idx] = kTombstone;
-    keys_[idx].~Key();
-    values_[idx].~Value();
-    size_--;
-    tombstones_++;
-    PERFETTO_DCHECK(size_ + tombstones_ <= capacity_);
-  }
-
-  PERFETTO_NO_INLINE void MaybeGrowAndRehash(bool grow) {
-    PERFETTO_DCHECK(size_ <= capacity_);
-    const size_t old_capacity = capacity_;
-
-    // Grow quickly up to 1MB, then chill.
-    const size_t old_size_bytes = old_capacity * (sizeof(Key) + sizeof(Value));
-    const size_t grow_factor = old_size_bytes < (1024u * 1024u) ? 8 : 2;
-    const size_t new_capacity =
-        grow ? std::max(old_capacity * grow_factor, size_t(1024))
-             : old_capacity;
-
-    auto old_tags(std::move(tags_));
-    auto old_keys(std::move(keys_));
-    auto old_values(std::move(values_));
-    size_t old_size = size_;
-
-    // This must be a CHECK (i.e. not just a DCHECK) to prevent UAF attacks on
-    // 32-bit archs that try to double the size of the table until wrapping.
-    PERFETTO_CHECK(new_capacity >= old_capacity);
-    Reset(new_capacity, true);
-
-    size_t new_size = 0;  // Recompute the size.
-    for (size_t i = 0; i < old_capacity; ++i) {
-      const uint8_t old_tag = old_tags[i];
-      if (old_tag != kFreeSlot && old_tag != kTombstone) {
-        Insert(std::move(old_keys[i]), std::move(old_values[i]));
-        old_keys[i].~Key();  // Destroy the old objects.
-        old_values[i].~Value();
-        new_size++;
-      }
-    }
-    PERFETTO_DCHECK(new_size == old_size);
-    PERFETTO_DCHECK(tombstones_ == 0);
-    size_ = new_size;
-  }
-
-  // Doesn't call destructors. Use Clear() for that.
-  PERFETTO_NO_INLINE void Reset(size_t n, bool reallocate) {
-    PERFETTO_DCHECK((n & (n - 1)) == 0);  // Must be a pow2.
-
-    capacity_ = n;
-    max_probe_length_ = 0;
-    size_ = 0;
-    tombstones_ = 0;
-    load_limit_ = n * static_cast<size_t>(load_limit_percent_) / 100;
-    load_limit_ = std::min(load_limit_, n);
-
-    if (reallocate) {
-      tags_.reset(new uint8_t[n]);
-      keys_ = AlignedAllocTyped<Key[]>(n);  // Deliberately not 0-initialized.
-      values_ =
-          AlignedAllocTyped<Value[]>(n);  // Deliberately not 0-initialized.
-    }
-
-    // Only clear the tags if not nullptr.
-    if (tags_) {
-      memset(&tags_[0], 0, n);  // Clear all tags.
-    }
-  }
-
-  static inline uint8_t HashToTag(size_t full_hash) {
-    uint8_t tag = full_hash >> (sizeof(full_hash) * 8 - 8);
-    // Ensure the hash is always >= 2. We use 0, 1 for kFreeSlot and kTombstone.
-    tag += (tag <= kTombstone) << 1;
-    PERFETTO_DCHECK(tag > kTombstone);
-    return tag;
-  }
-
-  size_t capacity_ = 0;
-  size_t size_ = 0;
-  size_t tombstones_ = 0;
-  size_t max_probe_length_ = 0;
-  size_t load_limit_ = 0;  // Updated every time |capacity_| changes.
-  int load_limit_percent_ =
-      kDefaultLoadLimitPct;  // Load factor limit in % of |capacity_|.
-
-  // These arrays have always the |capacity_| elements.
-  // Note: AlignedUniquePtr just allocates memory, doesn't invoke any ctor/dtor.
-  std::unique_ptr<uint8_t[]> tags_;
-  AlignedUniquePtr<Key[]> keys_;
-  AlignedUniquePtr<Value[]> values_;
-};
-
-}  // namespace base
-}  // namespace perfetto
-
-#endif  // INCLUDE_PERFETTO_EXT_BASE_FLAT_HASH_MAP_H_
+// gen_amalgamated begin source: src/tracing/service/trace_buffer_v1.cc
+// gen_amalgamated begin header: src/tracing/service/trace_buffer_v1.h
 // gen_amalgamated begin header: include/perfetto/ext/tracing/core/client_identity.h
 /*
  * Copyright (C) 2023 The Android Open Source Project
@@ -49735,6 +49550,934 @@ class Histogram {
 }  // namespace perfetto
 
 #endif  // SRC_TRACING_SERVICE_HISTOGRAM_H_
+// gen_amalgamated begin header: src/tracing/service/trace_buffer.h
+// gen_amalgamated begin header: include/perfetto/ext/base/flat_hash_map.h
+// gen_amalgamated begin header: include/perfetto/ext/base/murmur_hash.h
+// gen_amalgamated begin header: include/perfetto/ext/base/hash.h
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef INCLUDE_PERFETTO_EXT_BASE_HASH_H_
+#define INCLUDE_PERFETTO_EXT_BASE_HASH_H_
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <tuple>
+#include <utility>
+
+namespace perfetto::base {
+
+// ============================================================================
+// Absl-style hash customization point
+// ============================================================================
+//
+// To make a type hashable with Perfetto hash functions, define a friend
+// function template:
+//
+//   template <typename H>
+//   friend H PerfettoHashValue(H h, const MyType& value) {
+//     return H::Combine(std::move(h), value.field1, value.field2);
+//   }
+//
+// This function will be found via ADL (Argument Dependent Lookup) when hashing
+// your type. No forward declaration is needed - ADL finds it in your type's
+// namespace.
+
+// ============================================================================
+// Built-in PerfettoHashValue implementations for common standard library
+// types. These allow standard library types to work seamlessly with the
+// absl-style hash API without requiring users to define their own
+// implementations.
+// ============================================================================
+
+// Hash function for std::optional - hashes the value if present, or a sentinel
+// if not.
+template <typename H, typename T>
+H PerfettoHashValue(H h, const std::optional<T>& value) {
+  if (value.has_value()) {
+    return H::Combine(H::Combine(std::move(h), true), *value);
+  }
+  return H::Combine(std::move(h), false, 0);
+}
+
+// Hash function for std::pair - combines hashes of both elements.
+template <typename H, typename T1, typename T2>
+H PerfettoHashValue(H h, const std::pair<T1, T2>& value) {
+  return H::Combine(std::move(h), value.first, value.second);
+}
+
+// Hash function for std::tuple - combines hashes of all elements.
+template <typename H, typename... Ts>
+H PerfettoHashValue(H h, const std::tuple<Ts...>& value) {
+  return std::apply(
+      [&h](const auto&... elements) {
+        return H::Combine(std::move(h), elements...);
+      },
+      value);
+}
+
+// Hash function for pointers - hashes the pointer value as an integer.
+template <typename H, typename T>
+H PerfettoHashValue(H h, const std::unique_ptr<T>& ptr) {
+  return H::Combine(std::move(h), ptr.get());
+}
+template <typename H, typename T>
+H PerfettoHashValue(H h, const std::shared_ptr<T>& ptr) {
+  return H::Combine(std::move(h), ptr.get());
+}
+
+// This is for using already-hashed key into std::unordered_map and avoid the
+// cost of re-hashing. Example:
+// unordered_map<uint64_t, Value, AlreadyHashed> my_map.
+template <typename T>
+struct AlreadyHashed {
+  size_t operator()(const T& x) const { return static_cast<size_t>(x); }
+};
+
+}  // namespace perfetto::base
+
+#endif  // INCLUDE_PERFETTO_EXT_BASE_HASH_H_
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef INCLUDE_PERFETTO_EXT_BASE_MURMUR_HASH_H_
+#define INCLUDE_PERFETTO_EXT_BASE_MURMUR_HASH_H_
+
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+
+// gen_amalgamated expanded: #include "perfetto/ext/base/hash.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/string_view.h"
+// gen_amalgamated expanded: #include "perfetto/public/compiler.h"
+
+// This file provides an implementation of the 64-bit MurmurHash2 algorithm,
+// also known as MurmurHash64A. This algorithm, created by Austin Appleby, is a
+// fast, non-cryptographic hash function with excellent distribution properties,
+// making it ideal for use in hash tables.
+//
+// The file also includes related hashing utilities:
+// - A standalone `fmix64` finalizer from MurmurHash3, used for hashing
+//   individual numeric types.
+// - A hash combiner for creating a single hash from a sequence of values.
+//
+// NOTE: This implementation is NOT cryptographically secure. It must not be
+// used for security-sensitive applications like password storage or digital
+// signatures, as it is not designed to be resistant to malicious attacks.
+
+namespace perfetto::base {
+
+namespace murmur_internal {
+
+// Finalizes an intermediate hash value using the `fmix64` routine from
+// MurmurHash3.
+//
+// This function's purpose is to thoroughly mix the bits of the hash state to
+// ensure the final result is well-distributed, which is critical for avoiding
+// collisions in hash tables.
+//
+// Args:
+//   h: The intermediate hash value to be finalized.
+//
+// Returns:
+//   The final, well-mixed 64-bit hash value.
+inline uint64_t MurmurHashMix(uint64_t h) {
+  h ^= h >> 33;
+  h *= 0xff51afd7ed558ccdULL;
+  h ^= h >> 33;
+  h *= 0xc4ceb9fe1a85ec53ULL;
+  h ^= h >> 33;
+  return h;
+}
+
+// Computes a 64-bit hash for a block of memory using the MurmurHash64A
+// algorithm.
+//
+// The process involves four main steps:
+// 1. Initialization: The hash state is seeded with a value derived from the
+//    input length.
+// 2. Main Loop: Data is processed in 8-byte chunks, with each chunk being
+//    mixed into the hash state.
+// 3. Tail Processing: The final 1-7 bytes of data are handled.
+// 4. Finalization: The hash state is passed through a final mixing sequence to
+//    ensure good bit distribution.
+//
+// Args:
+//   input: A pointer to the data to be hashed.
+//   len:   The length of the data in bytes.
+//
+// Returns:
+//   The 64-bit MurmurHash64A hash of the input data.
+inline uint64_t MurmurHashBytes(const void* input, size_t len) {
+  // This implementation follows the canonical MurmurHash64A algorithm.
+  // The constants `kMulConstant` (m) and the shift value `47` (r) are from
+  // the original specification.
+  // The seed is inspired by the one used in DuckDB.
+  static constexpr uint64_t kSeed = 0xe17a1465U;
+  static constexpr uint64_t kMulConstant = 0xc6a4a7935bd1e995;
+  static constexpr int kShift = 47;
+
+  uint64_t h = kSeed ^ (len * kMulConstant);
+  const auto* data = static_cast<const uint8_t*>(input);
+  const size_t num_blocks = len / 8;
+
+  // Process 8-byte (64-bit) chunks
+  for (size_t i = 0; i < num_blocks; ++i) {
+    uint64_t k;
+    memcpy(&k, data, sizeof(k));
+    data += sizeof(k);  // Advance the pointer by 8 bytes
+
+    k *= kMulConstant;
+    k ^= k >> kShift;
+    k *= kMulConstant;
+
+    h ^= k;
+    h *= kMulConstant;
+  }
+
+  // Process the remaining 1 to 7 bytes
+  // The 'byte_ptr' now points to the beginning of the tail.
+  switch (len & 7) {
+    case 7:
+      h ^= static_cast<uint64_t>(data[6]) << 48;
+      [[fallthrough]];
+    case 6:
+      h ^= static_cast<uint64_t>(data[5]) << 40;
+      [[fallthrough]];
+    case 5:
+      h ^= static_cast<uint64_t>(data[4]) << 32;
+      [[fallthrough]];
+    case 4:
+      h ^= static_cast<uint64_t>(data[3]) << 24;
+      [[fallthrough]];
+    case 3:
+      h ^= static_cast<uint64_t>(data[2]) << 16;
+      [[fallthrough]];
+    case 2:
+      h ^= static_cast<uint64_t>(data[1]) << 8;
+      [[fallthrough]];
+    case 1:
+      h ^= static_cast<uint64_t>(data[0]);
+      h *= kMulConstant;
+  }
+
+  // Final mixing stage
+  h ^= h >> kShift;
+  h *= kMulConstant;
+  h ^= h >> kShift;
+
+  return h;
+}
+
+template <typename Float, typename Int>
+Int NormalizeFloatToInt(Float value) {
+  static_assert(std::is_floating_point_v<Float>);
+  static_assert(std::is_integral_v<Int>);
+
+  // Normalize floating point representations which can vary.
+  if (PERFETTO_UNLIKELY(value == 0.0)) {
+    // Turn negative zero into positive zero
+    value = 0.0;
+  } else if (PERFETTO_UNLIKELY(std::isnan(value))) {
+    // Turn arbtirary NaN representations to a consistent NaN repr.
+    value = std::numeric_limits<Float>::quiet_NaN();
+  }
+  Int res;
+  static_assert(sizeof(Float) == sizeof(Int));
+  memcpy(&res, &value, sizeof(Float));
+  return res;
+}
+
+// Computes a 64-bit hash for a single built-in value without any combination.
+// This is the core primitive used by both MurmurHashValue and
+// MurmurHashCombiner::CombineOne for built-in types.
+//
+// NOTE: This function intentionally has no else branch for non-builtin types,
+// which will cause a compile error if called with an unsupported type. Callers
+// should check if the type is supported before calling this function.
+template <typename T>
+auto MurmurHashBuiltinValue(const T& value) {
+  if constexpr (std::is_enum_v<T>) {
+    return murmur_internal::MurmurHashMix(
+        static_cast<uint64_t>(static_cast<std::underlying_type_t<T>>(value)));
+  } else if constexpr (std::is_integral_v<T>) {
+    return murmur_internal::MurmurHashMix(static_cast<uint64_t>(value));
+  } else if constexpr (std::is_same_v<T, double>) {
+    return murmur_internal::MurmurHashMix(
+        murmur_internal::NormalizeFloatToInt<double, uint64_t>(value));
+  } else if constexpr (std::is_same_v<T, float>) {
+    return murmur_internal::MurmurHashMix(
+        murmur_internal::NormalizeFloatToInt<float, uint32_t>(value));
+  } else if constexpr (std::is_same_v<T, std::string> ||
+                       std::is_same_v<T, std::string_view> ||
+                       std::is_same_v<T, base::StringView>) {
+    return murmur_internal::MurmurHashBytes(value.data(), value.size());
+  } else if constexpr (std::is_same_v<T, const char*>) {
+    std::string_view view(value);
+    return murmur_internal::MurmurHashBytes(view.data(), view.size());
+  } else if constexpr (std::is_pointer_v<T>) {
+    return murmur_internal::MurmurHashMix(
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(value)));
+  } else {
+    struct InvalidBuiltin {};
+    return InvalidBuiltin{};
+  }
+}
+
+// Helper to check if a type has a built-in MurmurHash implementation.
+template <typename T>
+constexpr bool HasMurmurHashBuiltinValue() {
+  return std::is_same_v<decltype(MurmurHashBuiltinValue(std::declval<T>())),
+                        uint64_t>;
+}
+
+// Helper to check if two types are integeral and U is convertible to T.
+template <typename T, typename U>
+constexpr bool IsConvertibleIntegral() {
+  return std::is_integral_v<T> && std::is_integral_v<U> &&
+         std::is_convertible_v<U, T>;
+}
+
+// Helper to check if a type is string-like (i.e. string, c-string or string
+// views).
+template <typename T>
+constexpr bool IsStringLike() {
+  return std::is_same_v<T, std::string> ||
+         std::is_same_v<T, std::string_view> ||
+         std::is_same_v<T, base::StringView> || std::is_same_v<T, const char*>;
+}
+
+// Helper to check if heterogeneous lookup is allowed between T and U.
+// Only allows it for convertible integral types and string-like types.
+template <typename T, typename U>
+constexpr bool AllowsHeterogeneousLookup() {
+  return IsConvertibleIntegral<T, U>() ||
+         (IsStringLike<T>() && IsStringLike<U>());
+}
+
+}  // namespace murmur_internal
+
+// ============================================================================
+// MurmurHashCombiner - the core hasher state object
+// ============================================================================
+//
+// A helper class to create a 64-bit MurmurHash from a series of
+// structured fields.
+//
+// This class supports both the absl-style hasher API and a direct
+// member Combine() method.
+//
+// Absl-style API (for custom types with PerfettoHashValue):
+//   template <typename H>
+//   friend H PerfettoHashValue(H h, const MyType& value) {
+//     return H::Combine(std::move(h), value.field1, value.field2);
+//   }
+//
+// Direct API (for simple hash combining):
+//   MurmurHashCombiner combiner;
+//   combiner.Combine(field1, field2, ...);
+//   return combiner.digest();
+//
+// IMPORTANT: This is NOT a true streaming hash. It is an order-dependent
+// combiner. It does not guarantee that hashing two concatenated chunks of data
+// will produce the same result as hashing them separately in sequence.
+class MurmurHashCombiner {
+ public:
+  MurmurHashCombiner() = default;
+
+  // Static Combine - returns a new hasher with the combined state.
+  // This is used by the absl-style PerfettoHashValue API.
+  template <typename... Args>
+  static MurmurHashCombiner Combine(MurmurHashCombiner h, const Args&... args) {
+    h.Combine(args...);
+    return h;
+  }
+
+  // Member Combine - combines values into this hasher's state.
+  // This is a convenient API for directly combining multiple values.
+  // The combination is order-dependent.
+  template <typename... Args>
+  void Combine(const Args&... args) {
+    // Uses a C++17 fold expression with CombineOne for each argument.
+    (CombineOne(args), ...);
+  }
+
+  // Returns the digest (i.e. current state of the combiner).
+  uint64_t digest() const { return hash_; }
+
+ private:
+  // Combines a single value into the hasher state.
+  template <typename T>
+  void CombineOne(const T& value) {
+    if constexpr (murmur_internal::HasMurmurHashBuiltinValue<T>()) {
+      Update(murmur_internal::MurmurHashBuiltinValue(value));
+    } else {
+      // For custom types, use ADL to find the PerfettoHashValue function.
+      // This will cause a compile error with a clear message if the function
+      // is not defined.
+      hash_ = PerfettoHashValue(std::move(*this), value).digest();
+    }
+  }
+
+  // Low-level update with a pre-computed hash value. This uses a fast,
+  // order-dependent combination step inspired by the `hash_combine` function
+  // in the Boost C++ libraries.
+  void Update(uint64_t piece_hash) {
+    hash_ ^= piece_hash + 0x9e3779b9 + (hash_ << 6) + (hash_ >> 2);
+  }
+
+  static constexpr uint64_t kSeed = 0xe17a1465U;
+  uint64_t hash_ = kSeed;
+};
+
+// Simple wrapper function around MurmurHashCombiner to improve clarity in
+// callsites to not have to instantiate the class, call Combine() then digest().
+template <typename... Args>
+uint64_t MurmurHashCombine(const Args&... value) {
+  return MurmurHashCombiner::Combine(MurmurHashCombiner{}, value...).digest();
+}
+
+// Simple wrapper function to compute a hash value for a single value.
+// This is the primitive hash operation that MurmurHash<T> delegates to.
+//
+// For built-in types (integers, floats, strings), this uses a fast path that
+// avoids the overhead of the MurmurHashCombiner. For custom types, it delegates
+// to MurmurHashCombiner which will use ADL to find the PerfettoHashValue.
+template <typename T>
+uint64_t MurmurHashValue(const T& value) {
+  if constexpr (murmur_internal::HasMurmurHashBuiltinValue<T>()) {
+    return murmur_internal::MurmurHashBuiltinValue(value);
+  } else {
+    return MurmurHashCombine(value);
+  }
+}
+
+// std::hash<T> drop-in class which uses MurmurHashValue as the primitive.
+// All specializations consistently delegate to MurmurHashValue.
+template <typename T>
+struct MurmurHash {
+  using is_transparent = void;
+
+  uint64_t operator()(const T& value) const { return MurmurHashValue(value); }
+
+  // Heterogeneous lookup support. Only allowed for types where it makes sense
+  // (e.g. string-like types and convertible integral types).
+  template <typename U>
+  auto operator()(const U& value) const
+      -> std::enable_if_t<murmur_internal::AllowsHeterogeneousLookup<T, U>(),
+                          uint64_t> {
+    return MurmurHashValue(value);
+  }
+};
+
+}  // namespace perfetto::base
+
+#endif  // INCLUDE_PERFETTO_EXT_BASE_MURMUR_HASH_H_
+/*
+ * Copyright (C) 2021 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef INCLUDE_PERFETTO_EXT_BASE_FLAT_HASH_MAP_H_
+#define INCLUDE_PERFETTO_EXT_BASE_FLAT_HASH_MAP_H_
+
+// gen_amalgamated expanded: #include "perfetto/base/logging.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/flags.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/fnv_hash.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/murmur_hash.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/utils.h"
+// gen_amalgamated expanded: #include "perfetto/public/compiler.h"
+
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
+namespace perfetto {
+namespace base {
+
+// An open-addressing hashmap implementation.
+// Pointers are not stable, neither for keys nor values.
+// Has similar performances of a RobinHood hash (without the complications)
+// and 2x an unordered map.
+// Doc: http://go/perfetto-hashtables .
+//
+// When used to implement a string pool in TraceProcessor, the performance
+// characteristics obtained by replaying the set of strings seeen in a 4GB trace
+// (226M strings, 1M unique) are the following (see flat_hash_map_benchmark.cc):
+// This(Linear+AppendOnly)    879,383,676 ns    258.013M insertions/s
+// This(LinearProbe):         909,206,047 ns    249.546M insertions/s
+// This(QuadraticProbe):    1,083,844,388 ns    209.363M insertions/s
+// std::unordered_map:      6,203,351,870 ns    36.5811M insertions/s
+// tsl::robin_map:            931,403,397 ns    243.622M insertions/s
+// absl::flat_hash_map:       998,013,459 ns    227.379M insertions/s
+// FollyF14FastMap:         1,181,480,602 ns    192.074M insertions/s
+//
+// The structs below define the probing algorithm used to probe slots upon a
+// collision. They are guaranteed to visit all slots as our table size is always
+// a power of two (see https://en.wikipedia.org/wiki/Quadratic_probing).
+
+// Linear probing can be faster if the hashing is well distributed and the load
+// is not high. For TraceProcessor's StringPool this is the fastest. It can
+// degenerate badly if the hashing doesn't spread (e.g., if using directly pids
+// as keys, with a no-op hashing function).
+struct LinearProbe {
+  static inline size_t Calc(size_t key_hash, size_t step, size_t capacity) {
+    return (key_hash + step) & (capacity - 1);  // Linear probe
+  }
+};
+
+// Generates the sequence: 0, 3, 10, 21, 36, 55, ...
+// Can be a bit (~5%) slower than LinearProbe because it's less cache hot, but
+// avoids degenerating badly if the hash function is bad and causes clusters.
+// A good default choice unless benchmarks prove otherwise.
+struct QuadraticProbe {
+  static inline size_t Calc(size_t key_hash, size_t step, size_t capacity) {
+    return (key_hash + 2 * step * step + step) & (capacity - 1);
+  }
+};
+
+// Tends to perform in the middle between linear and quadratic.
+// It's a bit more cache-effective than the QuadraticProbe but can create more
+// clustering if the hash function doesn't spread well.
+// Generates the sequence: 0, 1, 3, 6, 10, 15, 21, ...
+struct QuadraticHalfProbe {
+  static inline size_t Calc(size_t key_hash, size_t step, size_t capacity) {
+    return (key_hash + (step * step + step) / 2) & (capacity - 1);
+  }
+};
+
+// Non-templated base class to hold helpers for FlatHashMap.
+struct FlatHashMapBase {
+ public:
+  // Helper to detect if a hasher has is_transparent defined.
+  template <typename, typename = void>
+  struct HasIsTransparent : std::false_type {};
+
+  template <typename H>
+  struct HasIsTransparent<H, std::void_t<typename H::is_transparent>>
+      : std::true_type {};
+
+  // Helper to check if a lookup key type K is allowed.
+  // Returns true if:
+  // 1. K can be implicitly converted to Key, OR
+  // 2. Hasher has is_transparent AND Hasher is invocable with K AND Key and K
+  // are equality comparable
+  template <typename K, typename Key, typename Hasher>
+  static constexpr bool IsLookupKeyAllowed() {
+    if constexpr (HasIsTransparent<Hasher>::value) {
+      return std::is_invocable_v<Hasher, const K&> &&
+             std::is_same_v<decltype(std::declval<const Key&>() ==
+                                     std::declval<const K&>()),
+                            bool>;
+    } else if constexpr (std::is_convertible_v<K, Key>) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+};
+
+template <typename Key,
+          typename Value,
+          typename Hasher =
+              std::conditional_t<base::flags::use_murmur_hash_for_flat_hash_map,
+                                 base::MurmurHash<Key>,
+                                 base::FnvHash<Key>>,
+          typename Probe = QuadraticProbe,
+          bool AppendOnly = false>
+class FlatHashMap : protected FlatHashMapBase {
+ public:
+  class Iterator {
+   public:
+    explicit Iterator(const FlatHashMap* map) : map_(map) { FindNextNonFree(); }
+    ~Iterator() = default;
+    Iterator(const Iterator&) = default;
+    Iterator& operator=(const Iterator&) = default;
+    Iterator(Iterator&&) noexcept = default;
+    Iterator& operator=(Iterator&&) noexcept = default;
+
+    Key& key() { return map_->keys_[idx_]; }
+    Value& value() { return map_->values_[idx_]; }
+    const Key& key() const { return map_->keys_[idx_]; }
+    const Value& value() const { return map_->values_[idx_]; }
+
+    explicit operator bool() const { return idx_ != kEnd; }
+    Iterator& operator++() {
+      PERFETTO_DCHECK(idx_ < map_->capacity_);
+      ++idx_;
+      FindNextNonFree();
+      return *this;
+    }
+
+   private:
+    static constexpr size_t kEnd = std::numeric_limits<size_t>::max();
+
+    void FindNextNonFree() {
+      const auto& tags = map_->tags_;
+      for (; idx_ < map_->capacity_; idx_++) {
+        if (tags[idx_] != kFreeSlot && (AppendOnly || tags[idx_] != kTombstone))
+          return;
+      }
+      idx_ = kEnd;
+    }
+
+    const FlatHashMap* map_ = nullptr;
+    size_t idx_ = 0;
+  };  // Iterator
+  static constexpr int kDefaultLoadLimitPct = 75;
+  explicit FlatHashMap(size_t initial_capacity = 0,
+                       int load_limit_pct = kDefaultLoadLimitPct)
+      : load_limit_percent_(load_limit_pct) {
+    if (initial_capacity > 0)
+      Reset(initial_capacity, true);
+  }
+
+  // We are calling Clear() so that the destructors for the inserted entries are
+  // called (unless they are trivial, in which case it will be a no-op).
+  ~FlatHashMap() { Clear(); }
+
+  FlatHashMap(FlatHashMap&& other) noexcept {
+    tags_ = std::move(other.tags_);
+    keys_ = std::move(other.keys_);
+    values_ = std::move(other.values_);
+    capacity_ = other.capacity_;
+    size_ = other.size_;
+    tombstones_ = other.tombstones_;
+    max_probe_length_ = other.max_probe_length_;
+    load_limit_ = other.load_limit_;
+    load_limit_percent_ = other.load_limit_percent_;
+
+    new (&other) FlatHashMap();
+  }
+
+  FlatHashMap& operator=(FlatHashMap&& other) noexcept {
+    this->~FlatHashMap();
+    new (this) FlatHashMap(std::move(other));
+    return *this;
+  }
+
+  FlatHashMap(const FlatHashMap&) = delete;
+  FlatHashMap& operator=(const FlatHashMap&) = delete;
+
+  std::pair<Value*, bool> Insert(Key key, Value value) {
+    const size_t key_hash = Hasher{}(key);
+    const uint8_t tag = HashToTag(key_hash);
+    static constexpr size_t kSlotNotFound = std::numeric_limits<size_t>::max();
+
+    // This for loop does in reality at most two attempts:
+    // The first iteration either:
+    //  - Early-returns, because the key exists already,
+    //  - Finds an insertion slot and proceeds because the load is < limit.
+    // The second iteration is only hit in the unlikely case of this insertion
+    // bringing the table beyond the target |load_limit_| (or the edge case
+    // of the HT being full, if |load_limit_pct_| = 100).
+    // We cannot simply pre-grow the table before insertion, because we must
+    // guarantee that calling Insert() with a key that already exists doesn't
+    // invalidate iterators.
+    size_t insertion_slot;
+    size_t probe_len;
+    for (;;) {
+      PERFETTO_DCHECK((capacity_ & (capacity_ - 1)) == 0);  // Must be a pow2.
+      insertion_slot = kSlotNotFound;
+      // Start the iteration at the desired slot (key_hash % capacity_)
+      // searching either for a free slot or a tombstone. In the worst case we
+      // might end up scanning the whole array of slots. The Probe functions are
+      // guaranteed to visit all the slots within |capacity_| steps. If we find
+      // a free slot, we can stop the search immediately (a free slot acts as an
+      // "end of chain for entries having the same hash". If we find a
+      // tombstones (a deleted slot) we remember its position, but have to keep
+      // searching until a free slot to make sure we don't insert a duplicate
+      // key.
+      for (probe_len = 0; probe_len < capacity_;) {
+        const size_t idx = Probe::Calc(key_hash, probe_len, capacity_);
+        PERFETTO_DCHECK(idx < capacity_);
+        const uint8_t tag_idx = tags_[idx];
+        ++probe_len;
+        if (tag_idx == kFreeSlot) {
+          // Rationale for "insertion_slot == kSlotNotFound": if we encountered
+          // a tombstone while iterating we should reuse that rather than
+          // taking another slot.
+          if (AppendOnly || insertion_slot == kSlotNotFound)
+            insertion_slot = idx;
+          break;
+        }
+        // We should never encounter tombstones in AppendOnly mode.
+        PERFETTO_DCHECK(!(tag_idx == kTombstone && AppendOnly));
+        if (!AppendOnly && tag_idx == kTombstone) {
+          insertion_slot = idx;
+          continue;
+        }
+        if (tag_idx == tag && keys_[idx] == key) {
+          // The key is already in the map.
+          return std::make_pair(&values_[idx], false);
+        }
+      }  // for (idx)
+
+      // If we got to this point the key does not exist (otherwise we would have
+      // hit the return above) and we are going to insert a new entry.
+      // Before doing so, ensure we stay under the target load limit.
+      if (PERFETTO_UNLIKELY(size_ >= load_limit_)) {
+        MaybeGrowAndRehash(/*grow=*/true);
+        continue;
+      }
+      // If there are too many tombstones, it's worth doing a rehash to
+      // clean them up. This is to avoid the case where we have a table full
+      // of tombstones which would cause lookups to be very slow.
+      bool is_many_tombstones = tombstones_ > size_ && size_ > 128;
+      bool is_tombstones_plus_size_too_high = tombstones_ + size_ > load_limit_;
+      if (PERFETTO_UNLIKELY(is_many_tombstones ||
+                            is_tombstones_plus_size_too_high)) {
+        MaybeGrowAndRehash(/*grow=*/false);
+        continue;
+      }
+      PERFETTO_DCHECK(insertion_slot != kSlotNotFound);
+      break;
+    }  // for (attempt)
+
+    PERFETTO_CHECK(insertion_slot < capacity_);
+
+    // We found a free slot (or a tombstone). Proceed with the insertion.
+    if (tags_[insertion_slot] == kTombstone) {
+      PERFETTO_DCHECK(tombstones_ > 0);
+      tombstones_--;
+    }
+    Value* value_idx = &values_[insertion_slot];
+    new (&keys_[insertion_slot]) Key(std::move(key));
+    new (value_idx) Value(std::move(value));
+    tags_[insertion_slot] = tag;
+    PERFETTO_DCHECK(probe_len > 0 && probe_len <= capacity_);
+    max_probe_length_ = std::max(max_probe_length_, probe_len);
+    size_++;
+
+    return std::make_pair(value_idx, true);
+  }
+
+  template <typename K = Key>
+  Value* Find(const K& key) const {
+    const size_t idx = FindInternal(key);
+    if (idx == kNotFound)
+      return nullptr;
+    return &values_[idx];
+  }
+
+  template <typename K = Key>
+  bool Erase(const K& key) {
+    if (AppendOnly)
+      PERFETTO_FATAL("Erase() not supported because AppendOnly=true");
+    size_t idx = FindInternal(key);
+    if (idx == kNotFound)
+      return false;
+    EraseInternal(idx);
+    return true;
+  }
+
+  void Clear() {
+    // Avoid trivial heap operations on zero-capacity std::move()-d objects.
+    if (PERFETTO_UNLIKELY(capacity_ == 0))
+      return;
+
+    for (size_t i = 0; i < capacity_; ++i) {
+      const uint8_t tag = tags_[i];
+      if (tag != kFreeSlot && (AppendOnly || tag != kTombstone)) {
+        keys_[i].~Key();
+        values_[i].~Value();
+      }
+    }
+    Reset(capacity_, false);
+  }
+
+  Value& operator[](Key key) {
+    auto it_and_inserted = Insert(std::move(key), Value{});
+    return *it_and_inserted.first;
+  }
+
+  Iterator GetIterator() { return Iterator(this); }
+  const Iterator GetIterator() const { return Iterator(this); }
+
+  size_t size() const { return size_; }
+  size_t capacity() const { return capacity_; }
+
+  // "protected" here is only for the flat_hash_map_benchmark.cc. Everything
+  // below is by all means private.
+ protected:
+  enum ReservedTags : uint8_t { kFreeSlot = 0, kTombstone = 1 };
+  static constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
+
+  template <typename K = Key>
+  size_t FindInternal(const K& key) const {
+    static_assert(
+        IsLookupKeyAllowed<K, Key, Hasher>(),
+        "Heterogeneous lookup requires Hasher to define is_transparent and "
+        "support hashing the lookup key type. For same-type lookup, Key and K "
+        "must match exactly.");
+    const size_t key_hash = Hasher{}(key);
+    const uint8_t tag = HashToTag(key_hash);
+    PERFETTO_DCHECK((capacity_ & (capacity_ - 1)) == 0);  // Must be a pow2.
+    PERFETTO_DCHECK(max_probe_length_ <= capacity_);
+    for (size_t i = 0; i < max_probe_length_; ++i) {
+      const size_t idx = Probe::Calc(key_hash, i, capacity_);
+      const uint8_t tag_idx = tags_[idx];
+
+      if (tag_idx == kFreeSlot)
+        return kNotFound;
+      // HashToTag() never returns kTombstone, so the tag-check below cannot
+      // possibly match. Also we just want to skip tombstones.
+      if (tag_idx == tag && keys_[idx] == key) {
+        PERFETTO_DCHECK(tag_idx > kTombstone);
+        return idx;
+      }
+    }  // for (idx)
+    return kNotFound;
+  }
+
+  void EraseInternal(size_t idx) {
+    PERFETTO_DCHECK(tags_[idx] > kTombstone);
+    PERFETTO_DCHECK(size_ > 0);
+    tags_[idx] = kTombstone;
+    keys_[idx].~Key();
+    values_[idx].~Value();
+    size_--;
+    tombstones_++;
+    PERFETTO_DCHECK(size_ + tombstones_ <= capacity_);
+  }
+
+  PERFETTO_NO_INLINE void MaybeGrowAndRehash(bool grow) {
+    PERFETTO_DCHECK(size_ <= capacity_);
+    const size_t old_capacity = capacity_;
+
+    // Grow quickly up to 1MB, then chill.
+    const size_t old_size_bytes = old_capacity * (sizeof(Key) + sizeof(Value));
+    const size_t grow_factor = old_size_bytes < (1024u * 1024u) ? 8 : 2;
+    const size_t new_capacity =
+        grow ? std::max(old_capacity * grow_factor, size_t(1024))
+             : old_capacity;
+
+    auto old_tags(std::move(tags_));
+    auto old_keys(std::move(keys_));
+    auto old_values(std::move(values_));
+    size_t old_size = size_;
+
+    // This must be a CHECK (i.e. not just a DCHECK) to prevent UAF attacks on
+    // 32-bit archs that try to double the size of the table until wrapping.
+    PERFETTO_CHECK(new_capacity >= old_capacity);
+    Reset(new_capacity, true);
+
+    size_t new_size = 0;  // Recompute the size.
+    for (size_t i = 0; i < old_capacity; ++i) {
+      const uint8_t old_tag = old_tags[i];
+      if (old_tag != kFreeSlot && old_tag != kTombstone) {
+        Insert(std::move(old_keys[i]), std::move(old_values[i]));
+        old_keys[i].~Key();  // Destroy the old objects.
+        old_values[i].~Value();
+        new_size++;
+      }
+    }
+    PERFETTO_DCHECK(new_size == old_size);
+    PERFETTO_DCHECK(tombstones_ == 0);
+    size_ = new_size;
+  }
+
+  // Doesn't call destructors. Use Clear() for that.
+  PERFETTO_NO_INLINE void Reset(size_t n, bool reallocate) {
+    PERFETTO_DCHECK((n & (n - 1)) == 0);  // Must be a pow2.
+
+    capacity_ = n;
+    max_probe_length_ = 0;
+    size_ = 0;
+    tombstones_ = 0;
+    load_limit_ = n * static_cast<size_t>(load_limit_percent_) / 100;
+    load_limit_ = std::min(load_limit_, n);
+
+    if (reallocate) {
+      tags_.reset(new uint8_t[n]);
+      keys_ = AlignedAllocTyped<Key[]>(n);  // Deliberately not 0-initialized.
+      values_ =
+          AlignedAllocTyped<Value[]>(n);  // Deliberately not 0-initialized.
+    }
+
+    // Only clear the tags if not nullptr.
+    if (tags_) {
+      memset(&tags_[0], 0, n);  // Clear all tags.
+    }
+  }
+
+  static inline uint8_t HashToTag(size_t full_hash) {
+    uint8_t tag = full_hash >> (sizeof(full_hash) * 8 - 8);
+    // Ensure the hash is always >= 2. We use 0, 1 for kFreeSlot and kTombstone.
+    tag += (tag <= kTombstone) << 1;
+    PERFETTO_DCHECK(tag > kTombstone);
+    return tag;
+  }
+
+  size_t capacity_ = 0;
+  size_t size_ = 0;
+  size_t tombstones_ = 0;
+  size_t max_probe_length_ = 0;
+  size_t load_limit_ = 0;  // Updated every time |capacity_| changes.
+  int load_limit_percent_ =
+      kDefaultLoadLimitPct;  // Load factor limit in % of |capacity_|.
+
+  // These arrays have always the |capacity_| elements.
+  // Note: AlignedUniquePtr just allocates memory, doesn't invoke any ctor/dtor.
+  std::unique_ptr<uint8_t[]> tags_;
+  AlignedUniquePtr<Key[]> keys_;
+  AlignedUniquePtr<Value[]> values_;
+};
+
+}  // namespace base
+}  // namespace perfetto
+
+#endif  // INCLUDE_PERFETTO_EXT_BASE_FLAT_HASH_MAP_H_
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -49755,6 +50498,146 @@ class Histogram {
 #define SRC_TRACING_SERVICE_TRACE_BUFFER_H_
 
 #include <stdint.h>
+#include <array>
+#include <memory>
+
+// gen_amalgamated expanded: #include "perfetto/ext/base/flat_hash_map.h"
+// gen_amalgamated expanded: #include "perfetto/ext/tracing/core/basic_types.h"
+// gen_amalgamated expanded: #include "perfetto/ext/tracing/core/client_identity.h"
+// gen_amalgamated expanded: #include "perfetto/ext/tracing/core/trace_stats.h"
+// gen_amalgamated expanded: #include "src/tracing/service/histogram.h"
+
+namespace perfetto {
+
+class TracePacket;
+class TraceBuffer_WriterStats;
+
+// Virtual interface for trace buffers to enable multiple implementations.
+// This interface defines the minimal surface used by the tracing service.
+class TraceBuffer {
+ public:
+  using WriterStats = TraceBuffer_WriterStats;
+
+  // See comment in the header above.
+  enum OverwritePolicy { kOverwrite, kDiscard };
+
+  // Argument for out-of-band patches applied through TryPatchChunkContents().
+  struct Patch {
+    // From SharedMemoryABI::kPacketHeaderSize.
+    static constexpr size_t kSize = 4;
+
+    size_t offset_untrusted;
+    std::array<uint8_t, kSize> data;
+  };
+
+  // Identifiers that are constant for a packet sequence.
+  struct PacketSequenceProperties {
+    ProducerID producer_id_trusted;
+    ClientIdentity client_identity_trusted;
+    WriterID writer_id;
+
+    uid_t producer_uid_trusted() const { return client_identity_trusted.uid(); }
+    pid_t producer_pid_trusted() const { return client_identity_trusted.pid(); }
+  };
+
+  virtual ~TraceBuffer();
+
+  // Copies a Chunk from a producer Shared Memory Buffer into the trace buffer.
+  virtual void CopyChunkUntrusted(ProducerID producer_id_trusted,
+                                  const ClientIdentity& client_identity_trusted,
+                                  WriterID writer_id,
+                                  ChunkID chunk_id,
+                                  uint16_t num_fragments,
+                                  uint8_t chunk_flags,
+                                  bool chunk_complete,
+                                  const uint8_t* src,
+                                  size_t size) = 0;
+
+  // Applies a batch of |patches| to the given chunk, if the given chunk is
+  // still in the buffer. Does nothing if the given ChunkID is gone.
+  // Returns true if the chunk has been found and patched, false otherwise.
+  virtual bool TryPatchChunkContents(ProducerID,
+                                     WriterID,
+                                     ChunkID,
+                                     const Patch* patches,
+                                     size_t patches_size,
+                                     bool other_patches_pending) = 0;
+
+  // To read the contents of the buffer the caller needs to:
+  //   BeginRead()
+  //   while (ReadNextTracePacket(packet_fragments)) { ... }
+  // No other calls to any other method should be interleaved between
+  // BeginRead() and ReadNextTracePacket().
+  // Reads in the TraceBuffer are NOT idempotent.
+  virtual void BeginRead() = 0;
+
+  // Returns the next packet in the buffer, if any, and the producer_id,
+  // producer_uid, and writer_id of the producer/writer that wrote it.
+  // Returns false if no packets can be read at this point.
+  virtual bool ReadNextTracePacket(
+      TracePacket*,
+      PacketSequenceProperties* sequence_properties,
+      bool* previous_packet_on_sequence_dropped) = 0;
+
+  // Creates a read-only clone of the trace buffer. The read iterators of the
+  // new buffer will be reset, as if no Read() had been called.
+  virtual std::unique_ptr<TraceBuffer> CloneReadOnly() const = 0;
+
+  virtual void set_read_only() = 0;
+  virtual const TraceStats::BufferStats& stats() const = 0;
+  virtual const WriterStats& writer_stats() const = 0;
+  virtual size_t size() const = 0;
+  virtual size_t used_size() const = 0;
+  virtual OverwritePolicy overwrite_policy() const = 0;
+  virtual bool has_data() const = 0;
+
+  // Exposed for test/fake_packet.{cc,h}.
+  static inline constexpr size_t InlineChunkHeaderSize = 16;
+};
+
+class TraceBuffer_WriterStats {
+ public:
+  using WriterBuckets =
+      Histogram<8, 32, 128, 512, 1024, 2048, 4096, 8192, 12288, 16384>;
+  using WriterStatsMap = base::FlatHashMap<ProducerAndWriterID,
+                                           WriterBuckets,
+                                           std::hash<ProducerAndWriterID>,
+                                           base::QuadraticProbe,
+                                           /*AppendOnly=*/true>;
+
+  void Insert(ProducerAndWriterID key, HistValue val) {
+    map_.Insert(key, {}).first->Add(val);
+  }
+
+  WriterStatsMap::Iterator GetIterator() const { return map_.GetIterator(); }
+
+ private:
+  WriterStatsMap map_;
+};
+
+}  // namespace perfetto
+
+#endif  // SRC_TRACING_SERVICE_TRACE_BUFFER_H_
+/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef SRC_TRACING_SERVICE_TRACE_BUFFER_V1_H_
+#define SRC_TRACING_SERVICE_TRACE_BUFFER_V1_H_
+
+#include <stdint.h>
 #include <string.h>
 
 #include <array>
@@ -49763,7 +50646,6 @@ class Histogram {
 #include <tuple>
 
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
-// gen_amalgamated expanded: #include "perfetto/ext/base/flat_hash_map.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/paged_memory.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/thread_annotations.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/utils.h"
@@ -49772,6 +50654,7 @@ class Histogram {
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/slice.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/trace_stats.h"
 // gen_amalgamated expanded: #include "src/tracing/service/histogram.h"
+// gen_amalgamated expanded: #include "src/tracing/service/trace_buffer.h"
 
 namespace perfetto {
 
@@ -49878,49 +50761,18 @@ class TracePacket;
 // (according to their ChunkID), but don't give any guarantee about the read
 // order of packets from different sequences, see comments in
 // ReadNextTracePacket() below.
-class TraceBuffer {
+class TraceBufferV1 : public TraceBuffer {
  public:
-  static const size_t InlineChunkHeaderSize;  // For test/fake_packet.{cc,h}.
-
-  // See comment in the header above.
-  enum OverwritePolicy { kOverwrite, kDiscard };
-
-  // Argument for out-of-band patches applied through TryPatchChunkContents().
-  struct Patch {
-    // From SharedMemoryABI::kPacketHeaderSize.
-    static constexpr size_t kSize = 4;
-
-    size_t offset_untrusted;
-    std::array<uint8_t, kSize> data;
-  };
-
-  // Identifiers that are constant for a packet sequence.
-  struct PacketSequenceProperties {
-    ProducerID producer_id_trusted;
-    ClientIdentity client_identity_trusted;
-    WriterID writer_id;
-
-    uid_t producer_uid_trusted() const { return client_identity_trusted.uid(); }
-    pid_t producer_pid_trusted() const { return client_identity_trusted.pid(); }
-  };
-
-  // Holds the "used chunk" stats for each <Producer, Writer> tuple.
-  struct WriterStats {
-    Histogram<8, 32, 128, 512, 1024, 2048, 4096, 8192, 12288, 16384>
-        used_chunk_hist;
-  };
-
-  using WriterStatsMap = base::FlatHashMap<ProducerAndWriterID,
-                                           WriterStats,
-                                           std::hash<ProducerAndWriterID>,
-                                           base::QuadraticProbe,
-                                           /*AppendOnly=*/true>;
+  // Import types from the interface to avoid conflicts
+  using OverwritePolicy = TraceBuffer::OverwritePolicy;
+  using Patch = TraceBuffer::Patch;
+  using PacketSequenceProperties = TraceBuffer::PacketSequenceProperties;
 
   // Can return nullptr if the memory allocation fails.
-  static std::unique_ptr<TraceBuffer> Create(size_t size_in_bytes,
-                                             OverwritePolicy = kOverwrite);
+  static std::unique_ptr<TraceBufferV1> Create(size_t size_in_bytes,
+                                               OverwritePolicy = kOverwrite);
 
-  ~TraceBuffer();
+  ~TraceBufferV1() override;
 
   // Copies a Chunk from a producer Shared Memory Buffer into the trace buffer.
   // |src| points to the first packet in the SharedMemoryABI's chunk shared with
@@ -49936,7 +50788,7 @@ class TraceBuffer {
   // may use this to insert partial chunks (|chunk_complete = false|) before the
   // producer has committed them.
   //
-  // If |chunk_complete| is |false|, the TraceBuffer will only consider the
+  // If |chunk_complete| is |false|, the TraceBufferV1 will only consider the
   // first |num_fragments - 1| packets to be complete, since the producer may
   // not have finished writing the latest packet. Reading from a sequence will
   // also not progress past any incomplete chunks until they were rewritten with
@@ -49945,14 +50797,13 @@ class TraceBuffer {
   // TODO(eseckler): Pass in a PacketStreamProperties instead of individual IDs.
   void CopyChunkUntrusted(ProducerID producer_id_trusted,
                           const ClientIdentity& client_identity_trusted,
-
                           WriterID writer_id,
                           ChunkID chunk_id,
                           uint16_t num_fragments,
                           uint8_t chunk_flags,
                           bool chunk_complete,
                           const uint8_t* src,
-                          size_t size);
+                          size_t size) override;
 
   // Applies a batch of |patches| to the given chunk, if the given chunk is
   // still in the buffer. Does nothing if the given ChunkID is gone.
@@ -49974,7 +50825,7 @@ class TraceBuffer {
                              ChunkID,
                              const Patch* patches,
                              size_t patches_size,
-                             bool other_patches_pending);
+                             bool other_patches_pending) override;
 
   // To read the contents of the buffer the caller needs to:
   //   BeginRead()
@@ -49982,7 +50833,7 @@ class TraceBuffer {
   // No other calls to any other method should be interleaved between
   // BeginRead() and ReadNextTracePacket().
   // Reads in the TraceBuffer are NOT idempotent.
-  void BeginRead();
+  void BeginRead() override;
 
   // Returns the next packet in the buffer, if any, and the producer_id,
   // producer_uid, and writer_id of the producer/writer that wrote it (as passed
@@ -50014,21 +50865,22 @@ class TraceBuffer {
   //   P1, P5, P7, P4 (P4 cannot come after P5)
   bool ReadNextTracePacket(TracePacket*,
                            PacketSequenceProperties* sequence_properties,
-                           bool* previous_packet_on_sequence_dropped);
+                           bool* previous_packet_on_sequence_dropped) override;
 
-  // Creates a read-only clone of the trace buffer. The read iterators of the
-  // new buffer will be reset, as if no Read() had been called. Calls to
+  // Creates a read-only clone of the trace buffer. Calls to
   // CopyChunkUntrusted() and TryPatchChunkContents() on the returned cloned
   // TraceBuffer will CHECK().
-  std::unique_ptr<TraceBuffer> CloneReadOnly() const;
+  std::unique_ptr<TraceBuffer> CloneReadOnly() const override;
 
-  void set_read_only() { read_only_ = true; }
-  const WriterStatsMap& writer_stats() const { return writer_stats_; }
-  const TraceStats::BufferStats& stats() const { return stats_; }
-  size_t size() const { return size_; }
-  size_t used_size() const { return used_size_; }
-  OverwritePolicy overwrite_policy() const { return overwrite_policy_; }
-  bool has_data() const { return has_data_; }
+  void set_read_only() override { read_only_ = true; }
+  const TraceStats::BufferStats& stats() const override { return stats_; }
+  const WriterStats& writer_stats() const override { return writer_stats_; }
+  size_t size() const override { return size_; }
+  size_t used_size() const override { return used_size_; }
+  OverwritePolicy overwrite_policy() const override {
+    return overwrite_policy_;
+  }
+  bool has_data() const override { return has_data_; }
 
  private:
   friend class TraceBufferTest;
@@ -50278,14 +51130,14 @@ class TraceBuffer {
     kFailedEmptyPacket,
   };
 
-  explicit TraceBuffer(OverwritePolicy);
-  TraceBuffer(const TraceBuffer&) = delete;
-  TraceBuffer& operator=(const TraceBuffer&) = delete;
+  explicit TraceBufferV1(OverwritePolicy);
+  TraceBufferV1(const TraceBufferV1&) = delete;
+  TraceBufferV1& operator=(const TraceBufferV1&) = delete;
 
   // Not using the implicit copy ctor to avoid unintended copies.
   // This tagged ctor should be used only for Clone().
   struct CloneCtor {};
-  TraceBuffer(CloneCtor, const TraceBuffer&);
+  TraceBufferV1(CloneCtor, const TraceBufferV1&);
 
   bool Initialize(size_t size);
 
@@ -50460,7 +51312,7 @@ class TraceBuffer {
   TraceStats::BufferStats stats_;
 
   // Per-{Producer, Writer} statistics.
-  WriterStatsMap writer_stats_;
+  WriterStats writer_stats_;
 
   // Set to true upon the very first call to CopyChunkUntrusted() and never
   // cleared. This is used to tell if the buffer has never been used since its
@@ -50479,7 +51331,7 @@ class TraceBuffer {
 
 }  // namespace perfetto
 
-#endif  // SRC_TRACING_SERVICE_TRACE_BUFFER_H_
+#endif  // SRC_TRACING_SERVICE_TRACE_BUFFER_V1_H_
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -50496,11 +51348,12 @@ class TraceBuffer {
  * limitations under the License.
  */
 
-// gen_amalgamated expanded: #include "src/tracing/service/trace_buffer.h"
+// gen_amalgamated expanded: #include "src/tracing/service/trace_buffer_v1.h"
 
 #include <limits>
 
 // gen_amalgamated expanded: #include "perfetto/base/logging.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/flags.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/utils.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/client_identity.h"
 // gen_amalgamated expanded: #include "perfetto/ext/tracing/core/shared_memory_abi.h"
@@ -50525,27 +51378,26 @@ constexpr uint8_t kChunkNeedsPatching =
     SharedMemoryABI::ChunkHeader::kChunkNeedsPatching;
 }  // namespace.
 
-const size_t TraceBuffer::InlineChunkHeaderSize = sizeof(ChunkRecord);
-
 // static
-std::unique_ptr<TraceBuffer> TraceBuffer::Create(size_t size_in_bytes,
-                                                 OverwritePolicy pol) {
-  std::unique_ptr<TraceBuffer> trace_buffer(new TraceBuffer(pol));
+std::unique_ptr<TraceBufferV1> TraceBufferV1::Create(size_t size_in_bytes,
+                                                     OverwritePolicy pol) {
+  std::unique_ptr<TraceBufferV1> trace_buffer(new TraceBufferV1(pol));
   if (!trace_buffer->Initialize(size_in_bytes))
     return nullptr;
   return trace_buffer;
 }
 
-TraceBuffer::TraceBuffer(OverwritePolicy pol) : overwrite_policy_(pol) {
+TraceBufferV1::TraceBufferV1(OverwritePolicy pol) : overwrite_policy_(pol) {
   // See comments in ChunkRecord for the rationale of this.
   static_assert(sizeof(ChunkRecord) == sizeof(SharedMemoryABI::PageHeader) +
                                            sizeof(SharedMemoryABI::ChunkHeader),
                 "ChunkRecord out of sync with the layout of SharedMemoryABI");
+  static_assert(sizeof(ChunkRecord) == TraceBuffer::InlineChunkHeaderSize);
 }
 
-TraceBuffer::~TraceBuffer() = default;
+TraceBufferV1::~TraceBufferV1() = default;
 
-bool TraceBuffer::Initialize(size_t size) {
+bool TraceBufferV1::Initialize(size_t size) {
   static_assert(
       SharedMemoryABI::kMinPageSize % sizeof(ChunkRecord) == 0,
       "sizeof(ChunkRecord) must be an integer divider of a page size");
@@ -50571,7 +51423,7 @@ bool TraceBuffer::Initialize(size_t size) {
 // Note: |src| points to a shmem region that is shared with the producer. Assume
 // that the producer is malicious and will change the content of |src|
 // while we execute here. Don't do any processing on it other than memcpy().
-void TraceBuffer::CopyChunkUntrusted(
+void TraceBufferV1::CopyChunkUntrusted(
     ProducerID producer_id_trusted,
     const ClientIdentity& client_identity_trusted,
     WriterID writer_id,
@@ -50607,7 +51459,7 @@ void TraceBuffer::CopyChunkUntrusted(
     if (num_fragments > 0) {
       num_fragments--;
       // These flags should only affect the last packet in the chunk. We clear
-      // them, so that TraceBuffer is able to look at the remaining packets in
+      // them, so that TraceBufferV1 is able to look at the remaining packets in
       // this chunk.
       chunk_flags &= ~kLastPacketContinuesOnNextChunk;
       chunk_flags &= ~kChunkNeedsPatching;
@@ -50676,7 +51528,7 @@ void TraceBuffer::CopyChunkUntrusted(
     // We should not have read past the last packet.
     if (record_meta->num_fragments_read > prev->num_fragments) {
       PERFETTO_ELOG(
-          "TraceBuffer read too many fragments from an incomplete chunk");
+          "TraceBufferV1 read too many fragments from an incomplete chunk");
       PERFETTO_DCHECK(suppress_client_dchecks_for_testing_);
       return;
     }
@@ -50792,7 +51644,7 @@ void TraceBuffer::CopyChunkUntrusted(
     AddPaddingRecord(padding_size);
 }
 
-ssize_t TraceBuffer::DeleteNextChunksFor(size_t bytes_to_clear) {
+ssize_t TraceBufferV1::DeleteNextChunksFor(size_t bytes_to_clear) {
   PERFETTO_CHECK(!discard_writes_);
 
   // Find the position of the first chunk which begins at or after
@@ -50874,7 +51726,7 @@ ssize_t TraceBuffer::DeleteNextChunksFor(size_t bytes_to_clear) {
   return static_cast<ssize_t>(next_chunk_ptr - search_end);
 }
 
-void TraceBuffer::AddPaddingRecord(size_t size) {
+void TraceBufferV1::AddPaddingRecord(size_t size) {
   PERFETTO_DCHECK(size >= sizeof(ChunkRecord) && size <= ChunkRecord::kMaxSize);
   ChunkRecord record(size);
   record.is_padding = 1;
@@ -50885,12 +51737,12 @@ void TraceBuffer::AddPaddingRecord(size_t size) {
   // |wptr_| is deliberately not advanced when writing a padding record.
 }
 
-bool TraceBuffer::TryPatchChunkContents(ProducerID producer_id,
-                                        WriterID writer_id,
-                                        ChunkID chunk_id,
-                                        const Patch* patches,
-                                        size_t patches_size,
-                                        bool other_patches_pending) {
+bool TraceBufferV1::TryPatchChunkContents(ProducerID producer_id,
+                                          WriterID writer_id,
+                                          ChunkID chunk_id,
+                                          const Patch* patches,
+                                          size_t patches_size,
+                                          bool other_patches_pending) {
   PERFETTO_CHECK(!read_only_);
   ChunkMeta::Key key(producer_id, writer_id, chunk_id);
   auto it = index_.find(key);
@@ -50943,14 +51795,14 @@ bool TraceBuffer::TryPatchChunkContents(ProducerID producer_id,
   return true;
 }
 
-void TraceBuffer::BeginRead() {
+void TraceBufferV1::BeginRead() {
   read_iter_ = GetReadIterForSequence(index_.begin());
 #if PERFETTO_DCHECK_IS_ON()
   changed_since_last_read_ = false;
 #endif
 }
 
-TraceBuffer::SequenceIterator TraceBuffer::GetReadIterForSequence(
+TraceBufferV1::SequenceIterator TraceBufferV1::GetReadIterForSequence(
     ChunkMap::iterator seq_begin) {
   SequenceIterator iter;
   iter.seq_begin = seq_begin;
@@ -50992,7 +51844,7 @@ TraceBuffer::SequenceIterator TraceBuffer::GetReadIterForSequence(
   return iter;
 }
 
-void TraceBuffer::SequenceIterator::MoveNext() {
+void TraceBufferV1::SequenceIterator::MoveNext() {
   // Stop iterating when we reach the end of the sequence.
   // Note: |seq_begin| might be == |seq_end|.
   if (cur == seq_end || cur->first.chunk_id == wrapping_id) {
@@ -51018,7 +51870,7 @@ void TraceBuffer::SequenceIterator::MoveNext() {
     cur = seq_end;
 }
 
-bool TraceBuffer::ReadNextTracePacket(
+bool TraceBufferV1::ReadNextTracePacket(
     TracePacket* packet,
     PacketSequenceProperties* sequence_properties,
     bool* previous_packet_on_sequence_dropped) {
@@ -51206,7 +52058,7 @@ bool TraceBuffer::ReadNextTracePacket(
   }  // for(;;MoveNext()) [iterate over chunks].
 }
 
-TraceBuffer::ReadAheadResult TraceBuffer::ReadAhead(TracePacket* packet) {
+TraceBufferV1::ReadAheadResult TraceBufferV1::ReadAhead(TracePacket* packet) {
   static_assert(static_cast<ChunkID>(kMaxChunkID + 1) == 0,
                 "relying on kMaxChunkID to wrap naturally");
   TRACE_BUFFER_DLOG(" readahead start @ chunk %u", read_iter_.chunk_id());
@@ -51286,7 +52138,7 @@ TraceBuffer::ReadAheadResult TraceBuffer::ReadAhead(TracePacket* packet) {
   return ReadAheadResult::kFailedMoveToNextSequence;
 }
 
-TraceBuffer::ReadPacketResult TraceBuffer::ReadNextPacketInChunk(
+TraceBufferV1::ReadPacketResult TraceBufferV1::ReadNextPacketInChunk(
     ProducerAndWriterID producer_and_writer_id,
     ChunkMeta* const chunk_meta,
     TracePacket* packet) {
@@ -51357,8 +52209,8 @@ TraceBuffer::ReadPacketResult TraceBuffer::ReadNextPacketInChunk(
                         chunk_meta->is_complete())) {
     stats_.set_chunks_read(stats_.chunks_read() + 1);
     stats_.set_bytes_read(stats_.bytes_read() + chunk_record->size);
-    auto* writer_stats = writer_stats_.Insert(producer_and_writer_id, {}).first;
-    writer_stats->used_chunk_hist.Add(chunk_meta->cur_fragment_offset);
+    writer_stats_.Insert(producer_and_writer_id,
+                         chunk_meta->cur_fragment_offset);
   } else {
     // We have at least one more packet to parse. It should be within the chunk.
     if (chunk_meta->cur_fragment_offset + sizeof(ChunkRecord) >=
@@ -51378,21 +52230,21 @@ TraceBuffer::ReadPacketResult TraceBuffer::ReadNextPacketInChunk(
   return ReadPacketResult::kSucceeded;
 }
 
-void TraceBuffer::DiscardWrite() {
+void TraceBufferV1::DiscardWrite() {
   PERFETTO_DCHECK(overwrite_policy_ == kDiscard);
   discard_writes_ = true;
   stats_.set_chunks_discarded(stats_.chunks_discarded() + 1);
   TRACE_BUFFER_DLOG("  discarding write");
 }
 
-std::unique_ptr<TraceBuffer> TraceBuffer::CloneReadOnly() const {
-  std::unique_ptr<TraceBuffer> buf(new TraceBuffer(CloneCtor(), *this));
+std::unique_ptr<TraceBuffer> TraceBufferV1::CloneReadOnly() const {
+  std::unique_ptr<TraceBufferV1> buf(new TraceBufferV1(CloneCtor(), *this));
   if (!buf->data_.IsValid())
     return nullptr;  // PagedMemory::Allocate() failed. We are out of memory.
   return buf;
 }
 
-TraceBuffer::TraceBuffer(CloneCtor, const TraceBuffer& src)
+TraceBufferV1::TraceBufferV1(CloneCtor, const TraceBufferV1& src)
     : overwrite_policy_(src.overwrite_policy_),
       read_only_(true),
       discard_writes_(src.discard_writes_) {
@@ -51411,16 +52263,30 @@ TraceBuffer::TraceBuffer(CloneCtor, const TraceBuffer& src)
   stats_.set_readaheads_failed(0);
   stats_.set_readaheads_succeeded(0);
 
-  // Copy the index of chunk metadata and reset the read states.
+  // Copy the index of chunk metadata.
+  // NOTE: in 2025-10 the behavior of CloneReadOnly() in presence of existing
+  // reads has changed.
+  // Before: the read iterator would be reset and the cloned buffer would behave
+  //         as if no read was performed.
+  // After: the read iterators are untouched.
+  // This is done for two reasons:
+  // 1. To converge with the behavior of TraceBufferV2, which can't support the
+  //    old behavior.
+  // 2. To support properly cloning of write_into_file sessions (b/382209797).
   index_ = ChunkMap(src.index_);
-  for (auto& kv : index_) {
-    ChunkMeta& chunk_meta = kv.second;
-    chunk_meta.num_fragments_read = 0;
-    chunk_meta.cur_fragment_offset = 0;
-    chunk_meta.set_last_read_packet_skipped(false);
+  if (!base::flags::buffer_clone_preserve_read_iter) {
+    for (auto& kv : index_) {
+      ChunkMeta& chunk_meta = kv.second;
+      chunk_meta.num_fragments_read = 0;
+      chunk_meta.cur_fragment_offset = 0;
+      chunk_meta.set_last_read_packet_skipped(false);
+    }
   }
   read_iter_ = SequenceIterator();
 }
+
+// For the virtual base class.
+TraceBuffer::~TraceBuffer() = default;
 
 }  // namespace perfetto
 // gen_amalgamated begin source: src/tracing/service/tracing_service_impl.cc
@@ -52184,6 +53050,9 @@ class TracingServiceImpl : public TracingService {
 
   // Reads all the tracing buffers from the tracing session `tsid` and writes
   // them into the associated file.
+  // If `async_flush_buffers_before_read` is `true` this function becomes
+  // asynchronous: immediately posts a `Flush` task and returns. Reads the
+  // buffers when the flush is done, inside the `FlushCallback`.
   //
   // Reads all the data in the buffers (or until the file is full) before
   // returning.
@@ -52193,7 +53062,8 @@ class TracingServiceImpl : public TracingService {
   // to be executed after write_period_ms.
   //
   // Returns false in case of error.
-  bool ReadBuffersIntoFile(TracingSessionID);
+  bool ReadBuffersIntoFile(TracingSessionID tsid,
+                           bool async_flush_buffers_before_read);
 
   void FreeBuffers(TracingSessionID tsid, const std::string& error = {});
 
@@ -52310,6 +53180,7 @@ class TracingServiceImpl : public TracingService {
     bool skip_trace_filter = false;
     std::optional<TriggerInfo> clone_trigger;
     int64_t clone_started_timestamp_ns = 0;
+    base::ScopedFile output_file_fd;
   };
 
   // Holds the state of a tracing session. A tracing session is uniquely bound
@@ -52673,7 +53544,8 @@ class TracingServiceImpl : public TracingService {
                                   bool final_flush_outcome,
                                   std::optional<TriggerInfo> clone_trigger,
                                   base::Uuid*,
-                                  int64_t clone_started_timestamp_ns);
+                                  int64_t clone_started_timestamp_ns,
+                                  base::ScopedFile output_file_fd);
   void OnFlushDoneForClone(TracingSessionID src_tsid,
                            PendingCloneID clone_id,
                            const std::set<BufferID>& buf_ids,
@@ -52890,6 +53762,7 @@ inline base::StatusOr<base::SchedPolicyAndPrio> CreateSchedPolicyFromConfig(
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 #define PERFETTO_HAS_CHMOD
 #include <sys/stat.h>
@@ -52901,6 +53774,7 @@ inline base::StatusOr<base::SchedPolicyAndPrio> CreateSchedPolicyFromConfig(
 // gen_amalgamated expanded: #include "perfetto/ext/base/android_utils.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/clock_snapshots.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/file_utils.h"
+// gen_amalgamated expanded: #include "perfetto/ext/base/flags.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/metatrace.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/string_utils.h"
 // gen_amalgamated expanded: #include "perfetto/ext/base/string_view.h"
@@ -52930,6 +53804,7 @@ inline base::StatusOr<base::SchedPolicyAndPrio> CreateSchedPolicyFromConfig(
 // gen_amalgamated expanded: #include "src/tracing/core/shared_memory_arbiter_impl.h"
 // gen_amalgamated expanded: #include "src/tracing/service/packet_stream_validator.h"
 // gen_amalgamated expanded: #include "src/tracing/service/trace_buffer.h"
+// gen_amalgamated expanded: #include "src/tracing/service/trace_buffer_v1.h"
 
 // gen_amalgamated expanded: #include "protos/perfetto/common/builtin_clock.gen.h"
 // gen_amalgamated expanded: #include "protos/perfetto/common/builtin_clock.pbzero.h"
@@ -53028,7 +53903,7 @@ int32_t EncodeCommitDataRequest(ProducerID producer_id,
 }
 
 void SerializeAndAppendPacket(std::vector<TracePacket>* packets,
-                              std::vector<uint8_t> packet) {
+                              const std::vector<uint8_t>& packet) {
   Slice slice = Slice::Allocate(packet.size());
   memcpy(slice.own_data(), packet.data(), packet.size());
   packets->emplace_back();
@@ -53951,7 +54826,7 @@ base::Status TracingServiceImpl::EnableTracing(ConsumerEndpointImpl* consumer,
             ? TraceBuffer::kDiscard
             : TraceBuffer::kOverwrite;
     auto it_and_inserted =
-        buffers_.emplace(global_id, TraceBuffer::Create(buf_size, policy));
+        buffers_.emplace(global_id, TraceBufferV1::Create(buf_size, policy));
     PERFETTO_DCHECK(it_and_inserted.second);  // buffers_.count(global_id) == 0.
     std::unique_ptr<TraceBuffer>& trace_buffer = it_and_inserted.first->second;
     if (!trace_buffer) {
@@ -54260,8 +55135,13 @@ void TracingServiceImpl::StartTracing(TracingSessionID tsid) {
 
   // Start the periodic drain tasks if we should to save the trace into a file.
   if (tracing_session->config.write_into_file()) {
-    weak_runner_.PostDelayedTask([this, tsid] { ReadBuffersIntoFile(tsid); },
-                                 DelayToNextWritePeriodMs(*tracing_session));
+    bool async_flush_buffers_before_read =
+        !tracing_session->config.no_flush_before_write_into_file();
+    weak_runner_.PostDelayedTask(
+        [this, tsid, async_flush_buffers_before_read] {
+          ReadBuffersIntoFile(tsid, async_flush_buffers_before_read);
+        },
+        DelayToNextWritePeriodMs(*tracing_session));
   }
 
   // Start the periodic flush tasks if the config specified a flush period.
@@ -54359,9 +55239,6 @@ void TracingServiceImpl::DisableTracing(TracingSessionID tsid,
     return;
   }
 
-  MaybeLogUploadEvent(tracing_session->config, tracing_session->trace_uuid,
-                      PerfettoStatsdAtom::kTracedDisableTracing);
-
   switch (tracing_session->state) {
     // Spurious call to DisableTracing() while already disabled, nothing to do.
     case TracingSession::DISABLED:
@@ -54393,6 +55270,21 @@ void TracingServiceImpl::DisableTracing(TracingSessionID tsid,
 
     // This is the nominal case, continues below.
     case TracingSession::STARTED:
+      // Log the disable tracing event only when the session was actually
+      // started. This avoids double-logging in scenarios where DisableTracing
+      // is called multiple times for the same session. A common case is with
+      // traces that have a timeout (e.g. using `trigger_timeout_ms`):
+      // 1. The service's timer expires and it calls `DisableTracing`
+      // internally.
+      // 2. The service notifies the consumer (e.g. `perfetto_cmd`) that the
+      //    trace has ended.
+      // 3. The consumer, as part of its cleanup, calls `FreeBuffers()`.
+      // 4. `FreeBuffers()` on the service-side calls `DisableTracing()` again
+      //    as a safeguard.
+      // By logging only when transitioning from the `STARTED` state, we ensure
+      // we only log the effective disable event.
+      MaybeLogUploadEvent(tracing_session->config, tracing_session->trace_uuid,
+                          PerfettoStatsdAtom::kTracedDisableTracing);
       break;
   }
 
@@ -54795,7 +55687,9 @@ void TracingServiceImpl::DisableTracingNotifyConsumerAndFlushFile(
 
   if (tracing_session->write_into_file) {
     tracing_session->write_period_ms = 0;
-    ReadBuffersIntoFile(tracing_session->id);
+    // Buffers are scraped, no need to flush before reading into file.
+    ReadBuffersIntoFile(tracing_session->id,
+                        /* async_flush_buffers_before_read = */ false);
   }
 
   MaybeLogUploadEvent(tracing_session->config, tracing_session->trace_uuid,
@@ -55281,7 +56175,9 @@ bool TracingServiceImpl::ReadBuffersIntoConsumer(
   return true;
 }
 
-bool TracingServiceImpl::ReadBuffersIntoFile(TracingSessionID tsid) {
+bool TracingServiceImpl::ReadBuffersIntoFile(
+    TracingSessionID tsid,
+    bool async_flush_buffers_before_read) {
   PERFETTO_DCHECK_THREAD(thread_checker_);
   TracingSession* tracing_session = GetTracingSession(tsid);
   if (!tracing_session) {
@@ -55298,35 +56194,62 @@ bool TracingServiceImpl::ReadBuffersIntoFile(TracingSessionID tsid) {
   if (IsWaitingForTrigger(tracing_session))
     return false;
 
-  // ReadBuffers() can allocate memory internally, for filtering. By limiting
-  // the data that ReadBuffers() reads to kWriteIntoChunksSize per iteration,
-  // we limit the amount of memory used on each iteration.
-  //
-  // It would be tempting to split this into multiple tasks like in
-  // ReadBuffersIntoConsumer, but that's not currently possible.
-  // ReadBuffersIntoFile has to read the whole available data before returning,
-  // to support the disable_immediately=true code paths.
-  bool has_more = true;
-  bool stop_writing_into_file = false;
-  do {
-    std::vector<TracePacket> packets =
-        ReadBuffers(tracing_session, kWriteIntoFileChunkSize, &has_more);
+  auto do_read_buffers_into_file_fn =
+      [this, tsid](bool async_flush_buffers_before_read) {
+        TracingSession* tracing_session = GetTracingSession(tsid);
+        if (!tracing_session)
+          return;
+        // ReadBuffers() can allocate memory internally, for filtering. By
+        // limiting the data that ReadBuffers() reads to kWriteIntoChunksSize
+        // per iteration, we limit the amount of memory used on each iteration.
+        //
+        // It would be tempting to split this into multiple tasks like in
+        // ReadBuffersIntoConsumer, but that's not currently possible.
+        // ReadBuffersIntoFile has to read the whole available data before
+        // returning, to support the disable_immediately=true code paths.
+        bool has_more = true;
+        bool stop_writing_into_file = false;
+        do {
+          std::vector<TracePacket> packets =
+              ReadBuffers(tracing_session, kWriteIntoFileChunkSize, &has_more);
 
-    stop_writing_into_file = WriteIntoFile(tracing_session, std::move(packets));
-  } while (has_more && !stop_writing_into_file);
+          stop_writing_into_file =
+              WriteIntoFile(tracing_session, std::move(packets));
+        } while (has_more && !stop_writing_into_file);
 
-  if (stop_writing_into_file || tracing_session->write_period_ms == 0) {
-    // Ensure all data was written to the file before we close it.
-    base::FlushFile(tracing_session->write_into_file.get());
-    tracing_session->write_into_file.reset();
-    tracing_session->write_period_ms = 0;
-    if (tracing_session->state == TracingSession::STARTED)
-      DisableTracing(tsid);
-    return true;
+        // Ensure all data was written to the file.
+        base::FlushFile(tracing_session->write_into_file.get());
+
+        if (stop_writing_into_file || tracing_session->write_period_ms == 0) {
+          tracing_session->write_into_file.reset();
+          tracing_session->write_period_ms = 0;
+          if (tracing_session->state == TracingSession::STARTED)
+            DisableTracing(tsid);
+          return;
+        }
+
+        weak_runner_.PostDelayedTask(
+            [this, tsid, async_flush_buffers_before_read] {
+              ReadBuffersIntoFile(tsid, async_flush_buffers_before_read);
+            },
+            DelayToNextWritePeriodMs(*tracing_session));
+      };
+
+  if (async_flush_buffers_before_read) {
+    Flush(
+        tsid, 0,
+        [do_read_buffers_into_file_fn](bool success) {
+          if (!success)
+            PERFETTO_ELOG("ReadBuffersIntoFile flush timed out");
+          do_read_buffers_into_file_fn(
+              /* async_flush_buffers_before_read= */ true);
+        },
+        FlushFlags(FlushFlags::Initiator::kTraced,
+                   FlushFlags::Reason::kPeriodic));
+  } else {
+    do_read_buffers_into_file_fn(/* async_flush_buffers_before_read= */ false);
   }
 
-  weak_runner_.PostDelayedTask([this, tsid] { ReadBuffersIntoFile(tsid); },
-                               DelayToNextWritePeriodMs(*tracing_session));
   return true;
 }
 
@@ -55726,7 +56649,7 @@ void TracingServiceImpl::FreeBuffers(TracingSessionID tsid,
           [weak_consumer = clone_op.weak_consumer] {
             if (weak_consumer) {
               weak_consumer->consumer_->OnSessionCloned(
-                  {false, "Original session ended", {}});
+                  {false, "Original session ended", {}, false});
             }
           });
     }
@@ -56295,7 +57218,7 @@ TraceBuffer* TracingServiceImpl::GetBufferByID(BufferID buffer_id) {
   auto buf_iter = buffers_.find(buffer_id);
   if (buf_iter == buffers_.end())
     return nullptr;
-  return &*buf_iter->second;
+  return buf_iter->second.get();
 }
 
 void TracingServiceImpl::OnStartTriggersTimeout(TracingSessionID tsid) {
@@ -56618,7 +57541,7 @@ TraceStats TracingServiceImpl::GetTraceStats(TracingSession* tracing_session) {
       if (!buf)
         continue;
       for (auto it = buf->writer_stats().GetIterator(); it; ++it) {
-        const auto& hist = it.value().used_chunk_hist;
+        const auto& hist = it.value();
         ProducerID p;
         WriterID w;
         GetProducerAndWriterID(it.key(), &p, &w);
@@ -56987,6 +57910,38 @@ base::Status TracingServiceImpl::FlushAndCloneSession(
     return PERFETTO_SVC_ERR("Not allowed to clone a session from another UID");
   }
 
+  // The new logic we use to clone 'write_into_file' session relies on the
+  // 'buffer_clone_preserve_read_iter' flag being true; see b/448604718.
+  //
+  // The old logic ignored |session->write_into_file| when doing clone.
+  // Therefore, if the 'buffer_clone_preserve_read_iter' flag is false, we
+  // ignore the file to make the new logic behave like the old logic.
+  bool clone_session_write_into_file =
+      base::flags::buffer_clone_preserve_read_iter && session->write_into_file;
+
+  if (clone_session_write_into_file) {
+    if (!args.output_file_fd) {
+      return PERFETTO_SVC_ERR(
+          "Failed to clone 'write_into_file' session: a file descriptor is "
+          "required to copy existing file");
+    }
+    base::FlushFile(*session->write_into_file);
+    base::Status status =
+        base::CopyFileContents(*session->write_into_file, *args.output_file_fd);
+    if (!status.ok()) {
+      return PERFETTO_SVC_ERR(
+          "Failed to clone 'write_into_file' session: failed to copy existing "
+          "file: %s",
+          status.c_message());
+    }
+  } else {
+    // The client always sends a FD because when it asks to CloneSession,
+    // it doesn't know if the session being cloned is WIF or not. If it's
+    // not we should just ignore the file, the client will readback via IPC
+    // as usual in that case.
+    args.output_file_fd.reset();
+  }
+
   // If any of the buffers are marked as clear_before_clone, reset them before
   // issuing the Flush(kCloneReason).
   size_t buf_idx = 0;
@@ -57009,7 +57964,7 @@ base::Status TracingServiceImpl::FlushAndCloneSession(
     const auto buf_policy = buf->overwrite_policy();
     const auto buf_size = buf->size();
     std::unique_ptr<TraceBuffer> old_buf = std::move(buf);
-    buf = TraceBuffer::Create(buf_size, buf_policy);
+    buf = TraceBufferV1::Create(buf_size, buf_policy);
     if (!buf) {
       // This is extremely rare but could happen on 32-bit. If the new buffer
       // allocation failed, put back the buffer where it was and fail the clone.
@@ -57038,6 +57993,9 @@ base::Status TracingServiceImpl::FlushAndCloneSession(
         args.clone_trigger_boot_time_ns, args.clone_trigger_name,
         args.clone_trigger_producer_name,
         args.clone_trigger_trusted_producer_uid, args.clone_trigger_delay_ms};
+  }
+  if (args.output_file_fd) {
+    clone_op.output_file_fd = std::move(args.output_file_fd);
   }
 
   // Issue separate flush requests for separate buffer groups. The buffer marked
@@ -57125,6 +58083,7 @@ void TracingServiceImpl::OnFlushDoneForClone(TracingSessionID tsid,
     result = PERFETTO_SVC_ERR("Buffer allocation failed");
   }
 
+  bool was_write_into_file = false;
   if (result.ok()) {
     UpdateMemoryGuardrail();
 
@@ -57137,17 +58096,19 @@ void TracingServiceImpl::OnFlushDoneForClone(TracingSessionID tsid,
                  final_flush_outcome);
 
     if (clone_op.weak_consumer) {
+      was_write_into_file = static_cast<bool>(clone_op.output_file_fd);
       result = FinishCloneSession(
           &*clone_op.weak_consumer, tsid, std::move(clone_op.buffers),
           std::move(clone_op.buffer_cloned_timestamps),
           clone_op.skip_trace_filter, !clone_op.flush_failed,
-          clone_op.clone_trigger, &uuid, clone_op.clone_started_timestamp_ns);
+          clone_op.clone_trigger, &uuid, clone_op.clone_started_timestamp_ns,
+          std::move(clone_op.output_file_fd));
     }
   }  // if (result.ok())
 
   if (clone_op.weak_consumer) {
     clone_op.weak_consumer->consumer_->OnSessionCloned(
-        {result.ok(), result.message(), uuid});
+        {result.ok(), result.message(), uuid, was_write_into_file});
   }
 
   src->pending_clones.erase(it);
@@ -57175,7 +58136,7 @@ bool TracingServiceImpl::DoCloneBuffers(const TracingSession& src,
       const auto buf_policy = src_buf->overwrite_policy();
       const auto buf_size = src_buf->size();
       new_buf = std::move(src_buf);
-      src_buf = TraceBuffer::Create(buf_size, buf_policy);
+      src_buf = TraceBufferV1::Create(buf_size, buf_policy);
       if (!src_buf) {
         // If the allocation fails put the buffer back and let the code below
         // handle the failure gracefully.
@@ -57202,7 +58163,8 @@ base::Status TracingServiceImpl::FinishCloneSession(
     bool final_flush_outcome,
     std::optional<TriggerInfo> clone_trigger,
     base::Uuid* new_uuid,
-    int64_t clone_started_timestamp_ns) {
+    int64_t clone_started_timestamp_ns,
+    base::ScopedFile output_file_fd) {
   PERFETTO_DLOG("CloneSession(%" PRIu64
                 ", skip_trace_filter=%d) started, consumer uid: %d",
                 src_tsid, skip_trace_filter, static_cast<int>(consumer->uid_));
@@ -57309,6 +58271,14 @@ base::Status TracingServiceImpl::FinishCloneSession(
   cloned_session->final_flush_outcome = final_flush_outcome
                                             ? TraceStats::FINAL_FLUSH_SUCCEEDED
                                             : TraceStats::FINAL_FLUSH_FAILED;
+  if (output_file_fd) {
+    cloned_session->write_into_file = std::move(output_file_fd);
+    cloned_session->write_period_ms = 0;
+    // Buffers are flushed, no need to flush again before reading into file.
+    ReadBuffersIntoFile(cloned_session->id,
+                        /* async_flush_buffers_before_read= */ false);
+  }
+
   return base::OkStatus();
 }
 
@@ -57674,7 +58644,7 @@ void TracingServiceImpl::ConsumerEndpointImpl::CloneSession(
   base::Status result = service_->FlushAndCloneSession(this, std::move(args));
 
   if (!result.ok()) {
-    consumer_->OnSessionCloned({false, result.message(), {}});
+    consumer_->OnSessionCloned({false, result.message(), {}, false});
   }
 }
 
@@ -58244,7 +59214,8 @@ bool CloneSessionResponse::operator==(const CloneSessionResponse& other) const {
    && ::protozero::internal::gen_helpers::EqualsField(success_, other.success_)
    && ::protozero::internal::gen_helpers::EqualsField(error_, other.error_)
    && ::protozero::internal::gen_helpers::EqualsField(uuid_msb_, other.uuid_msb_)
-   && ::protozero::internal::gen_helpers::EqualsField(uuid_lsb_, other.uuid_lsb_);
+   && ::protozero::internal::gen_helpers::EqualsField(uuid_lsb_, other.uuid_lsb_)
+   && ::protozero::internal::gen_helpers::EqualsField(was_write_into_file_, other.was_write_into_file_);
 }
 
 bool CloneSessionResponse::ParseFromArray(const void* raw, size_t size) {
@@ -58268,6 +59239,9 @@ bool CloneSessionResponse::ParseFromArray(const void* raw, size_t size) {
         break;
       case 4 /* uuid_lsb */:
         field.get(&uuid_lsb_);
+        break;
+      case 5 /* was_write_into_file */:
+        field.get(&was_write_into_file_);
         break;
       default:
         field.SerializeAndAppendTo(&unknown_fields_);
@@ -58308,6 +59282,11 @@ void CloneSessionResponse::Serialize(::protozero::Message* msg) const {
   // Field 4: uuid_lsb
   if (_has_field_[4]) {
     ::protozero::internal::gen_helpers::SerializeVarInt(4, uuid_lsb_, msg);
+  }
+
+  // Field 5: was_write_into_file
+  if (_has_field_[5]) {
+    ::protozero::internal::gen_helpers::SerializeTinyVarInt(5, was_write_into_file_, msg);
   }
 
   protozero::internal::gen_helpers::SerializeUnknownFields(unknown_fields_, msg);
@@ -63257,7 +64236,8 @@ struct sockaddr_vm {
 #include <unistd.h>
 #endif
 
-#if PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
 #include <sys/ucred.h>
 #endif
 
@@ -63623,7 +64603,8 @@ UnixSocketRaw::UnixSocketRaw(ScopedSocketHandle fd,
                              SockType type)
     : fd_(std::move(fd)), family_(family), type_(type) {
   PERFETTO_CHECK(fd_);
-#if PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
   const int no_sigpipe = 1;
   setsockopt(*fd_, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
 #endif
@@ -64252,7 +65233,8 @@ void UnixSocket::ReadPeerCredentialsPosix() {
   PERFETTO_CHECK(res == 0);
   peer_uid_ = user_cred.uid;
   peer_pid_ = user_cred.pid;
-#elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
+#elif PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD)
   struct xucred user_cred;
   socklen_t len = sizeof(user_cred);
   int res = getsockopt(sock_raw_.fd(), 0, LOCAL_PEERCRED, &user_cred, &len);
@@ -66533,6 +67515,7 @@ base::MachineID GenerateMachineID(base::UnixSocket* sock,
 uid_t HostImpl::ClientConnection::GetPosixPeerUid() const {
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
   if (sock->family() == base::SockFamily::kUnix)
     return sock->peer_uid_posix();
@@ -67772,6 +68755,7 @@ void RelayPortProxy::SyncClock(const SyncClockRequest& request, DeferredSyncCloc
 
 #if PERFETTO_BUILDFLAG(PERFETTO_OS_LINUX) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE)
 #include <unistd.h>
 #endif
@@ -68048,6 +69032,7 @@ base::ScopedFile CreateMemfd(const char*, unsigned int) {
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_WASM)
 
 #include <stddef.h>
@@ -68128,6 +69113,7 @@ class PosixSharedMemory : public SharedMemory {
     PERFETTO_BUILDFLAG(PERFETTO_OS_ANDROID) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_APPLE) ||   \
     PERFETTO_BUILDFLAG(PERFETTO_OS_FUCHSIA) || \
+    PERFETTO_BUILDFLAG(PERFETTO_OS_FREEBSD) || \
     PERFETTO_BUILDFLAG(PERFETTO_OS_WASM)
 
 #include <fcntl.h>
@@ -69127,6 +70113,17 @@ void ConsumerIPCClientImpl::CloneSession(CloneSessionArgs args) {
     return;
   }
 
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+  if (args.output_file_fd) {
+    consumer_->OnSessionCloned(
+        {false,
+         "Passing FDs into CloneSession is not supported on Windows",
+         {},
+         false});
+    return;
+  }
+#endif
+
   protos::gen::CloneSessionRequest req;
   if (args.tsid) {
     req.set_session_id(args.tsid);
@@ -69164,14 +70161,18 @@ void ConsumerIPCClientImpl::CloneSession(CloneSessionArgs args) {
           // If the IPC fails, we are talking to an older version of the service
           // that didn't support CloneSession at all.
           weak_this->consumer_->OnSessionCloned(
-              {false, "CloneSession IPC not supported", {}});
+              {false, "CloneSession IPC not supported", {}, false});
         } else {
           base::Uuid uuid(response->uuid_lsb(), response->uuid_msb());
           weak_this->consumer_->OnSessionCloned(
-              {response->success(), response->error(), uuid});
+              {response->success(), response->error(), uuid,
+               response->was_write_into_file()});
         }
       });
-  consumer_port_.CloneSession(req, std::move(async_response));
+  // |args.output_file_fd| will be closed when this function returns, but it's
+  // fine because the IPC layer dup()'s it when sending the IPC.
+  consumer_port_.CloneSession(req, std::move(async_response),
+                              *args.output_file_fd);
 }
 }  // namespace perfetto
 // gen_amalgamated begin source: src/tracing/ipc/producer/producer_ipc_client_impl.cc
@@ -70566,6 +71567,9 @@ void ConsumerIPCService::CloneSession(
   if (req.has_clone_trigger_delay_ms()) {
     args.clone_trigger_delay_ms = req.clone_trigger_delay_ms();
   }
+  // The client (perfetto_cmd) always sends the file descriptor, but the traced
+  // uses it only if the session to clone is 'write_into_file' session.
+  args.output_file_fd = ipc::Service::TakeReceivedFD();
   remote_consumer->service_endpoint->CloneSession(std::move(args));
 }
 
@@ -70728,6 +71732,7 @@ void ConsumerIPCService::RemoteConsumer::OnSessionCloned(
   resp->set_error(args.error);
   resp->set_uuid_msb(args.uuid.msb());
   resp->set_uuid_lsb(args.uuid.lsb());
+  resp->set_was_write_into_file(args.was_write_into_file);
   std::move(clone_session_response).Resolve(std::move(resp));
 }
 
