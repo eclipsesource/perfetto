@@ -128,8 +128,9 @@ function downloadTrace(trace: TraceImpl) {
   }
 }
 
-function recordMetatrace(engine: Engine) {
+function recordMetatrace(trace: TraceImpl) {
   AppImpl.instance.analytics.logEvent('Trace Actions', 'Record metatrace');
+  const engine = trace.engine;
 
   const highPrecisionTimersAvailable =
     window.crossOriginIsolated || engine.mode === 'HTTP_RPC';
@@ -146,6 +147,7 @@ Note that events under timer precision (1ms) will dropped.
 Alternatively, connect to a trace_processor_shell --httpd instance.
 `;
     showModal({
+      owner: trace,
       title: `Trace processor doesn't have high-precision timers`,
       content: m('.pf-modal-pre', PROMPT),
       buttons: [
@@ -170,8 +172,10 @@ Alternatively, connect to a trace_processor_shell --httpd instance.
   }
 }
 
-async function toggleMetatrace(e: Engine) {
-  return isMetatracingEnabled() ? finaliseMetatrace(e) : recordMetatrace(e);
+async function toggleMetatrace(trace: TraceImpl) {
+  return isMetatracingEnabled()
+    ? finaliseMetatrace(trace.engine)
+    : recordMetatrace(trace);
 }
 
 async function finaliseMetatrace(engine: Engine) {
@@ -243,8 +247,8 @@ class EngineRPCWidget implements m.ClassComponent<OptionalTraceImplAttrs> {
   }
 }
 
-const ServiceWorkerWidget: m.Component = {
-  view() {
+const ServiceWorkerWidget: m.Component<OptionalTraceImplAttrs> = {
+  view({attrs}) {
     let cssClass = '';
     let title = 'Service Worker: ';
     let label = 'N/A';
@@ -275,6 +279,7 @@ const ServiceWorkerWidget: m.Component = {
         return;
       }
       showModal({
+        owner: attrs.trace ?? AppImpl.instance,
         title: 'Disable service worker?',
         content: m(
           'div',
@@ -324,7 +329,7 @@ class SidebarFooter implements m.ClassComponent<OptionalTraceImplAttrs> {
     return m(
       '.pf-sidebar__footer',
       m(EngineRPCWidget, attrs),
-      m(ServiceWorkerWidget),
+      m(ServiceWorkerWidget, {trace: attrs.trace}),
       m(
         '.pf-sidebar__version',
         m(
@@ -547,7 +552,7 @@ const traceItemsRegistered = new WeakSet<TraceImpl>();
 function registerMenuItems(trace: TraceImpl | undefined) {
   if (!globalItemsRegistered) {
     globalItemsRegistered = true;
-    registerGlobalSidebarEntries();
+    registerGlobalSidebarEntries(trace);
   }
   if (trace !== undefined && !traceItemsRegistered.has(trace)) {
     traceItemsRegistered.add(trace);
@@ -555,14 +560,14 @@ function registerMenuItems(trace: TraceImpl | undefined) {
   }
 }
 
-function registerGlobalSidebarEntries() {
+function registerGlobalSidebarEntries(trace: TraceImpl | undefined) {
   const app = AppImpl.instance;
   // TODO(primiano): The Open file / Open with legacy entries are registered by
   // the 'perfetto.CoreCommands' plugins. Make things consistent.
   app.sidebar.addMenuItem({
     section: 'support',
     text: 'Keyboard shortcuts',
-    action: toggleHelp,
+    action: () => toggleHelp(trace ?? app),
     icon: 'help',
   });
   app.sidebar.addMenuItem({
@@ -647,7 +652,7 @@ function registerTraceMenuItems(trace: TraceImpl) {
     sortOrder: 5,
     text: () =>
       isMetatracingEnabled() ? 'Finalize metatrace' : 'Record metatrace',
-    action: () => toggleMetatrace(trace.engine),
+    action: () => toggleMetatrace(trace),
     icon: () => (isMetatracingEnabled() ? 'download' : 'fiber_smart_record'),
   });
 }

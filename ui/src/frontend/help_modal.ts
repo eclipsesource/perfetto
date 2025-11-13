@@ -25,10 +25,12 @@ import {
 } from '../base/keyboard_layout_map';
 import {KeyMapping} from './viewer_page/wasd_navigation_handler';
 import {raf} from '../core/raf_scheduler';
+import {App} from '../public/app';
 
-export function toggleHelp() {
+export function toggleHelp(app: App) {
   AppImpl.instance.analytics.logEvent('User Actions', 'Show help');
   return showModal({
+    owner: app,
     title: 'Perfetto Help',
     content: () => m(KeyMappingsHelp),
   });

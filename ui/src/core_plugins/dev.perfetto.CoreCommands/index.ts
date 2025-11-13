@@ -776,6 +776,7 @@ export default class CoreCommands implements PerfettoPlugin {
         const json = localStorage.getItem(QUICKSAVE_LOCALSTORAGE_KEY);
         if (json === null) {
           showModal({
+            owner: ctx,
             title: 'Nothing saved in the quicksave slot',
             buttons: [{text: 'Dismiss'}],
           });

@@ -34,6 +34,7 @@ export function showImportWithStatementModal(
 ) {
   let sqlText = '';
   showModal({
+    owner: trace,
     title: 'Import from WITH statement',
     content: m(
       'div',
@@ -58,13 +59,13 @@ export function showImportWithStatementModal(
           const json = createGraphFromSql(sqlText);
           const newState = deserializeState(json, trace, sqlModules);
           onStateUpdate(newState);
-          closeModal();
+          closeModal(undefined, trace);
         },
       },
       {
         text: 'Cancel',
         action: () => {
-          closeModal();
+          closeModal(undefined, trace);
         },
       },
     ],

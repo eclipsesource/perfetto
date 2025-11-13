@@ -164,8 +164,10 @@ export class TrackView {
       scrollIntoView = true;
     }
 
+    const modalOwner = this.trace;
     function showTrackMoveErrorModal(msg: string) {
       showModal({
+        owner: modalOwner,
         title: 'Error',
         content: msg,
         buttons: [{text: 'OK'}],
@@ -612,7 +614,7 @@ const TrackPopupMenu = {
       m(
         MenuItem,
         {label: 'Track details', icon: 'info'},
-        renderTrackDetailsMenu(attrs.node, attrs.descriptor),
+        renderTrackDetailsMenu(attrs.trace, attrs.node, attrs.descriptor),
       ),
       m(MenuDivider),
       m(
@@ -691,7 +693,11 @@ function copyToWorkspace(trace: Trace, node: TrackNode, ws?: Workspace) {
   return ws;
 }
 
-function renderTrackDetailsMenu(node: TrackNode, descriptor?: Track) {
+function renderTrackDetailsMenu(
+  trace: Trace,
+  node: TrackNode,
+  descriptor?: Track,
+) {
   const fullPath = node.fullPath.join(' \u2023 ');
   const query = descriptor?.renderer.getDataset?.()?.query();
 
@@ -729,6 +735,7 @@ function renderTrackDetailsMenu(node: TrackNode, descriptor?: Track) {
             {
               onclick: () => {
                 showModal({
+                  owner: trace,
                   title: 'Query for track',
                   content: () => m(CodeSnippet, {text: query, language: 'SQL'}),
                 });

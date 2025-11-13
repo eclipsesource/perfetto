@@ -184,7 +184,7 @@ export function postMessageHandler(messageEvent: MessageEvent) {
   }
 
   if (messageEvent.data === 'SHOW-HELP') {
-    toggleHelp();
+    toggleHelp(AppImpl.instance.trace ?? AppImpl.instance);
     return;
   }
 

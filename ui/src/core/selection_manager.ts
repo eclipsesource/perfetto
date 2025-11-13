@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {assertTrue, assertUnreachable} from '../base/logging';
+import {assertExists, assertTrue, assertUnreachable} from '../base/logging';
 import {
   Selection,
   Area,
@@ -35,6 +35,7 @@ import {SerializedSelection} from './state_serialization_schema';
 import {showModal} from '../widgets/modal';
 import {NUM, SqlValue, UNKNOWN} from '../trace_processor/query_result';
 import {SourceDataset, UnionDataset} from '../trace_processor/dataset';
+import {Trace} from '../public/trace';
 import {Track} from '../public/track';
 import {TimelineImpl} from './timeline';
 import {HighPrecisionTime} from '../base/high_precision_time';
@@ -60,6 +61,7 @@ export class SelectionManagerImpl implements SelectionManager {
     Selection,
     SelectionDetailsPanel
   >();
+  private _trace?: Trace;
   public readonly areaSelectionTabs: AreaSelectionTab[] = [];
 
   constructor(
@@ -70,6 +72,15 @@ export class SelectionManagerImpl implements SelectionManager {
     private scrollHelper: ScrollHelper,
     private onSelectionChange: (s: Selection, opts: SelectionOpts) => void,
   ) {}
+
+  get trace(): Trace {
+    return assertExists(this._trace);
+  }
+
+  setTrace(trace: Trace): void {
+    assertTrue(this._trace === undefined);
+    this._trace = trace;
+  }
 
   clearSelection(): void {
     this.setSelection({kind: 'empty'});
@@ -149,6 +160,7 @@ export class SelectionManagerImpl implements SelectionManager {
       }
     } catch (ex) {
       showModal({
+        owner: this.trace,
         title: 'Failed to restore the selected event',
         content: m(
           'div',

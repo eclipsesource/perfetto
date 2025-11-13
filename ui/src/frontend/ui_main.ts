@@ -91,7 +91,7 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
       {
         id: 'dev.perfetto.ShowHelp',
         name: 'Show help',
-        callback: () => toggleHelp(),
+        callback: () => toggleHelp(this.preferredApp),
         defaultHotkey: '?',
       },
     ];
@@ -103,7 +103,7 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
     // commands or anything in this state as they will be useless.
     if (trace === undefined) return;
     document.title = `${trace.traceInfo.traceTitle || 'Trace'} - Perfetto UI`;
-    this.maybeShowJsonWarning();
+    this.maybeShowJsonWarning(this.preferredApp);
   }
 
   private renderOmnibox(): m.Children {
@@ -385,7 +385,7 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
         this.preferredApp.pages.renderPageForCurrentRoute(this.trace),
       ),
       m(CookieConsent),
-      maybeRenderFullscreenModalDialog(),
+      maybeRenderFullscreenModalDialog(this.preferredApp),
       showStatusBarFlag.get() && renderStatusBar(this.trace),
       this.preferredApp.perfDebugging.renderPerfStats(),
     ]);
@@ -442,7 +442,7 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
     }
   }
 
-  private async maybeShowJsonWarning() {
+  private async maybeShowJsonWarning(app: AppImpl | TraceImpl) {
     // Show warning if the trace is in JSON format.
     const isJsonTrace = this.trace?.traceInfo.traceType === 'json';
     const SHOWN_JSON_WARNING_KEY = 'shownJsonWarning';
@@ -462,6 +462,7 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
     window.localStorage.setItem(SHOWN_JSON_WARNING_KEY, 'true');
 
     showModal({
+      owner: app,
       title: 'Warning',
       content: m(
         'div',

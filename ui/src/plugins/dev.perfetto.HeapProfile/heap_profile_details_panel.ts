@@ -158,6 +158,7 @@ export class HeapProfileFlamegraphDetailsPanel
       return undefined;
     }
     return m(Modal, {
+      owner: trace,
       title: 'The flamegraph is incomplete',
       vAlign: 'TOP',
       content: m(
@@ -482,6 +483,7 @@ async function downloadPprof(trace: Trace, upid: number, ts: time) {
   );
   if (!trace.traceInfo.downloadable) {
     showModal({
+      owner: trace,
       title: 'Download not supported',
       content: m('div', 'This trace file does not support downloads'),
     });

@@ -47,6 +47,7 @@ export async function shareTrace(trace: TraceImpl) {
       const traceUrl = await uploadTraceBlob(trace);
       const hash = await createPermalink(trace, traceUrl);
       showModal({
+        owner: trace,
         title: 'Permalink',
         content: m(CopyableLink, {
           url: `${self.location.origin}/#!/?s=${hash}`,
@@ -69,6 +70,7 @@ export async function shareTrace(trace: TraceImpl) {
           const hash = await createPermalink(trace, undefined);
           const urlWithHash = traceUrl.replace(STATE_HASH_PLACEHOLDER, hash);
           showModal({
+            owner: trace,
             title: 'Permalink',
             content: m(CopyableLink, {url: urlWithHash}),
           });
@@ -76,6 +78,7 @@ export async function shareTrace(trace: TraceImpl) {
       } else {
         // Trace is not sharable, has a URL, but no placeholder.
         showModal({
+          owner: trace,
           title: 'Cannot create permalink from external trace',
           content: m(
             '',
@@ -94,6 +97,7 @@ export async function shareTrace(trace: TraceImpl) {
       // Trace is not sharable and has no URL. Nothing we can do. Just tell the
       // user.
       showModal({
+        owner: trace,
         title: 'Cannot create permalink',
         content: m(
           'p',

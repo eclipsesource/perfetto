@@ -233,6 +233,11 @@ export class TraceImpl implements Trace {
     this.traceCtx = ctx;
     const traceUnloadTrash = ctx.trash;
 
+    if (pluginId === CORE_PLUGIN_ID) {
+      // Inject myself into the selection manager so that it can target modal dialogs
+      ctx.selectionMgr.setTrace(this);
+    }
+
     const childOmnibox = appImpl.omnibox.childFor(ctx);
     traceUnloadTrash.use(childOmnibox);
     this.omniboxMgr = childOmnibox;

@@ -1475,6 +1475,7 @@ export class WidgetsPage implements m.ClassComponent<{app: App}> {
             label: 'Show Modal',
             onclick: () => {
               showModal({
+                owner: attrs.app,
                 title: 'Attention',
                 icon: Icons.Help,
                 content: () => [

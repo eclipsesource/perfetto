@@ -17,6 +17,9 @@ import {defer} from '../base/deferred';
 import {Icon} from './icon';
 import {Button, ButtonVariant} from './button';
 import {Intent} from './common';
+import {getOrCreate} from '../base/utils';
+import {App} from '../public/app';
+import {assertExists, assertTrue} from '../base/logging';
 
 // This module deals with modal dialogs. Unlike most components, here we want to
 // render the DOM elements outside of the corresponding vdom tree. For instance
@@ -46,6 +49,8 @@ import {Intent} from './common';
 // showModal()/closeModal() are irrelevant in this case.
 
 export interface ModalAttrs {
+  /** The default owner is the currently active trace or, if none, the app instance. */
+  owner?: App;
   title: string;
   icon?: string;
   className?: string;
@@ -81,6 +86,12 @@ export interface ModalButton {
 // want to nest a modal dialog in a <div> they control (i.e. when the modal
 // is scoped to a mithril component, not fullscreen).
 export class Modal implements m.ClassComponent<ModalAttrs> {
+  private readonly owner: App;
+
+  constructor(node: m.CVnode<ModalAttrs>) {
+    this.owner = defaultOwnerOf(node.attrs);
+  }
+
   onbeforeremove(vnode: m.VnodeDOM<ModalAttrs>) {
     const removePromise = defer<void>();
     vnode.dom.addEventListener('animationend', () => {
@@ -135,7 +146,7 @@ export class Modal implements m.ClassComponent<ModalAttrs> {
           variant: ButtonVariant.Filled,
           id: button.id,
           onclick: () => {
-            closeModal(attrs.key);
+            closeModal(attrs.key, this.owner);
             if (button.action !== undefined) button.action();
           },
           label: button.text,
@@ -165,7 +176,7 @@ export class Modal implements m.ClassComponent<ModalAttrs> {
           ),
           m(
             'button.pf-button[aria-label=Close Modal]',
-            {onclick: () => closeModal(attrs.key)},
+            {onclick: () => closeModal(attrs.key, this.owner)},
             m(Icon, {icon: 'close'}),
           ),
         ),
@@ -181,30 +192,63 @@ export class Modal implements m.ClassComponent<ModalAttrs> {
     // on the dialog itself.
     const t = e.target;
     if (t instanceof Element && t.classList.contains('modal-backdrop')) {
-      closeModal(attrs.key);
+      closeModal(attrs.key, this.owner);
     }
   }
 
   onBackdropKeydown(attrs: ModalAttrs, e: KeyboardEvent) {
     e.stopPropagation();
     if (e.key === 'Escape') {
-      closeModal(attrs.key);
+      closeModal(attrs.key, this.owner);
     }
   }
 }
 
-// Set by showModal().
-let currentModal: ModalAttrs | undefined = undefined;
-let generationCounter = 0;
+interface ModalState {
+  currentModal: ModalAttrs | undefined;
+  generationCounter: number;
+}
 
-// This should be called only by app.ts and nothing else.
+// Set by showModal().
+const modalStates = new WeakMap<App, ModalState>();
+
+function getModalState(owner: App | undefined) {
+  return getOrCreate(modalStates, defaultOwner(owner), () => ({
+    currentModal: undefined,
+    generationCounter: 0,
+  }));
+}
+
+function getCurrentModal(owner: App | undefined) {
+  const state = modalStates.get(defaultOwner(owner));
+  return state?.currentModal;
+}
+
+// We have to inject the defaulting of the owner to avoid a dependency cycle via AppImpl.
+export function setDefaultOwnerFunction(defaultOwnerFunction: () => App): void {
+  assertTrue(_defaultOwner === undefined);
+  _defaultOwner = defaultOwnerFunction;
+}
+
+let _defaultOwner: (app?: App) => App;
+
+function defaultOwner(app: App | undefined): App {
+  return app ?? assertExists(_defaultOwner)(app);
+}
+
+function defaultOwnerOf(userAttrs: ModalAttrs): App {
+  return defaultOwner(userAttrs.owner);
+}
+
+// This should be called only by UiMain.ts and nothing else.
 // This generates the modal dialog at the root of the DOM, so it can overlay
 // on top of everything else.
-export function maybeRenderFullscreenModalDialog() {
+export function maybeRenderFullscreenModalDialog(owner: App) {
   // We use the generation counter as key to distinguish between: (1) two render
   // passes for the same dialog vs (2) rendering a new dialog that has been
   // created invoking showModal() while another modal dialog was already being
   // shown.
+  const currentModal = getCurrentModal(owner);
   if (currentModal === undefined) return [];
   let children: m.Children;
   if (currentModal.content === undefined) {
@@ -219,12 +263,14 @@ export function maybeRenderFullscreenModalDialog() {
 
 // Shows a full-screen modal dialog.
 export async function showModal(userAttrs: ModalAttrs): Promise<void> {
+  const owner = defaultOwnerOf(userAttrs);
   const returnedClosePromise = defer<void>();
   const userOnClose = userAttrs.onClose ?? (() => {});
 
   // If the user doesn't specify a key (to match the closeModal), generate a
   // random key to distinguish two showModal({key:undefined}) calls.
-  const key = userAttrs.key ?? `${++generationCounter}`;
+  const modalState = getModalState(owner);
+  const key = userAttrs.key ?? `${++modalState.generationCounter}`;
   const attrs: ModalAttrs = {
     ...userAttrs,
     key,
@@ -233,16 +279,16 @@ export async function showModal(userAttrs: ModalAttrs): Promise<void> {
       returnedClosePromise.resolve();
     },
   };
-  currentModal = attrs;
-  redrawModal();
+  modalState.currentModal = attrs;
+  redrawModal(owner);
   return returnedClosePromise;
 }
 
 // Technically we don't need to redraw the whole app, but it's the more
 // pragmatic option. This is exposed to keep the plugin code more clear, so it's
 // evident why a redraw is requested.
-export function redrawModal() {
-  if (currentModal !== undefined) {
+export function redrawModal(owner?: App) {
+  if (getCurrentModal(owner) !== undefined) {
     m.redraw();
   }
 }
@@ -252,19 +298,20 @@ export function redrawModal() {
 // matches. This is to avoid accidentally closing another dialog that popped
 // in the meanwhile. If undefined, it closes whatever modal dialog is currently
 // open (if any).
-export function closeModal(key?: string) {
+export function closeModal(key?: string, owner?: App) {
+  const modalState = getModalState(owner);
   if (
-    currentModal === undefined ||
-    (key !== undefined && currentModal.key !== key)
+    modalState.currentModal === undefined ||
+    (key !== undefined && modalState.currentModal.key !== key)
   ) {
     // Somebody else closed the modal dialog already, or opened a new one with
     // a different key.
     return;
   }
-  currentModal = undefined;
+  modalState.currentModal = undefined;
   m.redraw();
 }
 
-export function getCurrentModalKey(): string | undefined {
-  return currentModal?.key;
+export function getCurrentModalKey(owner?: App): string | undefined {
+  return getCurrentModal(owner)?.key;
 }

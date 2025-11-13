@@ -70,7 +70,7 @@ export default class implements PerfettoPlugin {
     ctx.commands.registerCommand({
       id: `dev.perfetto.EnableTimelineSync`,
       name: 'Enable timeline sync with other Perfetto UI tabs',
-      callback: () => this.showTimelineSyncDialog(),
+      callback: () => this.showTimelineSyncDialog(ctx),
     });
     ctx.commands.registerCommand({
       id: `dev.perfetto.DisableTimelineSync`,
@@ -80,7 +80,7 @@ export default class implements PerfettoPlugin {
     ctx.commands.registerCommand({
       id: `dev.perfetto.ToggleTimelineSync`,
       name: 'Toggle timeline sync with other PerfettoUI tabs',
-      callback: () => this.toggleTimelineSync(),
+      callback: () => this.toggleTimelineSync(ctx),
       defaultHotkey: 'Mod+Alt+S',
     });
 
@@ -92,7 +92,7 @@ export default class implements PerfettoPlugin {
           intent: this.active ? Intent.Success : Intent.None,
           onclick: this.active
             ? undefined
-            : () => this.showTimelineSyncDialog(),
+            : () => this.showTimelineSyncDialog(ctx),
         };
       },
       popupContent: () => {
@@ -157,15 +157,15 @@ export default class implements PerfettoPlugin {
     } as SyncMessage);
   }
 
-  private toggleTimelineSync() {
+  private toggleTimelineSync(trace: Trace) {
     if (this._sessionId === 0) {
-      this.showTimelineSyncDialog();
+      this.showTimelineSyncDialog(trace);
     } else {
       this.disableTimelineSync(this._sessionId);
     }
   }
 
-  private showTimelineSyncDialog() {
+  private showTimelineSyncDialog(trace: Trace) {
     let clientsSelect: HTMLSelectElement;
 
     // This nested function is invoked when the modal dialog buton is pressed.
@@ -236,6 +236,7 @@ export default class implements PerfettoPlugin {
     };
 
     showModal({
+      owner: trace,
       title: 'Synchronize timeline across several tabs',
       content: renderModalContents,
       buttons: [
@@ -318,7 +319,7 @@ export default class implements PerfettoPlugin {
             lastHeartbeat: Date.now(),
           });
           this.purgeInactiveClients();
-          redrawModal();
+          redrawModal(this._ctx);
         }
         break;
       case 'MSG_SESSION_START':

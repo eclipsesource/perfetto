@@ -37,7 +37,7 @@ import {checkHttpRpcConnection} from './rpc_http_dialog';
 import {maybeOpenTraceFromRoute} from './trace_url_handler';
 import {renderViewerPage} from './viewer_page/viewer_page';
 import {HttpRpcEngine} from '../trace_processor/http_rpc_engine';
-import {showModal} from '../widgets/modal';
+import {setDefaultOwnerFunction, showModal} from '../widgets/modal';
 import {IdleDetector} from './idle_detector';
 import {IdleDetectorWindow} from './idle_detector_interface';
 import {AppImpl} from '../core/app_impl';
@@ -268,6 +268,8 @@ function main() {
     startupCommandsSetting,
     enforceStartupCommandAllowlistSetting,
   });
+
+  setDefaultOwnerFunction(() => AppImpl.instance.trace ?? AppImpl.instance);
 
   // Load the css. The load is asynchronous and the CSS is not ready by the time
   // appendChild returns.

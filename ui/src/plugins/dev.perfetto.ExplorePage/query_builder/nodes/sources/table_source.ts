@@ -55,12 +55,14 @@ interface TableSelectionResult {
 }
 
 export function modalForTableSelection(
+  trace: Trace,
   sqlModules: SqlModules,
 ): Promise<TableSelectionResult | undefined> {
   return new Promise((resolve) => {
     let searchQuery = '';
 
     showModal({
+      owner: trace,
       title: 'Choose a table',
       content: () => {
         return m(
@@ -77,12 +79,12 @@ export function modalForTableSelection(
                 columnInfoFromSqlColumn(c, true),
               );
               resolve({sqlTable, sourceCols});
-              closeModal();
+              closeModal(undefined, trace);
             },
             searchQuery,
             onSearchQueryChange: (query) => {
               searchQuery = query;
-              redrawModal();
+              redrawModal(trace);
             },
             autofocus: true,
           }),

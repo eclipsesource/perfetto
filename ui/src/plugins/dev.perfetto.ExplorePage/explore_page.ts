@@ -70,7 +70,7 @@ export class ExplorePage implements m.ClassComponent<ExplorePageAttrs> {
       return;
     }
 
-    const selection = await modalForTableSelection(sqlModules);
+    const selection = await modalForTableSelection(trace, sqlModules);
 
     if (selection) {
       const newNode = new TableSourceNode({
