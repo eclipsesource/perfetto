@@ -24,6 +24,7 @@ import {TraceImpl} from '../../core/trace_impl';
 import {Note, SpanNote} from '../../public/note';
 import {COLOR_BORDER, TRACK_SHELL_WIDTH} from '../css_constants';
 import {generateTicks, getMaxMajorTicks, TickType} from './gridline_helper';
+import {NoteDeleteBadgeState} from './note_badge';
 import {TimelineToolbar} from './timeline_toolbar';
 
 const FLAG_WIDTH = 16;
@@ -49,6 +50,7 @@ function getStartTimestamp(note: Note | SpanNote) {
 
 export class NotesPanel {
   private readonly trace: TraceImpl;
+  private readonly noteDeleteBadge;
   private timescale?: TimeScale; // The timescale from the last render()
   private hoveredX: null | number = null;
   private mouseDragging = false;
@@ -56,13 +58,14 @@ export class NotesPanel {
 
   constructor(trace: TraceImpl) {
     this.trace = trace;
+    this.noteDeleteBadge = new NoteDeleteBadgeState(trace);
   }
 
   render(): m.Children {
     return m(
       '',
       {
-        style: {height: `${this.height}px`},
+        style: {height: `${this.height}px`, position: 'relative'},
         onmousedown: () => {
           // If the user clicks & drags, very likely they just want to measure
           // the time horizontally, not set a flag. This debouncing is done to
@@ -92,6 +95,7 @@ export class NotesPanel {
         },
       },
       m(TimelineToolbar, {trace: this.trace}),
+      this.noteDeleteBadge.render(this.timescale!, TRACK_SHELL_WIDTH),
     );
   }
 
@@ -149,7 +153,13 @@ export class NotesPanel {
       }
       const currentIsHovered =
         this.hoveredX !== null && this.hitTestNote(this.hoveredX, note);
-      if (currentIsHovered) aNoteIsHovered = true;
+
+      if (currentIsHovered) {
+        aNoteIsHovered = true;
+        this.noteDeleteBadge.updateHoveredNote(note);
+      } else {
+        this.noteDeleteBadge.updateHoveredNote(null);
+      }
 
       const selection = this.trace.selection.selection;
       const isSelected = selection.kind === 'note' && selection.id === note.id;
@@ -191,8 +201,8 @@ export class NotesPanel {
       this.trace.timeline.hoveredNoteTimestamp = undefined;
     }
 
-    // View preview note flag when hovering on notes panel.
-    if (!aNoteIsHovered && this.hoveredX !== null) {
+    // View preview note flag when hovering on notes panel but not a delete badge.
+    if (!aNoteIsHovered && this.hoveredX !== null && !this.noteDeleteBadge.hovered) {
       const timestamp = timescale.pxToHpTime(this.hoveredX).toTime();
       if (visibleWindow.contains(timestamp)) {
         this.trace.timeline.hoveredNoteTimestamp = timestamp;
