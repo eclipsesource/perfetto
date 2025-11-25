@@ -1,4 +1,4 @@
-// Copyright (C) 2024 The Android Open Source Project
+// Copyright (C) 2025 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,9 +37,7 @@ export class AsyncQueue {
    * Schedule a task to be run.
    *
    * @param work An async function to schedule.
-   * @returns A promise that resolves when either the task has finished
-   * executing, or after the task has silently been discarded because a newer
-   * task was scheduled.
+   * @returns A promise that resolves with the result of running of the task
    */
   schedule<T>(work: Callback<T>): Promise<T> {
     const deferred = defer<T>();
