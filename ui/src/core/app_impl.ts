@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {AsyncLimiter} from '../base/async_limiter';
+import {AsyncQueue} from '../base/async_queue';
 import {defer} from '../base/deferred';
 import {EvtSource} from '../base/events';
 import {assertExists, assertIsInstance, assertTrue} from '../base/logging';
@@ -103,7 +103,7 @@ export class AppContext {
   readonly initArgs: AppInitArgs;
   readonly embeddedMode: boolean;
   readonly testingMode: boolean;
-  readonly openTraceAsyncLimiter = new AsyncLimiter();
+  readonly openTraceAsyncQueue = new AsyncQueue();
   readonly settingsManager: SettingsManagerImpl;
 
   // This is normally empty and is injected with extra google-internal packages
@@ -451,15 +451,13 @@ export class AppImpl implements App {
       }
     }
 
-    const result = defer<TraceImpl>();
-
     // Rationale for asyncLimiter: openTrace takes several seconds and involves
     // a long sequence of async tasks (e.g. invoking plugins' onLoad()). These
     // tasks cannot overlap if the user opens traces in rapid succession, as
     // they will mess up the state of registries. So once we start, we must
     // complete trace loading (we don't bother supporting cancellations. If the
     // user is too bothered, they can reload the tab).
-    await this.appCtx.openTraceAsyncLimiter.schedule(async () => {
+    return this.appCtx.openTraceAsyncQueue.schedule(async () => {
       // Wait for extras parsing descriptors to be loaded
       // via is_internal_user.js. This prevents a race condition where
       // trace loading would otherwise begin before this data is available.
@@ -483,17 +481,12 @@ export class AppImpl implements App {
         // loadTrace to be finished before setting it because some internal
         // implementation details of loadTrace() rely on that trace to be current
         // to work properly (mainly the router hash uuid).
-
-        result.resolve(trace);
-      } catch (error) {
-        result.reject(error);
+        return trace;
       } finally {
         this.appCtx.setTraceLoading(src, false);
         raf.scheduleFullRedraw();
       }
     });
-
-    return result;
   }
 
   // Called by trace_loader.ts soon after it has created a new TraceImpl.
