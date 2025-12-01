@@ -102,7 +102,6 @@ export class UiMainPerTrace implements m.ClassComponent<UiMainPerTraceAttrs> {
     // When the UI loads there is no trace. There is no point registering
     // commands or anything in this state as they will be useless.
     if (trace === undefined) return;
-    document.title = `${trace.traceInfo.traceTitle || 'Trace'} - Perfetto UI`;
     this.maybeShowJsonWarning(this.preferredApp);
   }
 
