@@ -137,3 +137,20 @@ export function bindEventListener<K extends keyof HTMLElementEventMap>(
     },
   };
 }
+
+export function ancestorThat(el: Element | null, predicate: (htmlEl: HTMLElement) => boolean): HTMLElement | undefined {
+  let result: HTMLElement | undefined;
+
+  while (!result && el instanceof HTMLElement) {
+    if (predicate(el)) {
+      result = el;
+    }
+    el = el.parentElement;
+  }
+
+  return result;
+}
+
+export function matchesSelector(selector: string): (el: HTMLElement) => boolean {
+  return (el) => el.matches(selector);
+}
