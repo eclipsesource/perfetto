@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {DisposableStack} from '../../base/disposable_stack';
-import {currentTargetOffset, elementIsEditable} from '../../base/dom_utils';
+import {ancestorThat, currentTargetOffset, elementIsEditable, matchesSelector} from '../../base/dom_utils';
 import {Animation} from '../animation';
 
 // When first starting to pan or zoom, move at least this many units.
@@ -113,18 +113,21 @@ export class KeyboardNavigationHandler implements Disposable {
     this.onZoomed = onZoomed;
     this.trash = new DisposableStack();
 
-    if (!element.getAttribute('tabindex')) {
+    // Don't add the listener on the document body because we may be embedded in a host application.
+    // Instead, add the listener on the containing UIMain if we can find it, otherwise the element
+    const keyTarget = ancestorThat(this.element, matchesSelector('.pf-ui-main')) ?? this.element;
+    if (!keyTarget.getAttribute('tabindex')) {
       // Make it focusable and also tabbable for keyboard accessibility
-      element.setAttribute('tabindex', '0');
+      keyTarget.setAttribute('tabindex', '0');
     }
 
-    document.body.addEventListener('keydown', this.boundOnKeyDown);
-    document.body.addEventListener('keyup', this.boundOnKeyUp);
+    keyTarget.addEventListener('keydown', this.boundOnKeyDown);
+    keyTarget.addEventListener('keyup', this.boundOnKeyUp);
     this.element.addEventListener('mousemove', this.boundOnMouseMove);
     this.trash.defer(() => {
       this.element.removeEventListener('mousemove', this.boundOnMouseMove);
-      document.body.removeEventListener('keyup', this.boundOnKeyUp);
-      document.body.removeEventListener('keydown', this.boundOnKeyDown);
+      keyTarget.removeEventListener('keyup', this.boundOnKeyUp);
+      keyTarget.removeEventListener('keydown', this.boundOnKeyDown);
     });
   }
 

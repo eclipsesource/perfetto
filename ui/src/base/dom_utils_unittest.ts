@@ -13,10 +13,12 @@
 // limitations under the License.
 
 import {
+  ancestorThat,
   bindEventListener,
   elementIsEditable,
   findRef,
   isOrContains,
+  matchesSelector,
   toHTMLElement,
 } from './dom_utils';
 
@@ -160,5 +162,104 @@ describe('bindEventListener', () => {
       disposable[Symbol.dispose]();
       disposable[Symbol.dispose]();
     }).not.toThrow();
+  });
+});
+
+describe('ancestorThat', () => {
+  test('returns undefined for null element', () => {
+    expect(ancestorThat(null, () => true)).toBeUndefined();
+  });
+
+  test('returns the element itself if it matches the predicate', () => {
+    const el = document.createElement('div');
+    el.classList.add('target');
+    expect(ancestorThat(el, (e) => e.classList.contains('target'))).toBe(el);
+  });
+
+  test('finds ancestor matching predicate', () => {
+    const grandparent = document.createElement('div');
+    grandparent.classList.add('grandparent');
+    const parent = document.createElement('div');
+    parent.classList.add('parent');
+    const child = document.createElement('div');
+    child.classList.add('child');
+
+    grandparent.appendChild(parent);
+    parent.appendChild(child);
+
+    expect(ancestorThat(child, (e) => e.classList.contains('parent'))).toBe(
+      parent,
+    );
+    expect(
+      ancestorThat(child, (e) => e.classList.contains('grandparent')),
+    ).toBe(grandparent);
+  });
+
+  test('returns closest matching ancestor', () => {
+    const outer = document.createElement('div');
+    outer.classList.add('match');
+    const inner = document.createElement('div');
+    inner.classList.add('match');
+    const child = document.createElement('div');
+
+    outer.appendChild(inner);
+    inner.appendChild(child);
+
+    expect(ancestorThat(child, (e) => e.classList.contains('match'))).toBe(
+      inner,
+    );
+  });
+
+  test('returns undefined when no ancestor matches', () => {
+    const parent = document.createElement('div');
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    expect(
+      ancestorThat(child, (e) => e.classList.contains('nonexistent')),
+    ).toBeUndefined();
+  });
+
+  test('does not match non-HTMLElement ancestors', () => {
+    const svgElement = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'svg',
+    );
+    expect(ancestorThat(svgElement, () => true)).toBeUndefined();
+  });
+});
+
+describe('matchesSelector', () => {
+  test('matchesSelector for a single class', () => {
+    const el = document.createElement('div');
+    el.classList.add('foo');
+
+    const hasFoo = matchesSelector('.foo');
+    const hasBar = matchesSelector('.bar');
+
+    expect(hasFoo(el)).toBe(true);
+    expect(hasBar(el)).toBe(false);
+  });
+
+  test('checks for multiple classes', () => {
+    const el = document.createElement('div');
+    el.classList.add('foo', 'bar');
+
+    const hasFooAndBar = matchesSelector('.foo.bar');
+    const hasFooAndBaz = matchesSelector('.foo.baz');
+
+    expect(hasFooAndBar(el)).toBe(true);
+    expect(hasFooAndBaz(el)).toBe(false);
+  });
+
+  test('works with ancestorThat', () => {
+    const parent = document.createElement('div');
+    parent.classList.add('container', 'active');
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    expect(ancestorThat(child, matchesSelector('.container'))).toBe(parent);
+    expect(ancestorThat(child, matchesSelector('.container.active'))).toBe(parent);
+    expect(ancestorThat(child, matchesSelector('.container.inactive'))).toBeUndefined();
   });
 });
