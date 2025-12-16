@@ -34,6 +34,7 @@ import {TrackNode} from '../../public/workspace';
 import {SourceDataset} from '../../trace_processor/dataset';
 import {
   LONG,
+  LONG_NULL,
   NUM,
   NUM_NULL,
   STR,
@@ -113,8 +114,8 @@ export default class implements PerfettoPlugin {
       upid: NUM_NULL,
       threadName: STR_NULL,
       processName: STR_NULL,
-      tid: NUM_NULL,
-      pid: NUM_NULL,
+      tid: LONG_NULL,
+      pid: LONG_NULL,
       isMainThread: NUM,
       isKernelThread: NUM,
       machine: NUM_NULL,
@@ -215,7 +216,12 @@ export default class implements PerfettoPlugin {
           extract_arg(t.dimension_arg_set_id, 'upid') as upid,
           extract_arg(t.source_arg_set_id, 'description') as description,
           group_concat(t.id) as trackIds,
-          count() as trackCount
+          count() as trackCount,
+          CASE t.type
+            WHEN 'thread_execution' THEN 0
+            WHEN 'art_method_tracing' THEN 1
+            ELSE 99
+          END as track_rank
         from _slice_track_summary s
         join track t using (id)
         group by type, upid, utid, t.track_group_id, ifnull(t.track_group_id, t.id)
@@ -239,7 +245,7 @@ export default class implements PerfettoPlugin {
       left join thread using (utid)
       left join _threads_with_kernel_flag k using (utid)
       left join process tp on thread.upid = tp.upid
-      order by lower_name
+      order by s.track_rank, lower_name
     `);
 
     const schemas = new Map(SLICE_TRACK_SCHEMAS.map((x) => [x.type, x]));
@@ -250,9 +256,9 @@ export default class implements PerfettoPlugin {
       upid: NUM_NULL,
       trackIds: STR,
       maxDepth: NUM,
-      tid: NUM_NULL,
+      tid: LONG_NULL,
       threadName: STR_NULL,
-      pid: NUM_NULL,
+      pid: LONG_NULL,
       processName: STR_NULL,
       isMainThread: NUM,
       isKernelThread: NUM,
@@ -293,6 +299,11 @@ export default class implements PerfettoPlugin {
       });
       const uri = `/slice_${trackIds[0]}`;
 
+      // Apply displayName function from schema if available
+      const displayName = schema.displayName
+        ? schema.displayName(trackName)
+        : trackName;
+
       const maybeDescriptionRenderer = schema.description?.({
         name: trackName ?? undefined,
         description: description ?? undefined,
@@ -327,7 +338,7 @@ export default class implements PerfettoPlugin {
         utid,
         new TrackNode({
           uri,
-          name: trackName,
+          name: displayName,
           sortOrder: utid !== undefined || upid !== undefined ? 20 : 0,
         }),
       );
@@ -362,15 +373,17 @@ export default class implements PerfettoPlugin {
         break;
       }
       case undefined: {
-        this.getGroupByName(ctx.workspace.tracks, group, upid).addChildInOrder(
-          track,
-        );
+        this.getGroupByName(
+          ctx.defaultWorkspace.tracks,
+          group,
+          upid,
+        ).addChildInOrder(track);
         break;
       }
       default: {
         const standardGroup = ctx.plugins
           .getPlugin(StandardGroupsPlugin)
-          .getOrCreateStandardGroup(ctx.workspace, topLevelGroup);
+          .getOrCreateStandardGroup(ctx.defaultWorkspace, topLevelGroup);
         this.getGroupByName(standardGroup, group, null).addChildInOrder(track);
         break;
       }
@@ -468,7 +481,7 @@ export default class implements PerfettoPlugin {
         const processGroupsPlugin = ctx.plugins.getPlugin(
           ProcessThreadGroupsPlugin,
         );
-        const topLevelTracks = ctx.workspace.children;
+        const topLevelTracks = ctx.defaultWorkspace.children;
         const upidOrderMap = new Map<number, number>();
 
         // Get the position of each upid's process group in the top-level tracks
@@ -603,7 +616,7 @@ function createSliceFlameGraphPanel(trace: Trace) {
         return undefined;
       }
 
-      return {isLoading: false, content: currentFlamegraph.flamegraph.render()};
+      return {isLoading: false, content: currentFlamegraph.render()};
     },
   };
 }
@@ -611,7 +624,7 @@ function createSliceFlameGraphPanel(trace: Trace) {
 async function computeSliceFlamegraph(
   trace: Trace,
   currentSelection: AreaSelection,
-): Promise<(AsyncDisposable & {flamegraph: QueryFlamegraph}) | undefined> {
+): Promise<QueryFlamegraph | undefined> {
   const trackIds = [];
   for (const trackInfo of currentSelection.tracks) {
     if (!trackInfo?.tags?.kinds?.includes(SLICE_TRACK_KIND)) {
@@ -689,10 +702,12 @@ async function computeSliceFlamegraph(
       },
     ],
   );
-  return {
-    ...iiTable,
-    flamegraph: new QueryFlamegraph(trace, metrics, {
+  return new QueryFlamegraph(
+    trace,
+    metrics,
+    {
       state: Flamegraph.createDefaultState(metrics),
-    }),
-  };
+    },
+    [iiTable],
+  );
 }

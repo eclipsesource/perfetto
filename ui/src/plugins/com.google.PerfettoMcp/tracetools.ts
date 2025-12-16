@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp';
-import {Engine} from 'src/trace_processor/engine';
+import {Engine} from '../../trace_processor/engine';
 import {z} from 'zod';
 import {runQueryForMcp} from './query';
 
@@ -86,13 +86,13 @@ export function registerTraceTools(server: McpServer, engine: Engine) {
     'perfetto-list-interesting-tables',
     `
         Tool to list interesting tables and views.
-        
+
         It's basically a query on [sqlite_schema], but excluding 'sqlite_' and '_' prefixed tables which tend to
         be internal implementation details.
-        
+
         This is relevant if queries aren't working, they may need to be loaded via the 'INCLUDE PERFETTO MODULE'
         query.
-         
+
         If tables you expect to be there based on public samples aren't, please mention it so that the user can
         tweak the tool to automatically include them.
         `,
@@ -101,12 +101,12 @@ export function registerTraceTools(server: McpServer, engine: Engine) {
       const data = await runQueryForMcp(
         engine,
         `
-        SELECT 
+        SELECT
             name, type
-        FROM 
+        FROM
             sqlite_schema
-        WHERE 
-            type in ('table', 'view') 
+        WHERE
+            type in ('table', 'view')
             AND name NOT LIKE 'sqlite_%'
             AND name NOT LIKE '\_%' ESCAPE '\'
 `,
@@ -121,11 +121,11 @@ export function registerTraceTools(server: McpServer, engine: Engine) {
     'perfetto-list-macrobenchmark-slices',
     `
         Tool to list macrobenchmark slices.
-        
-        This is relevant because when a trace file includes a macrobenchmark run (a slice called 'measureBlock') 
-        then the user is probably interested in the target app and the specific range of time for that 'measureBlock'.      
 
-        So a \`measureBlock\` in the app \`com.google.android.horologist.mediasample.benchmark\`, 
+        This is relevant because when a trace file includes a macrobenchmark run (a slice called 'measureBlock')
+        then the user is probably interested in the target app and the specific range of time for that 'measureBlock'.
+
+        So a \`measureBlock\` in the app \`com.google.android.horologist.mediasample.benchmark\`,
         would usually be testing against an app called \`com.google.android.horologist.mediasample\`.
         But this is not always true, so ask the user if it's missing.
         `,
@@ -164,8 +164,8 @@ export function registerTraceTools(server: McpServer, engine: Engine) {
     'perfetto-list-table-structure',
     `
         Tool to list the structure of a table.
-        
-        It's basically a query of \`pragma table_info('TABLE_NAME')\`.   
+
+        It's basically a query of \`pragma table_info('TABLE_NAME')\`.
         `,
     {table: z.string()},
     async ({table}) => {

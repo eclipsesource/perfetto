@@ -35,7 +35,12 @@ import {postMessageHandler} from './post_message_handler';
 import {Route, Router} from '../core/router';
 import {checkHttpRpcConnection} from './rpc_http_dialog';
 import {maybeOpenTraceFromRoute} from './trace_url_handler';
-import {renderViewerPage} from './viewer_page/viewer_page';
+import {
+  DEFAULT_TRACK_MIN_HEIGHT_PX,
+  MINIMUM_TRACK_MIN_HEIGHT_PX,
+  TRACK_MIN_HEIGHT_SETTING,
+} from './timeline_page/track_view';
+import {renderTimelinePage} from './timeline_page/timeline_page';
 import {HttpRpcEngine} from '../trace_processor/http_rpc_engine';
 import {setDefaultOwnerFunction, showModal} from '../widgets/modal';
 import {IdleDetector} from './idle_detector';
@@ -341,7 +346,7 @@ function onCssLoaded() {
   pages.registerPage({route: '/', render: () => m(HomePage)});
   pages.registerPage({
     route: '/viewer',
-    renderPage: ({trace}) => renderViewerPage(trace),
+    renderPage: ({trace}) => renderTimelinePage(trace),
   });
   const router = new Router();
   router.onRouteChanged = routeChange;
@@ -352,15 +357,15 @@ function onCssLoaded() {
     description: 'Warning: Dark mode is not fully supported yet.',
     schema: z.enum(['dark', 'light']),
     defaultValue: 'light',
-  });
+  } as const);
 
   AppImpl.instance.settings.register({
-    id: 'track-height-min-px',
+    id: TRACK_MIN_HEIGHT_SETTING,
     name: 'Track Height',
     description:
       'Minimum height of tracks in the trace viewer page, in pixels.',
-    schema: z.number().int().min(18),
-    defaultValue: 18,
+    schema: z.number().int().min(MINIMUM_TRACK_MIN_HEIGHT_PX),
+    defaultValue: DEFAULT_TRACK_MIN_HEIGHT_PX,
   });
 
   // Add command to toggle the theme.
@@ -389,17 +394,35 @@ function onCssLoaded() {
           }
         }
 
-        return m(
-          ThemeProvider,
-          {theme: themeSetting.get() as 'dark' | 'light'},
-          [
-            m(HotkeyContext, {hotkeys, fillHeight: true, autoFocus: true}, [
-              m(OverlayContainer, {fillParent: true}, [
-                m(UiMain, {key: themeSetting.get()}),
+        const currentTraceId = app.trace?.engine.engineId ?? 'no-trace';
+
+        // Trace data is cached inside many components on the tree. To avoid
+        // issues with stale data when reloading a trace, we force-remount the
+        // entire tree whenever the trace changes by using the trace ID as part of
+        // the key. We also know that UIMain reloads the theme CSS variables on
+        // mount, so include the theme in the key so that changing the theme also
+        // forces a remount.
+        const uiMainKey = `${currentTraceId}-${themeSetting.get()}`;
+
+        return m(ThemeProvider, {theme: themeSetting.get()}, [
+          m(
+            HotkeyContext,
+            {
+              hotkeys,
+              fillHeight: true,
+              // When embedded, hotkeys should be scoped to the context element to
+              // avoid interfering with the parent page. In standalone mode,
+              // document-level binding provides better UX (e.g., PGUP/PGDN scroll
+              // behavior).
+              focusable: false,
+            },
+            [
+              m(OverlayContainer, {fillHeight: true}, [
+                m(UiMain, {key: uiMainKey}),
               ]),
-            ]),
-          ],
-        );
+            ],
+          ),
+        ]);
       },
     });
   }
@@ -447,11 +470,11 @@ function onCssLoaded() {
 
   // Initialize plugins, now that we are ready to go.
   const pluginManager = AppImpl.instance.plugins;
-  CORE_PLUGINS.forEach((p) => pluginManager.registerPlugin(p));
-  NON_CORE_PLUGINS.forEach((p) => pluginManager.registerPlugin(p));
+  CORE_PLUGINS.forEach((p) => pluginManager.registerPlugin(p, true));
+  NON_CORE_PLUGINS.forEach((p) => pluginManager.registerPlugin(p, false));
   const route = Router.parseUrl(window.location.href);
   const overrides = (route.args.enablePlugins ?? '').split(',');
-  pluginManager.activatePlugins(overrides);
+  pluginManager.activatePlugins(AppImpl.instance, overrides);
 }
 
 // If the URL is /#!?rpc_port=1234, change the default RPC port.

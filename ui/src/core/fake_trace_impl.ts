@@ -109,7 +109,7 @@ export function createFakeTraceImpl(args: FakeTraceImplArgs = {}) {
   if (active) {
     AppImpl.instance.closeTrace(active);
   }
-  const trace = TraceImpl.createInstanceForCore(
+  const trace = new TraceImpl(
     AppImpl.instance,
     new FakeEngine(args.allowQueries ?? false),
     fakeTraceInfo,

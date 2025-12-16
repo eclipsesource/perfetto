@@ -48,16 +48,14 @@ interface AndroidLogPluginState {
 
 async function getMachineIds(engine: Engine): Promise<number[]> {
   // A machine might not provide Android logs, even if configured to do so.
-  // Hence, the |cpu| table might have ids not present in the logs. Given this
+  // Hence, the |machine| table might have ids not present in the logs. Given this
   // is highly unlikely and going through all logs is expensive, we will get
-  // the ids from |cpu|, even if filter shows ids not present in logs.
-  const result = await engine.query(
-    `SELECT DISTINCT(machine_id) FROM cpu ORDER BY machine_id`,
-  );
+  // the ids from |machine|, even if filter shows ids not present in logs.
+  const result = await engine.query(`SELECT id FROM machine ORDER BY id`);
   const machineIds: number[] = [];
-  const it = result.iter({machine_id: NUM_NULL});
+  const it = result.iter({id: NUM_NULL});
   for (; it.valid(); it.next()) {
-    machineIds.push(it.machine_id ?? 0);
+    machineIds.push(it.id ?? 0);
   }
   return machineIds;
 }
@@ -65,11 +63,14 @@ async function getMachineIds(engine: Engine): Promise<number[]> {
 export default class implements PerfettoPlugin {
   static readonly id = 'com.android.AndroidLog';
   async onTraceLoad(ctx: Trace): Promise<void> {
-    const store = ctx.mountStore<AndroidLogPluginState>((init) => {
-      return exists(init) && (init as {version: unknown}).version === VERSION
-        ? (init as AndroidLogPluginState)
-        : DEFAULT_STATE;
-    });
+    const store = ctx.mountStore<AndroidLogPluginState>(
+      'com.android.AndroidLogFilterState',
+      (init) => {
+        return exists(init) && (init as {version: unknown}).version === VERSION
+          ? (init as AndroidLogPluginState)
+          : DEFAULT_STATE;
+      },
+    );
 
     // Every time the log panel is rendered, it must use the same query limiter
     // otherwise a task from one limiter may be interleaved with another,
@@ -106,7 +107,7 @@ export default class implements PerfettoPlugin {
         name: 'Android logs',
         uri,
       });
-      ctx.workspace.addChildInOrder(track);
+      ctx.defaultWorkspace.addChildInOrder(track);
     }
 
     const androidLogsTabUri = 'perfetto.AndroidLog#tab';
@@ -125,7 +126,8 @@ export default class implements PerfettoPlugin {
       isEphemeral: false,
       uri: androidLogsTabUri,
       content: {
-        render: () => m(LogPanel, {filterStore, cache, trace: ctx, queryLimiter}),
+        render: () =>
+          m(LogPanel, {filterStore, cache, trace: ctx, queryLimiter}),
         getTitle: () => 'Android Logs',
       },
     });

@@ -15,39 +15,33 @@
 import {AsyncQueue} from '../base/async_queue';
 import {defer} from '../base/deferred';
 import {EvtSource} from '../base/events';
-import {assertExists, assertIsInstance, assertTrue} from '../base/logging';
-import {createProxy, getOrCreate} from '../base/utils';
+import {assertExists, assertTrue} from '../base/logging';
 import {ServiceWorkerController} from '../frontend/service_worker_controller';
 import {App} from '../public/app';
 import {SqlPackage} from '../public/extra_sql_packages';
 import {FeatureFlagManager, FlagSettings} from '../public/feature_flag';
-import {PageHandler} from '../public/page';
 import {Raf} from '../public/raf';
-import {RouteArg, RouteArgs} from '../public/route_schema';
-import {Setting, SettingsManager} from '../public/settings';
+import {RouteArgs} from '../public/route_schema';
+import {Setting} from '../public/settings';
+import {TraceStream} from '../public/stream';
 import {DurationPrecision, TimestampFormat} from '../public/timeline';
-import {Trace} from '../public/trace';
 import {NewEngineMode} from '../trace_processor/engine';
 import {AnalyticsInternal, initAnalytics} from './analytics_impl';
 import {CommandInvocation, CommandManagerImpl} from './command_manager';
 import {embedderContext} from './embedder';
 import {featureFlags} from './feature_flags';
 import {loadTrace} from './load_trace';
-import {
-  HierarchicalOmniboxManager,
-  OmniboxManagerImpl,
-} from './omnibox_manager';
+import {OmniboxManagerImpl} from './omnibox_manager';
 import {PageManagerImpl} from './page_manager';
 import {PerfManager} from './perf_manager';
-import {CORE_PLUGIN_ID, PluginManagerImpl} from './plugin_manager';
+import {PluginManagerImpl} from './plugin_manager';
 import {raf} from './raf_scheduler';
 import {Router} from './router';
 import {SettingsManagerImpl} from './settings_manager';
 import {SidebarManagerImpl} from './sidebar_manager';
 import {SerializedAppState} from './state_serialization_schema';
-import {TraceContext, TraceImpl} from './trace_impl';
+import {TraceImpl} from './trace_impl';
 import {TraceArrayBufferSource, TraceSource} from './trace_source';
-import {TraceStream} from './trace_stream';
 
 export type OpenTraceArrayBufArgs = Omit<
   Omit<TraceArrayBufferSource, 'type'>,
@@ -75,17 +69,15 @@ export interface AppInitArgs {
  * This class is only exposed to TraceImpl, nobody else should refer to this
  * and should use AppImpl instead.
  */
-export class AppContext {
-  // The per-plugin instances of AppImpl (including the CORE_PLUGIN one).
-  private readonly pluginInstances = new Map<string, AppImpl>();
-  readonly commandMgr = new CommandManagerImpl();
-  readonly omniboxMgr: HierarchicalOmniboxManager;
-  readonly pageMgr = new PageManagerImpl();
-  readonly sidebarMgr: SidebarManagerImpl;
-  readonly pluginMgr: PluginManagerImpl;
-  readonly perfMgr = new PerfManager();
+export class AppImpl implements App {
+  readonly commands = new CommandManagerImpl();
+  readonly omnibox = OmniboxManagerImpl.forApp(this);
+  readonly pages = new PageManagerImpl();
+  readonly sidebar: SidebarManagerImpl;
+  readonly plugins = new PluginManagerImpl();
+  readonly perfDebugging = new PerfManager();
   readonly analytics: AnalyticsInternal;
-  readonly serviceWorkerController: ServiceWorkerController;
+  readonly serviceWorkerController = new ServiceWorkerController();
   httpRpc = {
     newEngineMode: 'USE_HTTP_RPC_IF_AVAILABLE' as NewEngineMode,
     httpRpcAvailable: false,
@@ -94,17 +86,17 @@ export class AppContext {
 
   // Tracks the loading state for each TraceSource, allowing concurrent loads.
   private traceLoadingState = new WeakMap<TraceSource, boolean>();
-  private loadedTraces: TraceContext[] = [];
+  private loadedTraces: TraceImpl[] = [];
   private _multiTraceEnabled = false;
 
   // Event: notify when the active trace changes (fires with TraceContext or undefined)
-  readonly onActiveTraceChanged = new EvtSource<TraceContext | undefined>();
+  readonly onActiveTraceChanged = new EvtSource<TraceImpl | undefined>();
 
   readonly initArgs: AppInitArgs;
   readonly embeddedMode: boolean;
   readonly testingMode: boolean;
   readonly openTraceAsyncQueue = new AsyncQueue();
-  readonly settingsManager: SettingsManagerImpl;
+  readonly settings: SettingsManagerImpl;
 
   // This is normally empty and is injected with extra google-internal packages
   // via is_internal_user.js
@@ -122,21 +114,24 @@ export class AppContext {
   extrasLoadingDeferred = defer<undefined>();
 
   // The currently active trace (top of loadedTraces or undefined).
-  get currentTrace(): TraceContext | undefined {
+  get currentTrace(): TraceImpl | undefined {
     return this.loadedTraces.length > 0
       ? this.loadedTraces[this.loadedTraces.length - 1]
       : undefined;
   }
 
-  private static _instance: AppContext;
-
-  static initialize(initArgs: AppInitArgs): AppContext {
-    assertTrue(AppContext._instance === undefined);
-    return (AppContext._instance = new AppContext(initArgs));
+  // Initializes the singleton instance - must be called only once and before
+  // AppImpl.instance is used.
+  static initialize(initArgs: AppInitArgs): AppImpl {
+    assertTrue(AppImpl._instance === undefined);
+    AppImpl._instance = new AppImpl(initArgs);
+    return AppImpl._instance;
   }
 
-  static get instance(): AppContext {
-    return assertExists(AppContext._instance);
+  // Singleton.
+  private static _instance: AppImpl;
+  static get instance(): AppImpl {
+    return assertExists(AppImpl._instance);
   }
 
   readonly timestampFormat: Setting<TimestampFormat>;
@@ -149,27 +144,25 @@ export class AppContext {
   // This constructor is invoked only once, when frontend/index.ts invokes
   // AppMainImpl.initialize().
   private constructor(initArgs: AppInitArgs) {
-    this.omniboxMgr = OmniboxManagerImpl.forApp(this);
     this.timestampFormat = initArgs.timestampFormatSetting;
     this.durationPrecision = initArgs.durationPrecisionSetting;
     this.timezoneOverride = initArgs.timezoneOverrideSetting;
     this.startupCommandsSetting = initArgs.startupCommandsSetting;
     this.enforceStartupCommandAllowlistSetting =
       initArgs.enforceStartupCommandAllowlistSetting;
-    this.settingsManager = initArgs.settingsManager;
+    this.settings = initArgs.settingsManager;
     this.initArgs = initArgs;
     this.initialRouteArgs = {
       ...initArgs.initialRouteArgs,
       ...(embedderContext?.initialRouteArgs ?? {}),
     };
-    this.serviceWorkerController = new ServiceWorkerController();
     this.embeddedMode =
       this.initialRouteArgs.mode === 'embedded' ||
       embedderContext !== undefined;
     this.testingMode =
       self.location !== undefined &&
       self.location.search.indexOf('testing=1') >= 0;
-    this.sidebarMgr = new SidebarManagerImpl({
+    this.sidebar = new SidebarManagerImpl({
       id: 'app',
       disabled: this.embeddedMode,
       hidden: this.initialRouteArgs.hideSidebar,
@@ -179,23 +172,7 @@ export class AppContext {
       this.embeddedMode,
       initArgs.analyticsSetting.get(),
     );
-    this.pluginMgr = new PluginManagerImpl({
-      forkForPlugin: (pluginId) => this.forPlugin(pluginId),
-      get trace() {
-        return AppImpl.instance.trace;
-      },
-    });
   }
-
-  // Gets or creates an instance of AppImpl backed by the current AppContext
-  // for the given plugin.
-  forPlugin(pluginId: string) {
-    return getOrCreate(this.pluginInstances, pluginId, () => {
-      return new AppImpl(this, pluginId);
-    });
-  }
-
-  // ----- Trace loading state helpers -----
 
   /**
    * Query whether this application supports maintaining multiple
@@ -226,41 +203,41 @@ export class AppContext {
   }
 
   // Add loaded trace to the stack (unless already present).
-  addLoadedTrace(traceCtx: TraceContext) {
+  addLoadedTrace(trace: TraceImpl) {
     if (!this.multiTraceEnabled) {
       // Close the active trace
-      this.closeAllExcept(traceCtx);
+      this.closeAllExcept(trace);
     }
 
-    if (!this.loadedTraces.includes(traceCtx)) {
-      this.loadedTraces.push(traceCtx);
+    if (!this.loadedTraces.includes(trace)) {
+      this.loadedTraces.push(trace);
     }
   }
 
   // Remove a loaded trace (e.g., on close/dispose)
-  removeLoadedTrace(traceCtx: TraceContext) {
-    const idx = this.loadedTraces.indexOf(traceCtx);
+  removeLoadedTrace(trace: TraceImpl) {
+    const idx = this.loadedTraces.indexOf(trace);
     if (idx !== -1) {
       this.loadedTraces.splice(idx, 1);
     }
   }
 
   // Called when a new trace is made active.
-  setActiveTrace(traceCtx: TraceContext) {
+  setActiveTrace(trace: TraceImpl) {
     // Remove it if already present, then push to the end (top of stack).
-    this.removeLoadedTrace(traceCtx);
-    this.addLoadedTrace(traceCtx);
-    this.onActiveTraceChanged.notify(traceCtx);
+    this.removeLoadedTrace(trace);
+    this.addLoadedTrace(trace);
+    this.onActiveTraceChanged.notify(trace);
   }
 
-  closeTrace(traceCtx: TraceContext) {
-    this.omniboxMgr.childFor(traceCtx).reset(/* focus= */ false);
-    this.removeLoadedTrace(traceCtx);
-    traceCtx[Symbol.dispose]();
+  closeTrace(trace: TraceImpl) {
+    this.omnibox.childFor(trace).reset(/* focus= */ false);
+    this.removeLoadedTrace(trace);
+    trace[Symbol.dispose]();
 
     // If it was the active trace, notify listeners.
-    if (this.currentTrace !== traceCtx) return;
-    if (traceCtx !== undefined) {
+    if (this.currentTrace !== trace) return;
+    if (trace !== undefined) {
       this.onActiveTraceChanged.notify(this.currentTrace);
     }
     return this._isInternalUser;
@@ -269,11 +246,11 @@ export class AppContext {
   /**
    * Close all currently open traces, optionally except for some indicated trace to keep open.
    */
-  closeAllExcept(traceCtx?: TraceContext): void {
-    const toClose = traceCtx
-      ? this.loadedTraces.filter((trace) => trace !== traceCtx)
+  closeAllExcept(trace?: TraceImpl): void {
+    const toClose = trace
+      ? this.loadedTraces.filter((t) => t !== trace)
       : [...this.loadedTraces];
-    toClose.forEach((trace) => this.closeTrace(trace));
+    toClose.forEach((t) => this.closeTrace(t));
   }
 
   get isInternalUser() {
@@ -288,115 +265,13 @@ export class AppContext {
     this._isInternalUser = value;
     raf.scheduleFullRedraw();
   }
-}
-
-/*
- * Every plugin gets its own instance. This is how we keep track
- * what each plugin is doing and how we can blame issues on particular
- * plugins.
- * The instance exists for the whole duration a plugin is active.
- */
-export class AppImpl implements App {
-  readonly pluginId: string;
-  readonly initialPluginRouteArgs: RouteArgs;
-  private readonly appCtx: AppContext;
-  private readonly pageMgrProxy: PageManagerImpl;
-  readonly onActiveTraceChanged = new EvtSource<Trace | undefined>();
-
-  // Invoked by frontend/index.ts.
-  static initialize(args: AppInitArgs) {
-    AppContext.initialize(args).forPlugin(CORE_PLUGIN_ID);
-  }
-
-  // Gets access to the one instance that the core can use. Note that this is
-  // NOT the only instance, as other AppImpl instance will be created for each
-  // plugin.
-  static get instance(): AppImpl {
-    return AppContext.instance.forPlugin(CORE_PLUGIN_ID);
-  }
-
-  // Only called by AppContext.forPlugin().
-  constructor(appCtx: AppContext, pluginId: string) {
-    this.appCtx = appCtx;
-    this.pluginId = pluginId;
-
-    appCtx.onActiveTraceChanged.addListener((traceCtx) =>
-      this.onActiveTraceChanged.notify(traceCtx?.forPlugin(this.pluginId)),
-    );
-
-    const args: {[key: string]: RouteArg} = {};
-    this.initialPluginRouteArgs = Object.entries(
-      appCtx.initialRouteArgs,
-    ).reduce((result, [key, value]) => {
-      // Create a regex to match keys starting with pluginId
-      const regex = new RegExp(`^${pluginId}:(.+)$`);
-      const match = key.match(regex);
-
-      // Only include entries that match the regex
-      if (match) {
-        const newKey = match[1];
-        // Use the capture group (what comes after the prefix) as the new key
-        result[newKey] = value;
-      }
-      return result;
-    }, args);
-
-    this.pageMgrProxy = createProxy(this.appCtx.pageMgr, {
-      registerPage(pageHandler: PageHandler): Disposable {
-        return appCtx.pageMgr.registerPage({
-          ...pageHandler,
-          pluginId,
-        });
-      },
-    });
-  }
-
-  forPlugin(pluginId: string): AppImpl {
-    return this.appCtx.forPlugin(pluginId);
-  }
-
-  get commands(): CommandManagerImpl {
-    return this.appCtx.commandMgr;
-  }
-
-  get sidebar(): SidebarManagerImpl {
-    return this.appCtx.sidebarMgr;
-  }
-
-  get omnibox(): HierarchicalOmniboxManager {
-    return this.appCtx.omniboxMgr;
-  }
-
-  get plugins(): PluginManagerImpl {
-    return this.appCtx.pluginMgr;
-  }
-
-  get analytics(): AnalyticsInternal {
-    return this.appCtx.analytics;
-  }
-
-  get pages(): PageManagerImpl {
-    return this.pageMgrProxy;
-  }
 
   get trace(): TraceImpl | undefined {
-    return this.appCtx.currentTrace?.forPlugin(this.pluginId);
+    return this.currentTrace;
   }
 
   get raf(): Raf {
     return raf;
-  }
-
-  get httpRpc() {
-    return this.appCtx.httpRpc;
-  }
-
-  get initialRouteArgs(): RouteArgs {
-    return this.appCtx.initialRouteArgs;
-  }
-
-  get settings(): SettingsManager {
-    return this.appCtx.settingsManager;
   }
 
   get featureFlags(): FeatureFlagManager {
@@ -457,15 +332,15 @@ export class AppImpl implements App {
     // they will mess up the state of registries. So once we start, we must
     // complete trace loading (we don't bother supporting cancellations. If the
     // user is too bothered, they can reload the tab).
-    return this.appCtx.openTraceAsyncQueue.schedule(async () => {
+    return this.openTraceAsyncQueue.schedule(async () => {
       // Wait for extras parsing descriptors to be loaded
       // via is_internal_user.js. This prevents a race condition where
       // trace loading would otherwise begin before this data is available.
       await this.extraLoadingPromise;
-      if (!this.appCtx.multiTraceEnabled) {
-        this.appCtx.closeAllExcept();
+      if (!this.multiTraceEnabled) {
+        this.closeAllExcept();
       }
-      this.appCtx.setTraceLoading(src, true);
+      this.setTraceLoading(src, true);
       try {
         // loadTrace() in trace_loader.ts will do the following:
         // - Create a new engine.
@@ -481,80 +356,24 @@ export class AppImpl implements App {
         // loadTrace to be finished before setting it because some internal
         // implementation details of loadTrace() rely on that trace to be current
         // to work properly (mainly the router hash uuid).
+
         return trace;
       } finally {
-        this.appCtx.setTraceLoading(src, false);
+        this.setTraceLoading(src, false);
         raf.scheduleFullRedraw();
       }
     });
-  }
-
-  // Called by trace_loader.ts soon after it has created a new TraceImpl.
-  setActiveTrace(traceImpl: TraceImpl) {
-    this.appCtx.setActiveTrace(traceImpl.__traceCtxForApp);
-  }
-
-  closeTrace(trace: Trace) {
-    const traceCtx = assertIsInstance(trace, TraceImpl).__traceCtxForApp;
-    this.appCtx.closeTrace(traceCtx);
-  }
-
-  get embeddedMode(): boolean {
-    return this.appCtx.embeddedMode;
-  }
-
-  get testingMode(): boolean {
-    return this.appCtx.testingMode;
-  }
-
-  isTraceLoading(traceSource: TraceSource): boolean {
-    return this.appCtx.isTraceLoading(traceSource);
-  }
-
-  get extraSqlPackages(): SqlPackage[] {
-    return this.appCtx.extraSqlPackages;
-  }
-
-  get extraParsingDescriptors(): ReadonlyArray<string> {
-    return this.appCtx.extraParsingDescriptors;
-  }
-
-  get extraMacros(): Record<string, CommandInvocation[]>[] {
-    return this.appCtx.extraMacros;
-  }
-
-  get perfDebugging(): PerfManager {
-    return this.appCtx.perfMgr;
-  }
-
-  get serviceWorkerController(): ServiceWorkerController {
-    return this.appCtx.serviceWorkerController;
-  }
-
-  // Nothing other than TraceImpl's constructor should ever refer to this.
-  // This is necessary to avoid circular dependencies between trace_impl.ts
-  // and app_impl.ts.
-  get __appCtxForTrace() {
-    return this.appCtx;
   }
 
   navigate(newHash: string): void {
     Router.navigate(newHash);
   }
 
-  get isInternalUser() {
-    return this.appCtx.isInternalUser;
-  }
-
-  set isInternalUser(value: boolean) {
-    this.appCtx.isInternalUser = value;
-  }
-
   notifyOnExtrasLoadingCompleted() {
-    this.appCtx.extrasLoadingDeferred.resolve();
+    this.extrasLoadingDeferred.resolve();
   }
 
   get extraLoadingPromise(): Promise<undefined> {
-    return this.appCtx.extrasLoadingDeferred;
+    return this.extrasLoadingDeferred;
   }
 }

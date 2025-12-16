@@ -25,12 +25,13 @@ import {Storage} from './storage';
 export const PERFETTO_SETTINGS_STORAGE_KEY = 'perfettoSettings';
 
 // Implement the Setting interface for registered settings
-class SettingImpl<T> implements Setting<T> {
+export class SettingImpl<T> implements Setting<T> {
   readonly bootValue?: T;
   private _registration?: Disposable;
 
   constructor(
     private readonly manager: SettingsManagerImpl,
+    public readonly pluginId: string | undefined,
     public readonly id: string,
     public readonly name: string,
     public readonly description: string,
@@ -105,7 +106,7 @@ export class SettingsManagerImpl implements SettingsManager {
     return this.registry.get(id) as Setting<T> | undefined;
   }
 
-  register<T>(setting: SettingDescriptor<T>): Setting<T> {
+  register<T>(setting: SettingDescriptor<T>, pluginId?: string): Setting<T> {
     // Determine the initial value: stored value if valid, otherwise default.
     const storedValue = this.currentStoredValues[setting.id];
     const parseResult = setting.schema.safeParse(storedValue);
@@ -122,6 +123,7 @@ export class SettingsManagerImpl implements SettingsManager {
 
     const settingImpl = new SettingImpl<T>(
       this,
+      pluginId,
       setting.id,
       setting.name,
       setting.description,
@@ -142,9 +144,9 @@ export class SettingsManagerImpl implements SettingsManager {
     this.save();
   }
 
-  getAllSettings(): ReadonlyArray<Setting<unknown>> {
+  getAllSettings(): ReadonlyArray<SettingImpl<unknown>> {
     const settings = Array.from(this.registry.values());
-    settings.sort((a, b) => a.id.localeCompare(b.id));
+    settings.sort((a, b) => a.name.localeCompare(b.name));
     return settings;
   }
 

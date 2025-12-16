@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {RouteArg, RouteArgs} from './route_schema';
+import {RouteArgs} from './route_schema';
 import {CommandManager} from './command';
 import {OmniboxManager} from './omnibox';
 import {SidebarManager} from './sidebar';
@@ -24,18 +24,13 @@ import {FeatureFlagManager} from './feature_flag';
 import {Raf} from './raf';
 import {SettingsManager} from './settings';
 import {Evt} from '../base/events';
-import {TraceStream} from '../core/trace_stream';
+import {TraceStream} from './stream';
 
 /**
- * The API endpoint to interact programmaticaly with the UI before a trace has
+ * The API endpoint to interact programmatically with the UI before a trace has
  * been loaded. This is passed to plugins' OnActivate().
  */
 export interface App {
-  /**
-   * The unique id for this plugin (as specified in the PluginDescriptor),
-   * or '__core__' for the interface exposed to the core.
-   */
-  readonly pluginId: string;
   readonly commands: CommandManager;
   readonly sidebar: SidebarManager;
   readonly omnibox: OmniboxManager;
@@ -50,11 +45,6 @@ export interface App {
    * happens.
    */
   readonly initialRouteArgs: RouteArgs;
-
-  /**
-   * Args in the URL bar that start with this plugin's id.
-   */
-  readonly initialPluginRouteArgs: {[key: string]: RouteArg | undefined};
 
   /**
    * Returns the current trace object, if any. The instance being returned is

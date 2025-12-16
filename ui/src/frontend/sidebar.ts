@@ -14,7 +14,6 @@
 
 import m from 'mithril';
 import {getCurrentChannel} from '../core/channels';
-import {TRACE_SUFFIX} from '../public/trace';
 import {
   disableMetatracingAndGetTrace,
   enableMetatracing,
@@ -48,8 +47,10 @@ import {assetSrc} from '../base/assets';
 import {assertExists} from '../base/logging';
 import {Icon} from '../widgets/icon';
 import {Button} from '../widgets/button';
+import {App} from '../public/app';
 
 const GITILES_URL = 'https://github.com/google/perfetto';
+const TRACE_SUFFIX = '.perfetto-trace';
 
 function getBugReportUrl(): string {
   if (AppImpl.instance.isInternalUser) {
@@ -367,12 +368,10 @@ export class Sidebar implements m.ClassComponent<OptionalTraceImplAttrs> {
   private _asyncJobPending = new Set<string>();
   private _sectionExpanded = new Map<string, boolean>();
 
-  constructor({attrs}: m.CVnode<OptionalTraceImplAttrs>) {
-    registerMenuItems(attrs.trace);
-  }
-
   view({attrs}: m.CVnode<OptionalTraceImplAttrs>) {
-    const sidebar = attrs.trace?.sidebar ?? AppImpl.instance.sidebar;
+    const app = AppImpl.instance;
+    const trace = attrs.trace ?? app.trace;
+    const sidebar = trace?.sidebar ?? app.sidebar;
     if (!sidebar.enabled) return null;
     return m(
       'nav.pf-sidebar',
@@ -403,8 +402,8 @@ export class Sidebar implements m.ClassComponent<OptionalTraceImplAttrs> {
         '.pf-sidebar__scroll',
         m(
           '.pf-sidebar__scroll-container',
-          ...(Object.keys(SIDEBAR_SECTIONS) as SidebarSections[]).map((s) =>
-            this.renderSection(s, attrs),
+          (Object.keys(SIDEBAR_SECTIONS) as SidebarSections[]).map((s) =>
+            this.renderSection(s, trace),
           ),
           m(SidebarFooter, attrs),
         ),
@@ -414,15 +413,42 @@ export class Sidebar implements m.ClassComponent<OptionalTraceImplAttrs> {
 
   private renderSection(
     sectionId: SidebarSections,
-    attrs: OptionalTraceImplAttrs,
+    trace: TraceImpl | undefined,
   ) {
-    const sidebar = attrs.trace?.sidebar ?? AppImpl.instance.sidebar;
+    const app = AppImpl.instance;
+    const sidebar = trace?.sidebar ?? app.sidebar;
     const section = SIDEBAR_SECTIONS[sectionId];
-    const menuItems = sidebar.menuItems
-      .valuesAsArray()
-      .filter((item) => item.section === sectionId)
+
+    // Combine plugin-registered items with reactive built-in items
+    const allItems: SidebarMenuItemInternal[] = [
+      ...sidebar.menuItems
+        .valuesAsArray()
+        .filter((item) => item.section === sectionId),
+    ];
+
+    // Add section-specific global and trace items
+    switch (sectionId) {
+      case 'current_trace':
+        if (trace !== undefined) {
+          allItems.push(...getCurrentTraceItems(trace));
+        }
+        break;
+      case 'convert_trace':
+        if (trace !== undefined) {
+          allItems.push(...getConvertTraceItems(trace));
+        }
+        break;
+      case 'support':
+        allItems.push(...getSupportGlobalItems(trace ?? app));
+        if (trace !== undefined) {
+          allItems.push(...getSupportTraceItems(trace));
+        }
+        break;
+    }
+
+    const menuItems = allItems
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-      .map((item) => this.renderItem(item, attrs.trace));
+      .map((item) => this.renderItem(item, trace));
 
     // Don't render empty sections.
     if (menuItems.length === 0) return undefined;
@@ -494,6 +520,7 @@ export class Sidebar implements m.ClassComponent<OptionalTraceImplAttrs> {
     }
     return m(
       'li',
+      {key: item.id}, // This is to work around a mithril bug (b/449784590).
       m(
         'a',
         {
@@ -541,83 +568,54 @@ export class Sidebar implements m.ClassComponent<OptionalTraceImplAttrs> {
   }
 }
 
-// TODO(primiano): The registrations below should be moved to dedicated
-// plugins (most of this really belongs to core_plugins/commads/index.ts).
-// For now i'm keeping everything here as splitting these require moving some
+// TODO(primiano): The items below should be moved to dedicated
+// plugins (most of this really belongs to core_plugins/commands/index.ts).
+// For now keeping everything here as splitting these require moving some
 // functions like share_trace() out of core, splitting out permalink, etc.
 
-let globalItemsRegistered = false;
-const traceItemsRegistered = new WeakSet<TraceImpl>();
-
-function registerMenuItems(trace: TraceImpl | undefined) {
-  if (!globalItemsRegistered) {
-    globalItemsRegistered = true;
-    registerGlobalSidebarEntries(trace);
-  }
-  if (trace !== undefined && !traceItemsRegistered.has(trace)) {
-    traceItemsRegistered.add(trace);
-    registerTraceMenuItems(trace);
-  }
-}
-
-function registerGlobalSidebarEntries(trace: TraceImpl | undefined) {
-  const app = AppImpl.instance;
-  // TODO(primiano): The Open file / Open with legacy entries are registered by
-  // the 'perfetto.CoreCommands' plugins. Make things consistent.
-  app.sidebar.addMenuItem({
-    section: 'support',
-    text: 'Keyboard shortcuts',
-    action: () => toggleHelp(trace ?? app),
-    icon: 'help',
-  });
-  app.sidebar.addMenuItem({
-    section: 'support',
-    text: 'Documentation',
-    href: 'https://perfetto.dev/docs',
-    icon: 'find_in_page',
-  });
-  app.sidebar.addMenuItem({
-    section: 'support',
-    sortOrder: 4,
-    text: 'Report a bug',
-    href: getBugReportUrl(),
-    icon: 'bug_report',
-  });
-}
-
-function registerTraceMenuItems(trace: TraceImpl) {
+// Returns menu items for the 'current_trace' section.
+function getCurrentTraceItems(trace: TraceImpl): SidebarMenuItemInternal[] {
+  const items: SidebarMenuItemInternal[] = [];
   const downloadDisabled = trace.traceInfo.downloadable
     ? false
     : 'Cannot download external trace';
 
-  const traceTitle = trace?.traceInfo.traceTitle;
-  traceTitle &&
-    trace.sidebar.addMenuItem({
+  const traceTitle = trace.traceInfo.traceTitle;
+  if (traceTitle) {
+    items.push({
+      id: 'perfetto.TraceTitle',
       section: 'current_trace',
       sortOrder: 1,
       text: traceTitle,
       action: () => {
         // Do nothing (we need to supply an action to override the href).
       },
-      tooltip: 'Click to copy the URL',
       cssClass: 'pf-sidebar__trace-file-name',
     });
-  trace.sidebar.addMenuItem({
+  }
+
+  items.push({
+    id: 'perfetto.Timeline',
     section: 'current_trace',
     sortOrder: 10,
     text: 'Timeline',
     href: '#!/viewer',
     icon: 'line_style',
   });
-  AppImpl.instance.isInternalUser &&
-    trace.sidebar.addMenuItem({
+
+  if (AppImpl.instance.isInternalUser) {
+    items.push({
+      id: 'perfetto.ShareTrace',
       section: 'current_trace',
       sortOrder: 50,
       text: 'Share',
       action: async () => await shareTrace(trace),
       icon: 'share',
     });
-  trace.sidebar.addMenuItem({
+  }
+
+  items.push({
+    id: 'perfetto.DownloadTrace',
     section: 'current_trace',
     sortOrder: 51,
     text: 'Download',
@@ -625,36 +623,92 @@ function registerTraceMenuItems(trace: TraceImpl) {
     icon: 'file_download',
     disabled: downloadDisabled,
   });
-  trace.sidebar.addMenuItem({
+
+  return items;
+}
+
+// Returns menu items for the 'convert_trace' section.
+function getConvertTraceItems(trace: TraceImpl): SidebarMenuItemInternal[] {
+  const items: SidebarMenuItemInternal[] = [];
+  const downloadDisabled = trace.traceInfo.downloadable
+    ? false
+    : 'Cannot download external trace';
+
+  items.push({
+    id: 'perfetto.LegacyUI',
     section: 'convert_trace',
     text: 'Switch to legacy UI',
     action: async () => await openCurrentTraceWithOldUI(trace),
     icon: 'filter_none',
     disabled: downloadDisabled,
   });
-  trace.sidebar.addMenuItem({
+
+  items.push({
+    id: 'perfetto.ConvertToJson',
     section: 'convert_trace',
     text: 'Convert to .json',
     action: async () => await convertTraceToJson(trace),
     icon: 'file_download',
     disabled: downloadDisabled,
   });
-  trace.traceInfo.hasFtrace &&
-    trace.sidebar.addMenuItem({
+
+  if (trace.traceInfo.hasFtrace) {
+    items.push({
+      id: 'perfetto.ConvertToSystrace',
       section: 'convert_trace',
       text: 'Convert to .systrace',
       action: async () => await convertTraceToSystrace(trace),
       icon: 'file_download',
       disabled: downloadDisabled,
     });
-  trace.sidebar.addMenuItem({
-    section: 'support',
-    sortOrder: 5,
-    text: () =>
-      isMetatracingEnabled() ? 'Finalize metatrace' : 'Record metatrace',
-    action: () => toggleMetatrace(trace),
-    icon: () => (isMetatracingEnabled() ? 'download' : 'fiber_smart_record'),
-  });
+  }
+
+  return items;
+}
+
+// Returns global menu items for the 'support' section (always visible).
+function getSupportGlobalItems(app: App): SidebarMenuItemInternal[] {
+  // TODO(primiano): The Open file / Open with legacy entries are registered by
+  // the 'perfetto.CoreCommands' plugin. These built-in items should move there too.
+  return [
+    {
+      id: 'perfetto.KeyboardShortcuts',
+      section: 'support',
+      text: 'Keyboard shortcuts',
+      action: () => toggleHelp(app),
+      icon: 'help',
+    },
+    {
+      id: 'perfetto.Documentation',
+      section: 'support',
+      text: 'Documentation',
+      href: 'https://perfetto.dev/docs',
+      icon: 'find_in_page',
+    },
+    {
+      id: 'perfetto.ReportBug',
+      section: 'support',
+      sortOrder: 4,
+      text: 'Report a bug',
+      href: getBugReportUrl(),
+      icon: 'bug_report',
+    },
+  ];
+}
+
+// Returns trace-specific menu items for the 'support' section.
+function getSupportTraceItems(trace: TraceImpl): SidebarMenuItemInternal[] {
+  return [
+    {
+      id: 'perfetto.Metatrace',
+      section: 'support',
+      sortOrder: 5,
+      text: () =>
+        isMetatracingEnabled() ? 'Finalize metatrace' : 'Record metatrace',
+      action: () => toggleMetatrace(trace),
+      icon: () => (isMetatracingEnabled() ? 'download' : 'fiber_smart_record'),
+    },
+  ];
 }
 
 // Used to deal with fields like the entry name, which can be either a direct
