@@ -14,7 +14,6 @@
 
 import {assertExists, assertIsInstance} from '../base/logging';
 import {Registry} from '../base/registry';
-import {App} from '../public/app';
 import {
   MetricVisualisation,
   PerfettoPlugin,
@@ -25,9 +24,11 @@ import {defaultPlugins} from './default_plugins';
 import {featureFlags} from './feature_flags';
 import {Flag} from '../public/feature_flag';
 import {TraceImpl} from './trace_impl';
-
-// The pseudo plugin id used for the core instance of AppImpl.
-export const CORE_PLUGIN_ID = '__core__';
+import {AppImpl} from './app_impl';
+import {createProxy} from '../base/utils';
+import {RouteArgs} from '../public/route_schema';
+import {SettingsManagerImpl} from './settings_manager';
+import {PageManager} from '../public/page';
 
 function makePlugin(
   desc: PerfettoPluginStatic<PerfettoPlugin>,
@@ -35,13 +36,6 @@ function makePlugin(
 ): PerfettoPlugin {
   const PluginClass = desc;
   return new PluginClass(trace);
-}
-
-// This interface injects AppImpl's methods into PluginManager to avoid
-// circular dependencies between PluginManager and AppImpl.
-export interface PluginAppInterface {
-  forkForPlugin(pluginId: string): App;
-  get trace(): TraceImpl | undefined;
 }
 
 export interface PluginTraceContext {
@@ -66,6 +60,9 @@ export interface PluginWrapper {
   // boot time.
   readonly enabled: boolean;
 
+  // Whether this is a core plugin (part of CORE_PLUGINS) or not.
+  readonly isCore: boolean;
+
   // Keeps track of whether this plugin is active. A plugin can be active even
   // if it's disabled, if another plugin depends on it.
   //
@@ -86,7 +83,11 @@ class PluginWrapperImpl implements PluginWrapper {
 
   private readonly traceContexts = new Map<string, PluginTraceContext>();
 
-  constructor(readonly desc: PerfettoPluginStatic<PerfettoPlugin>, readonly enableFlag: Flag) {}
+  constructor(
+    readonly desc: PerfettoPluginStatic<PerfettoPlugin>,
+    readonly enableFlag: Flag,
+    readonly isCore: boolean,
+  ) {}
 
   get enabled(): boolean {
     return this.enableFlag.get();
@@ -96,11 +97,10 @@ class PluginWrapperImpl implements PluginWrapper {
     return this._active;
   }
 
-  activate(appInterface: PluginAppInterface): void {
+  activate(app: AppImpl, routeArgs: RouteArgs): void {
     if (this._active) return;
-          const app = appInterface.forkForPlugin(this.desc.id);
-      this.desc.onActivate?.(app);
-      this._active = true;
+    this.desc.onActivate?.(app, routeArgs);
+    this._active = true;
   }
 
   traceContext(trace: Trace): PluginTraceContext | undefined {
@@ -119,14 +119,14 @@ class PluginWrapperImpl implements PluginWrapper {
 export class PluginManagerImpl {
   private readonly registry: Registry<PluginWrapper>;
   private orderedPlugins: Array<PluginWrapper> = [];
-  private readonly app: PluginAppInterface;
 
-  constructor(app: PluginAppInterface, parentRegistry?: Registry<PluginWrapper>) {
-    this.app = app;
-    this.registry = parentRegistry ? parentRegistry.createChild() : new Registry<PluginWrapper>((x) => x.desc.id);
+  constructor(parentRegistry?: Registry<PluginWrapper>) {
+    this.registry = parentRegistry
+      ? parentRegistry.createChild()
+      : new Registry<PluginWrapper>((x) => x.desc.id);
   }
 
-  registerPlugin(desc: PerfettoPluginStatic<PerfettoPlugin>) {
+  registerPlugin(desc: PerfettoPluginStatic<PerfettoPlugin>, isCore = false) {
     const flagId = `plugin_${desc.id}`;
     const name = `Plugin: ${desc.id}`;
     const flag = featureFlags.register({
@@ -135,27 +135,35 @@ export class PluginManagerImpl {
       description: `Overrides '${desc.id}' plugin.`,
       defaultValue: defaultPlugins.includes(desc.id),
     });
-    this.registry.register(new PluginWrapperImpl(desc, flag));
+    this.registry.register(new PluginWrapperImpl(desc, flag, isCore));
   }
 
   /**
    * Activates all registered plugins that have not already been registered.
    *
+   * @param app - The application instance.
    * @param enableOverrides - The list of plugins that are enabled regardless of
    * the current flag setting.
    */
-  activatePlugins(enableOverrides: ReadonlyArray<string> = []) {
+  activatePlugins(app: AppImpl, enableOverrides: ReadonlyArray<string> = []) {
     const enabledPlugins = this.registry
       .valuesAsArray()
       .filter((p) => p.enableFlag.get() || enableOverrides.includes(p.desc.id));
 
     this.orderedPlugins = this.sortPluginsTopologically(enabledPlugins);
 
-    this.orderedPlugins.forEach((p) => assertIsInstance(p, PluginWrapperImpl).activate(this.app));
+    this.orderedPlugins.forEach((next) => {
+      const p = assertIsInstance(next, PluginWrapperImpl);
+
+      if (p.active) return;
+      const appProxy = createAppProxy(app, p.desc.id);
+      const pluginArgs = getPluginArgs(app, p.desc.id);
+      p.activate(appProxy, pluginArgs);
+    });
   }
 
   async onTraceLoad(
-    traceCore: TraceImpl,
+    trace: TraceImpl,
     beforeEach?: (id: string) => void,
   ): Promise<void> {
     // Awaiting all plugins in parallel will skew timing data as later plugins
@@ -168,15 +176,18 @@ export class PluginManagerImpl {
 
       if (p.active) {
         beforeEach?.(p.desc.id);
-        const trace = traceCore.forkForPlugin(p.desc.id);
+        const traceProxy = createTraceProxy(trace, p.desc.id);
+        const instance = makePlugin(p.desc, traceProxy);
+        const args = getOpenerArgs(trace, p.desc.id);
         const before = performance.now();
-        const instance = makePlugin(p.desc, trace);
-        await instance.onTraceLoad?.(trace);
+        await instance.onTraceLoad?.(traceProxy, args);
         const loadTimeMs = performance.now() - before;
-        traceCore.trash.use(p.registerTrace(trace, {
-          instance,
-          loadTimeMs,
-        }));
+        trace.trash.use(
+          p.registerTrace(trace, {
+            instance,
+            loadTimeMs,
+          }),
+        );
       }
     }
   }
@@ -200,9 +211,13 @@ export class PluginManagerImpl {
     pluginDescriptor: PerfettoPluginStatic<T>,
     trace?: Trace,
   ): T {
-    trace ??= this.app.trace;
     const plugin = this.registry.get(pluginDescriptor.id);
     return assertExists(plugin.traceContext(assertExists(trace))).instance as T;
+  }
+
+  isCorePlugin(pluginId: string): boolean {
+    const plugin = this.registry.tryGet(pluginId);
+    return plugin?.isCore ?? false;
   }
 
   /**
@@ -253,7 +268,136 @@ export class PluginManagerImpl {
   /**
    * Create a subordinate plug-in manager, as for trace-scoped plug-ins.
    */
-  createChild(): PluginManagerImpl {
-    return new PluginManagerImpl(this.app, this.registry);
+  createChild(trace: Trace): PluginManagerImpl {
+    const impl = new PluginManagerImpl(this.registry);
+    return createProxy(impl, {
+      getPlugin(pluginDescriptor) {
+        return impl.getPlugin(pluginDescriptor, trace);
+      },
+    });
   }
+}
+
+/**
+ * Creates a plugin-scoped proxy for the App instance.
+ *
+ * This proxy automatically injects the plugin's ID into any pages or settings
+ * registered by the plugin, ensuring proper attribution and enabling cleanup
+ * when the plugin is unloaded. It also recursively proxies the trace property
+ * if one is loaded.
+ */
+function createAppProxy(app: AppImpl, pluginId: string): AppImpl {
+  return createProxy(app, {
+    get trace() {
+      if (app.trace) {
+        return createTraceProxy(app.trace, pluginId);
+      } else {
+        return undefined;
+      }
+    },
+    get pages() {
+      return createPagesProxy(app.pages, pluginId);
+    },
+    get settings() {
+      return createSettingsProxy(app.settings, pluginId);
+    },
+  });
+}
+
+/**
+ * Creates a plugin-scoped proxy for the Trace instance.
+ *
+ * This proxy automatically injects the plugin's ID into any pages, settings,
+ * and tracks registered by the plugin. This ensures that all trace-scoped
+ * resources created by the plugin are properly attributed and can be
+ * automatically cleaned up when the trace is closed. It also proxies
+ * the trace property back to itself.
+ */
+function createTraceProxy(trace: TraceImpl, pluginId: string): TraceImpl {
+  const traceProxy = createProxy(trace, {
+    get engine() {
+      return trace.engine.getProxy(pluginId);
+    },
+    get trace(): TraceImpl {
+      return traceProxy; // Return this proxy.
+    },
+    get pages() {
+      return createPagesProxy(trace.pages, pluginId);
+    },
+    get settings() {
+      return createSettingsProxy(trace.settings, pluginId);
+    },
+    get tracks() {
+      return createProxy(trace.tracks, {
+        registerTrack(track) {
+          return trace.tracks.registerTrack({
+            ...track,
+            pluginId,
+          });
+        },
+      });
+    },
+  });
+  return traceProxy;
+}
+
+/**
+ * Creates a proxy for the PageManager that automatically injects the pluginId
+ * into any registered pages.
+ */
+function createPagesProxy<T extends PageManager>(
+  pages: T,
+  pluginId: string,
+): T {
+  return createProxy(pages, {
+    registerPage(page) {
+      return pages.registerPage({
+        ...page,
+        pluginId,
+      });
+    },
+  } as Partial<T>);
+}
+
+/**
+ * Creates a proxy for the SettingsManager that automatically injects the
+ * pluginId into any registered settings.
+ */
+function createSettingsProxy<T extends SettingsManagerImpl>(
+  settings: T,
+  pluginId: string,
+): T {
+  return createProxy(settings, {
+    register(setting) {
+      return settings.register(setting, pluginId);
+    },
+  } as Partial<T>);
+}
+
+function getPluginArgs(app: AppImpl, pluginId: string): RouteArgs {
+  return Object.entries(app.initialRouteArgs).reduce((result, [key, value]) => {
+    // Create a regex to match keys starting with pluginId
+    const regex = new RegExp(`^${pluginId}:(.+)$`);
+    const match = key.match(regex);
+
+    // Only include entries that match the regex
+    if (match) {
+      const newKey = match[1];
+      // Use the capture group (what comes after the prefix) as the new key
+      result[newKey] = value;
+    }
+    return result;
+  }, {} as RouteArgs);
+}
+
+function getOpenerArgs(
+  trace: TraceImpl,
+  pluginId: string,
+): {[key: string]: unknown} | undefined {
+  const traceSource = trace.traceInfo.source;
+  if (traceSource.type !== 'ARRAY_BUFFER') {
+    return undefined;
+  }
+  const pluginArgs = traceSource.pluginArgs;
+  return (pluginArgs ?? {})[pluginId];
 }

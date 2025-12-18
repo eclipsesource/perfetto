@@ -59,6 +59,8 @@ export function getOrCreate<K, V>(
   return value;
 }
 
+const targetKey: unique symbol = Symbol();
+
 // Allows to take an existing class instance (`target`) and override some of its
 // methods via `overrides`. We use this for cases where we want to expose a
 // "manager" (e.g. TrackManager, SidebarManager) to the plugins, but we want to
@@ -69,7 +71,10 @@ export function createProxy<T extends object>(
 ): T {
   return new Proxy(target, {
     get: (target: T, prop: string | symbol, receiver) => {
-      // If the property is overriden, use that; otherwise, use target
+      if (prop === targetKey) {
+        return target; // This cannot be overridden
+      }
+      // If the property is overridden, use that; otherwise, use target
       const overrideValue = (overrides as {[key: symbol | string]: {}})[prop];
       if (overrideValue !== undefined) {
         return typeof overrideValue === 'function'
@@ -82,4 +87,8 @@ export function createProxy<T extends object>(
         : baseValue;
     },
   }) as T;
+}
+
+export function getTarget<T extends object>(proxy: NonNullable<T>): T {
+  return (proxy as {[targetKey]: T})[targetKey] ?? proxy;
 }

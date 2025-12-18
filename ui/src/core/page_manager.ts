@@ -15,14 +15,14 @@
 import m from 'mithril';
 import {assertExists, assertTrue} from '../base/logging';
 import {Registry} from '../base/registry';
-import {PageHandler, PageRenderContext} from '../public/page';
+import {PageHandler, PageManager, PageRenderContext} from '../public/page';
 import {Trace} from '../public/trace';
 import {Router} from './router';
 import {Gate} from '../base/mithril_utils';
 import {createProxy} from '../base/utils';
 import {embedderContext} from './embedder';
 
-export class PageManagerImpl {
+export class PageManagerImpl implements PageManager {
   private readonly registry: Registry<PageHandler>;
   private readonly previousPages = new Map<
     string,
@@ -30,14 +30,15 @@ export class PageManagerImpl {
   >();
 
   constructor(parentRegistry?: Registry<PageHandler>) {
-    this.registry = parentRegistry ? parentRegistry.createChild() : new Registry<PageHandler>((x) => x.route);
+    this.registry = parentRegistry
+      ? parentRegistry.createChild()
+      : new Registry<PageHandler>((x) => x.route);
   }
 
   registerPage(pageHandler: PageHandler): Disposable {
     assertTrue(/^\/\w*$/.exec(pageHandler.route) !== null);
     // The pluginId is injected by the proxy in AppImpl / TraceImpl. If this is
     // undefined somebody (tests) managed to call this method without proxy.
-    assertExists(pageHandler.pluginId);
     return this.registry.register(adapt(pageHandler));
   }
 
@@ -55,14 +56,15 @@ export class PageManagerImpl {
     // avoid calling their view functions. This makes sure DOM state such as
     // scrolling position is retained between page flips, which can be handy
     // when quickly switching between pages that have long scrolling content
-    // such as the viewer page.
+    // such as the timeline page.
     return Array.from(this.previousPages.entries())
       .map(([key, {page, subpage}]) => {
         const maybeRenderedPage = this.renderPageForRoute(page, subpage, trace);
         // If either the route doesn't exist or requires a trace but the trace
         // is not loaded, fall back on the default route.
         const renderedPage =
-          maybeRenderedPage ?? assertExists(this.renderPageForRoute('/', '', trace));
+          maybeRenderedPage ??
+          assertExists(this.renderPageForRoute('/', '', trace));
         return [key, renderedPage];
       })
       .map(([key, page]) => {

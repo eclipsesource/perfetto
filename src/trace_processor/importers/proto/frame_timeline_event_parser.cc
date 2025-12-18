@@ -84,6 +84,8 @@ StringId JankTypeBitmaskToStringId(TraceProcessorContext* context,
     jank_reasons.emplace_back("Dropped Frame");
   if (jank_type & FrameTimelineEvent::JANK_NON_ANIMATING)
     jank_reasons.emplace_back("Non Animating");
+  if (jank_type & FrameTimelineEvent::JANK_DISPLAY_NOT_ON)
+    jank_reasons.emplace_back("Display not ON");
 
   std::string jank_str(
       std::accumulate(jank_reasons.begin(), jank_reasons.end(), std::string(),
@@ -96,6 +98,7 @@ StringId JankTypeBitmaskToStringId(TraceProcessorContext* context,
 bool DisplayFrameJanky(int32_t jank_type) {
   if (jank_type == FrameTimelineEvent::JANK_UNSPECIFIED ||
       jank_type == FrameTimelineEvent::JANK_NON_ANIMATING ||
+      jank_type == FrameTimelineEvent::JANK_DISPLAY_NOT_ON ||
       jank_type == FrameTimelineEvent::JANK_NONE)
     return false;
 
@@ -111,7 +114,8 @@ bool DisplayFrameJanky(int32_t jank_type) {
 bool SurfaceFrameJanky(int32_t jank_type) {
   if (jank_type == FrameTimelineEvent::JANK_UNSPECIFIED ||
       jank_type == FrameTimelineEvent::JANK_NONE ||
-      jank_type == FrameTimelineEvent::JANK_NON_ANIMATING)
+      jank_type == FrameTimelineEvent::JANK_NON_ANIMATING ||
+      jank_type == FrameTimelineEvent::JANK_DISPLAY_NOT_ON)
     return false;
 
   int32_t surface_frame_jank_bitmask =
@@ -213,7 +217,10 @@ FrameTimelineEventParser::FrameTimelineEventParser(
       layer_name_id_(context->storage->InternString("Layer name")),
       prediction_type_id_(context->storage->InternString("Prediction type")),
       jank_tag_id_(context->storage->InternString("Jank tag")),
+      jank_tag_experimental_id_(
+          context->storage->InternString("Jank tag (experimental)")),
       is_buffer_id_(context->storage->InternString("Is Buffer?")),
+      jank_tag_unspecified_id_(context->storage->InternString("Unspecified")),
       jank_tag_none_id_(context->storage->InternString("No Jank")),
       jank_tag_self_id_(context->storage->InternString("Self Jank")),
       jank_tag_other_id_(context->storage->InternString("Other Jank")),
@@ -223,7 +230,9 @@ FrameTimelineEventParser::FrameTimelineEventParser(
       jank_tag_sf_stuffing_id_(
           context->storage->InternString("SurfaceFlinger Stuffing")),
       jank_tag_none_animating_id_(
-          context->storage->InternString("Non Animating")) {}
+          context->storage->InternString("Non Animating")),
+      jank_tag_display_not_on_id_(
+          context->storage->InternString("Display not ON")) {}
 
 void FrameTimelineEventParser::ParseExpectedDisplayFrameStart(int64_t timestamp,
                                                               ConstBytes blob) {
@@ -250,6 +259,28 @@ void FrameTimelineEventParser::ParseExpectedDisplayFrameStart(int64_t timestamp,
       [this, token](ArgsTracker::BoundInserter* inserter) {
         inserter->AddArg(display_frame_token_id_, Variadic::Integer(token));
       });
+}
+
+StringId FrameTimelineEventParser::CalculateDisplayFrameJankTag(
+    int32_t jank_type) {
+  StringId jank_tag;
+  if (jank_type == FrameTimelineEvent::JANK_UNSPECIFIED) {
+    jank_tag = jank_tag_unspecified_id_;
+  } else if (DisplayFrameJanky(jank_type)) {
+    jank_tag = jank_tag_self_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_SF_STUFFING) {
+    jank_tag = jank_tag_sf_stuffing_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_DROPPED) {
+    jank_tag = jank_tag_dropped_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_NON_ANIMATING) {
+    jank_tag = jank_tag_none_animating_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_DISPLAY_NOT_ON) {
+    jank_tag = jank_tag_display_not_on_id_;
+  } else {
+    jank_tag = jank_tag_none_id_;
+  }
+
+  return jank_tag;
 }
 
 void FrameTimelineEventParser::ParseActualDisplayFrameStart(int64_t timestamp,
@@ -320,18 +351,9 @@ void FrameTimelineEventParser::ParseActualDisplayFrameStart(int64_t timestamp,
         prediction_type_ids_[static_cast<size_t>(event.prediction_type())];
   }
 
-  StringId jank_tag;
-  if (DisplayFrameJanky(event.jank_type())) {
-    jank_tag = jank_tag_self_id_;
-  } else if (event.jank_type() == FrameTimelineEvent::JANK_SF_STUFFING) {
-    jank_tag = jank_tag_sf_stuffing_id_;
-  } else if (event.jank_type() == FrameTimelineEvent::JANK_DROPPED) {
-    jank_tag = jank_tag_dropped_id_;
-  } else if (event.jank_type() == FrameTimelineEvent::JANK_NON_ANIMATING) {
-    jank_tag = jank_tag_none_animating_id_;
-  } else {
-    jank_tag = jank_tag_none_id_;
-  }
+  const StringId jank_tag = CalculateDisplayFrameJankTag(event.jank_type());
+  const StringId jank_tag_experimental =
+      CalculateDisplayFrameJankTag(event.jank_type_experimental());
 
   std::optional<SliceId> opt_slice_id = context_->slice_tracker->Begin(
       timestamp, track_id, kNullStringId, name_id,
@@ -356,6 +378,8 @@ void FrameTimelineEventParser::ParseActualDisplayFrameStart(int64_t timestamp,
         inserter->AddArg(prediction_type_id_,
                          Variadic::String(prediction_type));
         inserter->AddArg(jank_tag_id_, Variadic::String(jank_tag));
+        inserter->AddArg(jank_tag_experimental_id_,
+                         Variadic::String(jank_tag_experimental));
       });
 
   // SurfaceFrames will always be parsed before the matching DisplayFrame
@@ -425,6 +449,32 @@ void FrameTimelineEventParser::ParseExpectedSurfaceFrameStart(int64_t timestamp,
       });
 }
 
+StringId FrameTimelineEventParser::CalculateSurfaceFrameJankTag(
+    int32_t jank_type,
+    std::optional<int32_t> present_type_opt) {
+  StringId jank_tag;
+  if (jank_type == FrameTimelineEvent::JANK_UNSPECIFIED) {
+    jank_tag = jank_tag_unspecified_id_;
+  } else if (SurfaceFrameJanky(jank_type)) {
+    jank_tag = jank_tag_self_id_;
+  } else if (DisplayFrameJanky(jank_type)) {
+    jank_tag = jank_tag_other_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_BUFFER_STUFFING) {
+    jank_tag = jank_tag_buffer_stuffing_id_;
+  } else if (present_type_opt.has_value() &&
+             *present_type_opt == FrameTimelineEvent::PRESENT_DROPPED) {
+    jank_tag = jank_tag_dropped_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_NON_ANIMATING) {
+    jank_tag = jank_tag_none_animating_id_;
+  } else if (jank_type == FrameTimelineEvent::JANK_DISPLAY_NOT_ON) {
+    jank_tag = jank_tag_display_not_on_id_;
+  } else {
+    jank_tag = jank_tag_none_id_;
+  }
+
+  return jank_tag;
+}
+
 void FrameTimelineEventParser::ParseActualSurfaceFrameStart(int64_t timestamp,
                                                             ConstBytes blob) {
   ActualSurfaceFrameStartDecoder event(blob);
@@ -469,8 +519,10 @@ void FrameTimelineEventParser::ParseActualSurfaceFrameStart(int64_t timestamp,
 
   // parse present type experimental
   StringId present_type_experimental = present_type_experimental_ids_[0];
+  bool present_type_experimental_validated = false;
   if (event.has_present_type_experimental() &&
       ValidatePresentType(context_, event.present_type_experimental())) {
+    present_type_experimental_validated = true;
     present_type_experimental =
         present_type_experimental_ids_[static_cast<size_t>(
             event.present_type_experimental())];
@@ -504,21 +556,16 @@ void FrameTimelineEventParser::ParseActualSurfaceFrameStart(int64_t timestamp,
         prediction_type_ids_[static_cast<size_t>(event.prediction_type())];
   }
 
-  StringId jank_tag;
-  if (SurfaceFrameJanky(event.jank_type())) {
-    jank_tag = jank_tag_self_id_;
-  } else if (DisplayFrameJanky(event.jank_type())) {
-    jank_tag = jank_tag_other_id_;
-  } else if (event.jank_type() == FrameTimelineEvent::JANK_BUFFER_STUFFING) {
-    jank_tag = jank_tag_buffer_stuffing_id_;
-  } else if (present_type_validated &&
-             event.present_type() == FrameTimelineEvent::PRESENT_DROPPED) {
-    jank_tag = jank_tag_dropped_id_;
-  } else if (event.jank_type() == FrameTimelineEvent::JANK_NON_ANIMATING) {
-    jank_tag = jank_tag_none_animating_id_;
-  } else {
-    jank_tag = jank_tag_none_id_;
-  }
+  const StringId jank_tag = CalculateSurfaceFrameJankTag(
+      event.jank_type(), present_type_validated
+                             ? std::make_optional(event.present_type())
+                             : std::nullopt);
+  const StringId jank_tag_experimental = CalculateSurfaceFrameJankTag(
+      event.jank_type_experimental(),
+      present_type_experimental_validated
+          ? std::make_optional(event.present_type_experimental())
+          : std::nullopt);
+
   StringId is_buffer = context_->storage->InternString("Unspecified");
   if (event.has_is_buffer()) {
     if (event.is_buffer()) {
@@ -556,6 +603,8 @@ void FrameTimelineEventParser::ParseActualSurfaceFrameStart(int64_t timestamp,
         inserter->AddArg(prediction_type_id_,
                          Variadic::String(prediction_type));
         inserter->AddArg(jank_tag_id_, Variadic::String(jank_tag));
+        inserter->AddArg(jank_tag_experimental_id_,
+                         Variadic::String(jank_tag_experimental));
         inserter->AddArg(is_buffer_id_, Variadic::String(is_buffer));
       });
 

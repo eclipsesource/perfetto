@@ -17,7 +17,7 @@ import {defer} from '../base/deferred';
 import {Icon} from './icon';
 import {Button, ButtonVariant} from './button';
 import {Intent} from './common';
-import {getOrCreate} from '../base/utils';
+import {getOrCreate, getTarget} from '../base/utils';
 import {App} from '../public/app';
 import {assertExists, assertTrue} from '../base/logging';
 
@@ -233,7 +233,9 @@ export function setDefaultOwnerFunction(defaultOwnerFunction: () => App): void {
 let _defaultOwner: (app?: App) => App;
 
 function defaultOwner(app: App | undefined): App {
-  return app ?? assertExists(_defaultOwner)(app);
+  // We proxy apps and traces for plug-ins, so unwrap the proxy
+  // to get a canonical identity
+  return getTarget(app ?? assertExists(_defaultOwner)(app));
 }
 
 function defaultOwnerOf(userAttrs: ModalAttrs): App {

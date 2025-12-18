@@ -197,7 +197,7 @@ export default class implements PerfettoPlugin {
               },
               title: `${thdInfo.name}`,
               columns: sliceLiteColumns,
-              argColumns: sliceLiteColumnNames,
+              rawColumns: sliceLiteColumnNames,
             }),
           );
       },
@@ -232,7 +232,7 @@ export default class implements PerfettoPlugin {
               },
               title: `${thdInfo.name}`,
               columns: sliceColumns,
-              argColumns: sliceColumnNames,
+              rawColumns: sliceColumnNames,
             }),
           );
       },
@@ -276,7 +276,7 @@ export default class implements PerfettoPlugin {
             (await getThreadInfo(ctx.engine, trackUtid as Utid)).name ??
             '<thread name>',
           columns: criticalPathsliceLiteColumns,
-          argColumns: criticalPathsliceLiteColumnNames,
+          rawColumns: criticalPathsliceLiteColumnNames,
         });
       },
     });
@@ -311,7 +311,7 @@ export default class implements PerfettoPlugin {
             (await getThreadInfo(ctx.engine, trackUtid as Utid)).name ??
             '<thread name>',
           columns: criticalPathSliceColumns,
-          argColumns: criticalPathsliceColumnNames,
+          rawColumns: criticalPathsliceColumnNames,
         });
       },
     });

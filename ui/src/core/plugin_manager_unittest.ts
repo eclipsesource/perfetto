@@ -14,34 +14,31 @@
 
 import {PerfettoPlugin, PerfettoPluginStatic} from '../public/plugin';
 import {createFakeTraceImpl} from './fake_trace_impl';
-import {PluginAppInterface, PluginManagerImpl} from './plugin_manager';
+import {PluginManagerImpl} from './plugin_manager';
 
 const trace = createFakeTraceImpl();
-const DummyApp: PluginAppInterface = {
-  forkForPlugin: jest.fn(),
-  trace,
-};
+const dummyApp = trace.app;
 
 const testPlugin = (pluginId: string): PerfettoPluginStatic<PerfettoPlugin> => {
-    return (class {
-        static id = pluginId;
-    });
+  return class {
+    static id = pluginId;
+  };
 };
 
 describe('PluginManagerImpl child manager', () => {
   test('child registry sees parent plugins but not vice versa', async () => {
-    const parent = new PluginManagerImpl(DummyApp);
+    const parent = new PluginManagerImpl();
     const parentPlugin = testPlugin('test$parentPlugin');
     parent.registerPlugin(parentPlugin);
-    parent.activatePlugins([parentPlugin.id]);
+    parent.activatePlugins(dummyApp, [parentPlugin.id]);
     await parent.onTraceLoad(trace);
 
-    const child = parent.createChild();
+    const child = parent.createChild(trace);
     // Add to child, parent does not see it
     const childPlugin = testPlugin('test$childPlugin');
     child.registerPlugin(childPlugin);
     // Parent plug-in was already acviated in the parent manager
-    child.activatePlugins([childPlugin.id]);
+    child.activatePlugins(dummyApp, [childPlugin.id]);
     await child.onTraceLoad(trace);
 
     expect(child.getPlugin(parentPlugin)).toBeDefined();

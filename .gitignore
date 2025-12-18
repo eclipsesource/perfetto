@@ -1,6 +1,7 @@
 .aider*
 .android_config
 .cache
+.cargo
 .ccls
 .ccls-cache
 .clangd
@@ -12,6 +13,7 @@
 .eslintcache
 .gclient*
 .gemini
+.gemini/
 .gm-actuals
 .gradle
 .idea
@@ -22,7 +24,9 @@
 .venv
 .vscode
 *.code-workspace
+*.core
 *.iml
+*.LOCAL.md
 *.pyc
 *.sock
 *.swp
@@ -35,12 +39,11 @@
 /venv/*
 depot_tools/
 examples/sdk/build/
+gha-creds-*.json
 GPATH
 GRTAGS
 GTAGS
 mise.toml
 perf.data*
+rfcs
 TAGS
-
-.gemini/
-gha-creds-*.json

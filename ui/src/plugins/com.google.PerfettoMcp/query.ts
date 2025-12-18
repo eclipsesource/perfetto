@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {Engine} from '../../trace_processor/engine';
-import {QueryResult, SqlValue} from 'src/trace_processor/query_result';
+import {QueryResult, SqlValue} from '../../trace_processor/query_result';
 
 export async function runQueryForMcp(
   engine: Engine,
