@@ -53,16 +53,32 @@ export class HttpRpcEngine extends EngineBase {
 
   rpcSendRequestBytes(data: Uint8Array): void {
     if (this.disposed) return;
-    this.websocket ??= this.initWebSocket();
+    const websocket = this.getOrCreateWebSocket();
 
     if (this.connected) {
-      this.websocket.send(data);
+      websocket.send(data);
     } else {
       this.requestQueue.push(data); // onWebsocketConnected() will flush this.
     }
   }
 
-  private initWebSocket(): WebSocket {
+  /**
+   * Returns the existing WebSocket if one exists and is not closed,
+   * otherwise creates a new one (closing any stale socket first).
+   */
+  private getOrCreateWebSocket(): WebSocket {
+    // If we have an active websocket that's not closed/closing, reuse it
+    if (
+      this.websocket !== undefined &&
+      this.websocket.readyState !== WebSocket.CLOSED &&
+      this.websocket.readyState !== WebSocket.CLOSING
+    ) {
+      return this.websocket;
+    }
+
+    // Close any stale websocket before creating a new one
+    this.closeWebSocket();
+
     const wsUrl = `ws://${HttpRpcEngine.getHostAndPort(this.port)}/websocket`;
     this.websocket = new WebSocket(wsUrl);
     this.websocket.onopen = () => this.onWebsocketConnected();
@@ -70,6 +86,22 @@ export class HttpRpcEngine extends EngineBase {
     this.websocket.onclose = (e) => this.onWebsocketClosed(e);
     this.websocket.onerror = (e) => this.onWebsocketError(e);
     return this.websocket;
+  }
+
+  /**
+   * Closes the current websocket if one exists, clearing event handlers
+   * to prevent spurious callbacks.
+   */
+  private closeWebSocket(): void {
+    if (this.websocket === undefined) return;
+
+    // Clear handlers to prevent callbacks from a closing socket
+    this.websocket.onopen = null;
+    this.websocket.onmessage = null;
+    this.websocket.onclose = null;
+    this.websocket.onerror = null;
+    this.websocket.close();
+    this.websocket = undefined;
   }
 
   private onWebsocketError(e: Event): void {
@@ -89,7 +121,7 @@ export class HttpRpcEngine extends EngineBase {
     this.retryTimeoutId = setTimeout(() => {
       if (this.disposed) return;
       console.debug('Attempting WebSocket reconnection...');
-      this.initWebSocket();
+      this.getOrCreateWebSocket();
     }, this.retryDelayMs);
 
     // Exponential backoff with cap
@@ -189,8 +221,6 @@ export class HttpRpcEngine extends EngineBase {
       this.retryTimeoutId = undefined;
     }
 
-    const websocket = this.websocket;
-    this.websocket = undefined;
-    websocket?.close();
+    this.closeWebSocket();
   }
 }
