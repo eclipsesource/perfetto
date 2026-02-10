@@ -31,7 +31,10 @@ import {CommandInvocation, CommandManagerImpl} from './command_manager';
 import {embedderContext} from './embedder';
 import {featureFlags} from './feature_flags';
 import {loadTrace} from './load_trace';
-import {HierarchicalOmniboxManager, OmniboxManagerImpl} from './omnibox_manager';
+import {
+  HierarchicalOmniboxManager,
+  OmniboxManagerImpl,
+} from './omnibox_manager';
 import {PageManagerImpl} from './page_manager';
 import {PerfManager} from './perf_manager';
 import {PluginManagerImpl} from './plugin_manager';
@@ -282,34 +285,128 @@ export class AppImpl implements App {
     };
   }
 
-  openTraceFromFile(file: File) {
-    return this.openTrace({type: 'FILE', file});
+  openTraceFromFile(file: File): Promise<TraceImpl>;
+  openTraceFromFile(
+    file: File,
+    /**
+     * An optional call-back to be notified of the identity of the new trace as soon as it is created
+     * and before loading begins. Be careful how this is used: it may only be used for its identity
+     * because it is in an uninitialized state and loading it may yet fail.
+     */
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl>;
+  openTraceFromFile(
+    file: File,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ) {
+    return this.openTrace({type: 'FILE', file}, onTraceCreated);
   }
 
-  openTraceFromMultipleFiles(files: ReadonlyArray<File>) {
-    return this.openTrace({type: 'MULTIPLE_FILES', files});
+  openTraceFromMultipleFiles(files: ReadonlyArray<File>): Promise<TraceImpl>;
+  openTraceFromMultipleFiles(
+    files: ReadonlyArray<File>,
+    /**
+     * An optional call-back to be notified of the identity of the new trace as soon as it is created
+     * and before loading begins. Be careful how this is used: it may only be used for its identity
+     * because it is in an uninitialized state and loading it may yet fail.
+     */
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl>;
+  openTraceFromMultipleFiles(
+    files: ReadonlyArray<File>,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ) {
+    return this.openTrace({type: 'MULTIPLE_FILES', files}, onTraceCreated);
   }
 
-  openTraceFromUrl(url: string, serializedAppState?: SerializedAppState) {
-    return this.openTrace({type: 'URL', url, serializedAppState});
+  openTraceFromUrl(
+    url: string,
+    serializedAppState?: SerializedAppState,
+  ): Promise<TraceImpl>;
+  openTraceFromUrl(
+    url: string,
+    serializedAppState?: SerializedAppState,
+    /**
+     * An optional call-back to be notified of the identity of the new trace as soon as it is created
+     * and before loading begins. Be careful how this is used: it may only be used for its identity
+     * because it is in an uninitialized state and loading it may yet fail.
+     */
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl>;
+  openTraceFromUrl(
+    url: string,
+    serializedAppState?: SerializedAppState,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ) {
+    return this.openTrace(
+      {type: 'URL', url, serializedAppState},
+      onTraceCreated,
+    );
   }
 
-  openTraceFromStream(stream: TraceStream) {
-    return this.openTrace({type: 'STREAM', stream});
+  openTraceFromStream(stream: TraceStream): Promise<TraceImpl>;
+  openTraceFromStream(
+    stream: TraceStream,
+    /**
+     * An optional call-back to be notified of the identity of the new trace as soon as it is created
+     * and before loading begins. Be careful how this is used: it may only be used for its identity
+     * because it is in an uninitialized state and loading it may yet fail.
+     */
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl>;
+  openTraceFromStream(
+    stream: TraceStream,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ) {
+    return this.openTrace({type: 'STREAM', stream}, onTraceCreated);
   }
 
   openTraceFromBuffer(
     args: OpenTraceArrayBufArgs,
     serializedAppState?: SerializedAppState,
+  ): Promise<TraceImpl>;
+  openTraceFromBuffer(
+    args: OpenTraceArrayBufArgs,
+    serializedAppState?: SerializedAppState,
+    /**
+     * An optional call-back to be notified of the identity of the new trace as soon as it is created
+     * and before loading begins. Be careful how this is used: it may only be used for its identity
+     * because it is in an uninitialized state and loading it may yet fail.
+     */
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl>;
+  openTraceFromBuffer(
+    args: OpenTraceArrayBufArgs,
+    serializedAppState?: SerializedAppState,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
   ) {
-    return this.openTrace({...args, type: 'ARRAY_BUFFER', serializedAppState});
+    return this.openTrace(
+      {...args, type: 'ARRAY_BUFFER', serializedAppState},
+      onTraceCreated,
+    );
   }
 
-  openTraceFromHttpRpc(port?: string) {
-    return this.openTrace({type: 'HTTP_RPC', port});
+  openTraceFromHttpRpc(port?: string): Promise<TraceImpl>;
+  openTraceFromHttpRpc(
+    port?: string,
+    /**
+     * An optional call-back to be notified of the identity of the new trace as soon as it is created
+     * and before loading begins. Be careful how this is used: it may only be used for its identity
+     * because it is in an uninitialized state and loading it may yet fail.
+     */
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl>;
+  openTraceFromHttpRpc(
+    port?: string,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ) {
+    return this.openTrace({type: 'HTTP_RPC', port}, onTraceCreated);
   }
 
-  private async openTrace(src: TraceSource): Promise<TraceImpl> {
+  private async openTrace(
+    src: TraceSource,
+    onTraceCreated?: (newTrace: TraceImpl) => void,
+  ): Promise<TraceImpl> {
     if (src.type === 'ARRAY_BUFFER' && src.buffer instanceof Uint8Array) {
       // Even though the type of `buffer` is ArrayBuffer, it's possible to
       // accidentally pass a Uint8Array here, because the interface of
@@ -351,7 +448,7 @@ export class AppImpl implements App {
         // - Call AppImpl.setActiveTrace(TraceImpl)
         // - Continue with the trace loading logic (track decider, plugins, etc)
         // - Resolve the promise when everything is done.
-        const trace = await loadTrace(this, src);
+        const trace = await loadTrace(this, src, onTraceCreated);
         this.omnibox.childFor(src).reset(/* focus= */ false);
         // loadTrace() internally will call setActiveTrace() and change our
         // _currentTrace in the middle of its execution. We cannot wait for
