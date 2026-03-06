@@ -127,11 +127,17 @@ let lastEngineId = 0;
 export async function loadTrace(
   app: AppImpl,
   traceSource: TraceSource,
+  /**
+   * An optional call-back to be notified of the identity of the new trace as soon as it is created
+   * and before loading begins. Be careful how this is used: it may only be used for its identity
+   * because it is in an uninitialized state and loading it may yet fail.
+   */
+  onTraceCreated?: (newTrace: TraceImpl) => void,
 ): Promise<TraceImpl> {
   updateStatus(traceSource, app, 'Opening trace');
   const engineId = `${++lastEngineId}`;
   const engine = await createEngine(app, engineId, traceSource);
-  return await loadTraceIntoEngine(app, traceSource, engine);
+  return await loadTraceIntoEngine(app, traceSource, engine, onTraceCreated);
 }
 
 async function createEngine(
@@ -183,6 +189,7 @@ async function loadTraceIntoEngine(
   app: AppImpl,
   traceSource: TraceSource,
   engine: EngineBase,
+  onTraceCreated?: (newTrace: TraceImpl) => void,
 ): Promise<TraceImpl> {
   let traceStream: TraceStream | undefined;
   let serializedAppState = traceSource.serializedAppState;
@@ -238,6 +245,7 @@ async function loadTraceIntoEngine(
 
   const traceDetails = await getTraceInfo(engine, app, traceSource);
   const trace = new TraceImpl(app, engine, traceDetails);
+  onTraceCreated?.(trace);
   app.setActiveTrace(trace);
 
   const visibleTimeSpan = await computeVisibleTime(
