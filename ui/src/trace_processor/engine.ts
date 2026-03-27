@@ -233,6 +233,19 @@ export abstract class EngineBase implements Engine, Disposable {
 
     this.rxSeqId = rpc.seq;
 
+    // The protobufjs oneof discriminant for `type` is the string field `rpc.type`.
+    // When the TraceProcessor rejects an unknown request it sets the `invalid_request`
+    // oneof case, leaving `rpc.response` as null/0 so the switch below would fall
+    // through to `default` without ever resolving the pending promise — causing an
+    // indefinite hang. Detect and fail fast here instead.
+    if (rpc.type === 'invalidRequest') {
+      this.fail(
+        `TraceProcessor rejected RPC request (method=${rpc.invalidRequest}). ` +
+          `Ensure the trace_processor_shell binary is compatible with this ` +
+          `version of the UI (ERR:rpc_invalid_request)`,
+      );
+    }
+
     let isFinalResponse = true;
 
     switch (rpc.response) {
@@ -675,7 +688,42 @@ export abstract class EngineBase implements Engine, Disposable {
 
   protected fail(reason: string) {
     this._failed = reason;
-    throw new Error(reason);
+    const error = new Error(reason);
+    // Reject all pending operations so callers don't hang forever when the
+    // engine enters a failed state (e.g. after receiving an invalid_request).
+    for (const p of this.pendingParses) p.reject(error);
+    this.pendingParses = [];
+    for (const p of this.pendingEOFs) p.reject(error);
+    this.pendingEOFs = [];
+    for (const p of this.pendingResetTraceProcessors) p.reject(error);
+    this.pendingResetTraceProcessors = [];
+    for (const p of this.pendingRestoreTables) p.reject(error);
+    this.pendingRestoreTables = [];
+    for (const p of this.pendingComputeMetrics) p.reject(error);
+    this.pendingComputeMetrics = [];
+    this.pendingReadMetatrace?.reject(error);
+    this.pendingReadMetatrace = undefined;
+    this.pendingRegisterSqlPackage?.reject(error);
+    this.pendingRegisterSqlPackage = undefined;
+    this.pendingAnalyzeStructuredQueries?.reject(error);
+    this.pendingAnalyzeStructuredQueries = undefined;
+    this.pendingTraceSummary?.reject(error);
+    this.pendingTraceSummary = undefined;
+    // Complete any pending streaming queries with an error result.
+    // WritableQueryResult has no reject() method — errors are signalled by
+    // calling appendResultBatch() with a QueryResult proto that has `error`
+    // set and a final batch with `is_last_batch=true`.
+    if (this.pendingQueries.length > 0) {
+      const errBatch = protos.QueryResult.encode(
+        protos.QueryResult.create({
+          error: reason,
+          batch: [protos.QueryResult.CellsBatch.create({isLastBatch: true})],
+        }),
+      ).finish();
+      for (const q of this.pendingQueries) q.appendResultBatch(errBatch);
+      this.pendingQueries = [];
+    }
+    throw error;
   }
 
   get failed(): string | undefined {
