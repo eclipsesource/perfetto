@@ -449,9 +449,23 @@ size_t HttpServer::ParseOneWebsocketFrame(HttpServerConnection* conn) {
     return 0;  // Not enough data to read the payload.
   uint8_t* const payload_start = rd;
 
-  // Unmask the payload.
-  for (uint32_t i = 0; i < payload_len; ++i)
-    payload_start[i] ^= mask[i % sizeof(mask)];
+  // Unmask the payload. Use explicit 32-bit XOR to avoid a compiler
+  // vectorization bug (observed in Apple Clang 21 / Xcode 26) where the
+  // mask[i % 4] pattern produces an incorrect 8-byte vector with the second
+  // half zeroed, causing every other 4-byte group to be left unmasked.
+  {
+    uint32_t mask32;
+    memcpy(&mask32, mask, sizeof(mask32));
+    uint32_t i = 0;
+    for (; i + 4 <= payload_len; i += 4) {
+      uint32_t tmp;
+      memcpy(&tmp, &payload_start[i], sizeof(tmp));
+      tmp ^= mask32;
+      memcpy(&payload_start[i], &tmp, sizeof(tmp));
+    }
+    for (; i < payload_len; ++i)
+      payload_start[i] ^= mask[i & 3];
+  }
 
   if (opcode == kOpcodePing) {
     PERFETTO_DLOG("[HTTP] Websocket PING");
