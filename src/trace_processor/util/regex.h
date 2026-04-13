@@ -28,22 +28,21 @@
 #include "perfetto/base/status.h"
 #include "perfetto/ext/base/status_or.h"
 
-#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+#include <regex>
+#include <string>
+#else
 #include <regex.h>
 #endif
 
 namespace perfetto::trace_processor::regex {
 
 constexpr bool IsRegexSupported() {
-#if PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
-  return false;
-#else
   return true;
-#endif
 }
 
-// Implements regex parsing and regex search based on C library `regex.h`.
-// Doesn't work on Windows.
+// Implements regex parsing and regex search.
+// Uses POSIX regex.h on non-Windows, std::regex on Windows.
 class Regex {
  public:
 #if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
@@ -63,6 +62,12 @@ class Regex {
     return *this;
   }
   Regex& operator=(const Regex&) = delete;
+#else
+  ~Regex() = default;
+  Regex(const Regex&) = delete;
+  Regex(Regex&& other) = default;
+  Regex& operator=(Regex&& other) = default;
+  Regex& operator=(const Regex&) = delete;
 #endif
 
   // Parse regex pattern. Returns error if regex pattern is invalid.
@@ -74,8 +79,12 @@ class Regex {
     }
     return Regex(regex);
 #else
-    base::ignore_result(pattern);
-    PERFETTO_FATAL("Windows regex is not supported.");
+    try {
+      std::regex re(pattern);
+      return Regex(std::move(re));
+    } catch (const std::regex_error&) {
+      return base::ErrStatus("Regex pattern '%s' is malformed.", pattern);
+    }
 #endif
   }
 
@@ -85,8 +94,8 @@ class Regex {
     PERFETTO_CHECK(regex_);
     return regexec(&regex_.value(), s, 0, nullptr, 0) == 0;
 #else
-    base::ignore_result(s);
-    PERFETTO_FATAL("Windows regex is not supported.");
+    PERFETTO_CHECK(regex_.has_value());
+    return std::regex_search(s, regex_.value());
 #endif
   }
 
@@ -116,9 +125,23 @@ class Regex {
       }
     }
 #else
-    base::ignore_result(out);
-    if (s)
-      PERFETTO_FATAL("Windows regex is not supported.");
+    PERFETTO_CHECK(regex_.has_value());
+    std::string str(s);
+    std::smatch smatches;
+    out.clear();
+    if (!std::regex_search(str, smatches, regex_.value())) {
+      return;
+    }
+    for (size_t i = 0; i < smatches.size(); ++i) {
+      if (smatches[i].matched) {
+        auto offset = smatches[i].first - str.cbegin();
+        auto length = static_cast<size_t>(smatches[i].length());
+        out.emplace_back(s + offset, length);
+      } else {
+        // Optional group that did not match.
+        out.emplace_back();
+      }
+    }
 #endif
   }
 
@@ -128,6 +151,11 @@ class Regex {
 
   std::optional<regex_t> regex_;
   std::vector<regmatch_t> pmatch_;
+#else
+ private:
+  explicit Regex(std::regex re) : regex_(std::move(re)) {}
+
+  std::optional<std::regex> regex_;
 #endif
 };
 }  // namespace perfetto::trace_processor::regex

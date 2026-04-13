@@ -379,11 +379,8 @@ source_set("unittests") {
     "tar_writer_unittest.cc",
     "trace_blob_view_reader_unittest.cc",
     "zip_reader_unittest.cc",
+    "regex_unittest.cc",
   ]
-
-  if (!is_win) {
-    sources += [ "regex_unittest.cc" ]
-  }
 
   testonly = true
   deps = [

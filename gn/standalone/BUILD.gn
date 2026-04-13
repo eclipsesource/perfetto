@@ -255,7 +255,11 @@ config("default") {
       "NOMINMAX",
     ]
     if (!use_custom_libcxx) {
-      defines += [ "_HAS_EXCEPTIONS=0" ]  # Disables exceptions in MSVC STL.
+      # Samsung change:
+      # enable exceptions for using std::regex
+      cflags += [ "/EHsc" ]
+      # was:
+      #  defines += [ "_HAS_EXCEPTIONS=0" ]  # Disables exceptions in MSVC STL.
     }
   } else if (!is_wasm) {  # !is_win
     cflags += [
