@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {isTrustedOrigin} from './post_message_handler';
+import {isTrustedOrigin, postMessageHandler} from './post_message_handler';
 
 describe('postMessageHandler', () => {
+  test('ignores messages whose source is null without throwing', () => {
+    // A message whose source is null (e.g. posted by a browser extension or
+    // some internal browser machinery) must be gracefully ignored, not crash.
+    const messageEvent = new MessageEvent('message', {
+      data: {some: 'payload'},
+      origin: 'https://html5zombo.com',
+      source: null,
+    });
+    expect(() => postMessageHandler(messageEvent)).not.toThrow();
+  });
+
   test('baked-in trusted origins are trusted', () => {
     expect(isTrustedOrigin('https://chrometto.googleplex.com')).toBeTruthy();
     expect(isTrustedOrigin('https://uma.googleplex.com')).toBeTruthy();

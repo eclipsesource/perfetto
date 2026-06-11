@@ -155,7 +155,9 @@ export function postMessageHandler(messageEvent: MessageEvent) {
   // * A is navigated to Perfetto UI
   // * B sends the traceBuffer to A
   // * closes itself
-  const fromOpenee = (messageEvent.source as WindowProxy).opener === window;
+  const fromOpenee =
+    messageEvent.source !== null &&
+    (messageEvent.source as WindowProxy).opener === window;
 
   if (
     messageEvent.source === null ||
