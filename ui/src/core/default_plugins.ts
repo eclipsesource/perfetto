@@ -42,6 +42,7 @@ export const defaultPlugins = [
   'com.android.SysUIWorkspace',
   'com.google.PixelCpmTrace',
   'com.google.PixelMemory',
+  'com.samsung.Gperf',
   'dev.perfetto.AutoPinAndExpandTracks',
   'dev.perfetto.BookmarkletApi',
   'dev.perfetto.CoreCommands',
