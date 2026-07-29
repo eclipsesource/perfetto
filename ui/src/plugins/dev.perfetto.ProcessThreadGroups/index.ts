@@ -363,7 +363,24 @@ export default class implements PerfettoPlugin {
         headless: true,
       });
       this.threadGroups.set(utid, group);
-      this.processGroups.get(upid)?.addChildInOrder(group);
+
+      // If the thread group is not attached to a process group then it is not in the workspace at
+      // all, and every track that plugins subsequently add to it via getGroupForThread() is
+      // silently invisible in the timeline. Report it instead of leaving it to look like the trace
+      // has no data for the thread.
+      const processGroup = this.processGroups.get(upid);
+      if (processGroup === undefined) {
+        console.warn(
+          `No process group for upid ${upid}: the tracks of thread ${utid} will not appear in the timeline.`,
+        );
+      } else {
+        const result = processGroup.addChildInOrder(group);
+        if (!result.ok) {
+          console.warn(
+            `Could not add the group for thread ${utid} to the group for process ${upid}: ${result.error}`,
+          );
+        }
+      }
     }
   }
 }

@@ -274,6 +274,9 @@ export default class SchedPlugin implements PerfettoPlugin {
         is_kernel_thread as isKernelThread
       from _threads_with_kernel_flag t
       join _sched_summary using (utid)
+      -- Order explicitly: the order in which these tracks are registered and inserted into their
+      -- groups determines their order in the timeline, and must not vary from run to run.
+      order by t.upid, tid, utid
     `);
 
     const it = result.iter({
@@ -327,7 +330,23 @@ export default class SchedPlugin implements PerfettoPlugin {
         .getPlugin(ProcessThreadGroupsPlugin)
         .getGroupForThread(utid);
       const track = new TrackNode({uri, name: title, sortOrder: 10});
-      group?.addChildInOrder(track);
+
+      // A track that doesn't make it into the track tree is invisible in the timeline, and links
+      // to it from other tracks (e.g. from a CPU slice to the thread's state) resolve via the
+      // track registry and then have nowhere to scroll to. Neither symptom raises an error, so
+      // report it here rather than leaving it to look like missing trace data.
+      if (group === undefined) {
+        console.warn(
+          `No thread group for utid ${utid}: thread state track ${uri} will not appear in the timeline.`,
+        );
+      } else {
+        const result = group.addChildInOrder(track);
+        if (!result.ok) {
+          console.warn(
+            `Could not add thread state track ${uri} to the group for utid ${utid}: ${result.error}`,
+          );
+        }
+      }
     }
   }
 
