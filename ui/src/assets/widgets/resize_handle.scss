@@ -35,4 +35,19 @@
     top: 3px;
     background: var(--pf-color-border);
   }
+
+  &--horizontal {
+    cursor: col-resize;
+    margin-block: 0;
+    margin-inline: -3px;
+    height: auto;
+    width: 7px;
+
+    &::after {
+      height: 100%;
+      width: 1px;
+      top: 0;
+      left: 3px;
+    }
+  }
 }

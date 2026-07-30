@@ -29,6 +29,30 @@
     }
   }
 
+  &__timeline {
+    // Stacks the header on top of the track trees, as they share the track
+    // shell column.
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0; // Let the track trees scroll rather than overflow
+    position: relative; // Positions the track shell resize handle
+  }
+
+  // The handle classes are both included in the selector to outrank the
+  // in-flow positioning of .pf-resize-handle, which is defined in a stylesheet
+  // that comes later.
+  &__track-shell-resize-handle.pf-resize-handle--horizontal {
+    // Straddles the border between the track shells and the timeline, spanning
+    // the header and all of the tracks. The z-index inherited from
+    // .pf-resize-handle keeps it above both.
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--track-shell-width) - 3px);
+    margin-inline: 0; // Absolutely positioned, so no need to pull it into place
+  }
+
   &__header {
     display: grid;
     grid-template-columns: 1fr auto;

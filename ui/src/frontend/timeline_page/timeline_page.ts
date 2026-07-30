@@ -29,6 +29,12 @@ import {trackMatchesFilter} from '../../core/track_manager';
 import {TraceImpl} from '../../core/trace_impl';
 import {Trace} from '../../public/trace';
 import {ResizeHandle} from '../../widgets/resize_handle';
+import {
+  applyTrackShellWidth,
+  fitTrackShellWidth,
+  trackShellWidth,
+  updateTrackShellWidth,
+} from './track_shell_width';
 
 const OVERVIEW_PANEL_FLAG = featureFlags.register({
   id: 'overviewVisible',
@@ -58,6 +64,7 @@ class TimelinePage implements m.ClassComponent<TimelinePageAttrs> {
 
   view({attrs}: m.CVnode<TimelinePageAttrs>) {
     const {trace} = attrs;
+
     return m(
       '.pf-timeline-page',
       m(
@@ -68,62 +75,87 @@ class TimelinePage implements m.ClassComponent<TimelinePageAttrs> {
             trace,
             className: 'pf-timeline-page__overview',
           }),
-        m(TimelineHeader, {
-          trace,
-          className: 'pf-timeline-page__header',
-          // There are three independent canvases on this page which we could
-          // use keep track of the timeline width, but we use the header one
-          // because it's always rendered.
-          onTimelineBoundsChange: (rect) => (this.timelineBounds = rect),
-        }),
-        // Hide tracks while the trace is loading to prevent thrashing.
-        !AppImpl.instance.isTraceLoading(trace.traceInfo.source) && [
-          // Don't render pinned tracks if we have none.
-          trace.currentWorkspace.pinnedTracks.length > 0 && [
-            m(
-              '.pf-timeline-page__pinned-track-tree',
-              {
-                style:
-                  this.pinnedTracksHeight === 'auto'
-                    ? {maxHeight: '40%'}
-                    : {height: `${this.pinnedTracksHeight}px`},
-              },
-              m(TrackTreeView, {
-                trace,
-                rootNode: trace.currentWorkspace.pinnedTracksNode,
-                canReorderNodes: true,
-                scrollToNewTracks: true,
+        // The header and the tracks share the track shell column, so they are
+        // wrapped together to give the divider between the track names and the
+        // timeline something to span. The minimap is deliberately left out of
+        // it, as it has no track shell and handles its own drag interactions.
+        m(
+          '.pf-timeline-page__timeline',
+          m(TimelineHeader, {
+            trace,
+            className: 'pf-timeline-page__header',
+            // There are three independent canvases on this page which we could
+            // use keep track of the timeline width, but we use the header one
+            // because it's always rendered.
+            onTimelineBoundsChange: (rect) => (this.timelineBounds = rect),
+          }),
+          // Hide tracks while the trace is loading to prevent thrashing.
+          !AppImpl.instance.isTraceLoading(trace.traceInfo.source) && [
+            // Don't render pinned tracks if we have none.
+            trace.currentWorkspace.pinnedTracks.length > 0 && [
+              m(
+                '.pf-timeline-page__pinned-track-tree',
+                {
+                  style:
+                    this.pinnedTracksHeight === 'auto'
+                      ? {maxHeight: '40%'}
+                      : {height: `${this.pinnedTracksHeight}px`},
+                },
+                m(TrackTreeView, {
+                  trace,
+                  rootNode: trace.currentWorkspace.pinnedTracksNode,
+                  canReorderNodes: true,
+                  scrollToNewTracks: true,
+                }),
+              ),
+              m(ResizeHandle, {
+                onResize: (deltaPx: number) => {
+                  if (this.pinnedTracksHeight === 'auto') {
+                    this.pinnedTracksHeight = toHTMLElement(
+                      document.querySelector(
+                        '.pf-timeline-page__pinned-track-tree',
+                      )!,
+                    ).getBoundingClientRect().height;
+                  }
+                  this.pinnedTracksHeight = this.pinnedTracksHeight + deltaPx;
+                  m.redraw();
+                },
+                ondblclick: () => {
+                  this.pinnedTracksHeight = 'auto';
+                },
               }),
-            ),
-            m(ResizeHandle, {
-              onResize: (deltaPx: number) => {
-                if (this.pinnedTracksHeight === 'auto') {
-                  this.pinnedTracksHeight = toHTMLElement(
-                    document.querySelector(
-                      '.pf-timeline-page__pinned-track-tree',
-                    )!,
-                  ).getBoundingClientRect().height;
-                }
-                this.pinnedTracksHeight = this.pinnedTracksHeight + deltaPx;
-                m.redraw();
-              },
-              ondblclick: () => {
-                this.pinnedTracksHeight = 'auto';
-              },
+            ],
+
+            m(TrackTreeView, {
+              trace,
+              className: 'pf-timeline-page__scrolling-track-tree',
+              rootNode: trace.currentWorkspace.tracks,
+              canReorderNodes: trace.currentWorkspace.userEditable,
+              canRemoveNodes: trace.currentWorkspace.userEditable,
+              trackFilter: (track) => trackMatchesFilter(trace, track),
             }),
           ],
-
-          m(TrackTreeView, {
-            trace,
-            className: 'pf-timeline-page__scrolling-track-tree',
-            rootNode: trace.currentWorkspace.tracks,
-            canReorderNodes: trace.currentWorkspace.userEditable,
-            canRemoveNodes: trace.currentWorkspace.userEditable,
-            trackFilter: (track) => trackMatchesFilter(trace, track),
-          }),
-        ],
+          this.renderTrackShellResizeHandle(trace),
+        ),
       ),
     );
+  }
+
+  private renderTrackShellResizeHandle(trace: TraceImpl) {
+    return m(ResizeHandle, {
+      orientation: 'horizontal',
+      className: 'pf-timeline-page__track-shell-resize-handle',
+      title:
+        'Drag to resize the track name column\n' +
+        'Double click to fit the names of the tracks on screen',
+      // Each move updates the workspace, which is the source of truth for the
+      // width, so that a redraw mid-drag doesn't undo the drag.
+      onResize: (deltaPx: number) => {
+        const width = trackShellWidth(trace.currentWorkspace) + deltaPx;
+        updateTrackShellWidth(trace, width);
+      },
+      ondblclick: () => fitTrackShellWidth(trace),
+    });
   }
 
   oncreate(vnode: m.VnodeDOM<TimelinePageAttrs>) {
@@ -156,7 +188,11 @@ class TimelinePage implements m.ClassComponent<TimelinePageAttrs> {
     this.onupdate(vnode);
   }
 
-  onupdate({attrs}: m.VnodeDOM<TimelinePageAttrs>) {
+  onupdate({attrs, dom}: m.VnodeDOM<TimelinePageAttrs>) {
+    // Lay this timeline out at the width of the workspace it is showing. Each
+    // timeline has its own width, so this is scoped to this page's element.
+    applyTrackShellWidth(attrs.trace, toHTMLElement(dom));
+
     // TODO(stevegolton): It's assumed that the TrackStacks will call into
     // trace.tracks.getTrackRenderer() in their view() functions which will mark
     // track renderers as used. We call flushOldTracks() here as it's guaranteed

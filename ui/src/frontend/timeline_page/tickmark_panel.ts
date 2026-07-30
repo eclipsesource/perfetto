@@ -18,8 +18,9 @@ import {Size2D} from '../../base/geom';
 import {TimeScale} from '../../base/time_scale';
 import {getOrCreate} from '../../base/utils';
 import {TraceImpl} from '../../core/trace_impl';
-import {COLOR_BORDER, TRACK_SHELL_WIDTH} from '../css_constants';
+import {COLOR_BORDER} from '../css_constants';
 import {generateTicks, getMaxMajorTicks, TickType} from './gridline_helper';
+import {trackShellWidth} from './track_shell_width';
 import {SearchOverviewTrack} from './search_overview_track';
 
 // We want to create the overview track only once per trace, but this
@@ -46,12 +47,13 @@ export class TickmarkPanel {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: Size2D): void {
+    const shellWidth = trackShellWidth(this.trace.currentWorkspace);
     ctx.fillStyle = COLOR_BORDER;
-    ctx.fillRect(TRACK_SHELL_WIDTH - 1, 0, 1, size.height);
+    ctx.fillRect(shellWidth - 1, 0, 1, size.height);
 
-    const trackSize = {...size, width: size.width - TRACK_SHELL_WIDTH};
+    const trackSize = {...size, width: size.width - shellWidth};
     ctx.save();
-    ctx.translate(TRACK_SHELL_WIDTH, 0);
+    ctx.translate(shellWidth, 0);
     canvasClip(ctx, 0, 0, trackSize.width, trackSize.height);
     this.renderTrack(ctx, trackSize);
     ctx.restore();

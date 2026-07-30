@@ -37,6 +37,11 @@ import {
   openInOldUIWithSizeCheck,
 } from '../../frontend/legacy_trace_viewer';
 import {shareTrace} from '../../frontend/trace_share_utils';
+import {
+  fitTrackShellWidth,
+  trackShellWidth,
+  updateTrackShellWidth,
+} from '../../frontend/timeline_page/track_shell_width';
 import {PerfettoPlugin} from '../../public/plugin';
 import {DurationPrecision, TimestampFormat} from '../../public/timeline';
 import {getTimeSpanOfSelectionOrVisibleWindow} from '../../public/utils';
@@ -344,6 +349,33 @@ export default class CoreCommands implements PerfettoPlugin {
       name: 'Collapse all track groups',
       callback: () => {
         ctx.currentWorkspace.flatTracks.forEach((track) => track.collapse());
+      },
+    });
+
+    ctx.commands.registerCommand({
+      id: 'dev.perfetto.FitTrackShellWidth',
+      name: 'Fit track name column to tracks on screen',
+      callback: () => fitTrackShellWidth(ctx),
+    });
+
+    ctx.commands.registerCommand({
+      id: 'dev.perfetto.SetTrackShellWidth',
+      name: 'Set track name column width',
+      callback: async (widthPx?: unknown) => {
+        const width =
+          widthPx === undefined
+            ? Number(
+                await ctx.omnibox.prompt(
+                  'Enter the track name column width in pixels...',
+                  `${trackShellWidth(ctx.currentWorkspace)}`,
+                ),
+              )
+            : Number(widthPx);
+        // The prompt returns undefined if the user dismisses it, and the user
+        // can type anything at all into it.
+        if (Number.isFinite(width)) {
+          updateTrackShellWidth(ctx, width);
+        }
       },
     });
 
