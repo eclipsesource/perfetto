@@ -149,10 +149,13 @@ class TimelinePage implements m.ClassComponent<TimelinePageAttrs> {
         'Drag to resize the track name column\n' +
         'Double click to fit the names of the tracks on screen',
       // Each move updates the workspace, which is the source of truth for the
-      // width, so that a redraw mid-drag doesn't undo the drag.
+      // width, so that a redraw mid-drag doesn't undo the drag. The column is
+      // clamped, so the drag reports back how much of the move it took, to keep
+      // the divider where the pointer left it rather than where the pointer has
+      // since gone.
       onResize: (deltaPx: number) => {
-        const width = trackShellWidth(trace.currentWorkspace) + deltaPx;
-        updateTrackShellWidth(trace, width);
+        const width = trackShellWidth(trace.currentWorkspace);
+        return updateTrackShellWidth(trace, width + deltaPx) - width;
       },
       ondblclick: () => fitTrackShellWidth(trace),
     });

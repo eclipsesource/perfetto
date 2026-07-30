@@ -119,11 +119,14 @@ export function applyTrackShellWidth(trace: Trace, timeline: HTMLElement) {
  *
  * @param trace The trace whose timeline is being resized.
  * @param px The desired width in pixels.
+ * @returns The width actually applied, which is the desired width clamped to
+ * the range the timeline can accommodate.
  */
-export function updateTrackShellWidth(trace: Trace, px: number) {
+export function updateTrackShellWidth(trace: Trace, px: number): number {
   // Store the width that will actually be applied, so that the workspace and
   // the timeline can never disagree.
-  trace.currentWorkspace.trackShellWidth = clampTrackShellWidth(px);
+  const width = clampTrackShellWidth(px);
+  trace.currentWorkspace.trackShellWidth = width;
 
   const timeline = timelineFor(trace);
   if (timeline) {
@@ -135,6 +138,8 @@ export function updateTrackShellWidth(trace: Trace, px: number) {
     // pick the width up when it does.
     raf.scheduleFullRedraw();
   }
+
+  return width;
 }
 
 /**

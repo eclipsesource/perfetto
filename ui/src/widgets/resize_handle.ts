@@ -24,13 +24,23 @@ export type ResizeHandleOrientation = 'vertical' | 'horizontal';
 export interface ResizeHandleAttrs extends HTMLAttrs {
   // Defaults to 'vertical'.
   readonly orientation?: ResizeHandleOrientation;
-  onResize(deltaPx: number): void;
+  // Resizes the element by deltaPx, and may return how many pixels of that were
+  // actually applied, which is less than asked for when the resize runs into a
+  // limit. Returning nothing means that the whole delta was applied.
+  //
+  // Reporting what was applied is what keeps the handle under the pointer: at a
+  // limit the pointer runs on but the handle does not, so the pointer has to
+  // come back to the handle before dragging the other way moves it again.
+  onResize(deltaPx: number): number | void;
   onResizeStart?(): void;
   onResizeEnd?(): void;
 }
 
 export class ResizeHandle implements m.ClassComponent<ResizeHandleAttrs> {
   private handleElement?: HTMLElement;
+  // Where the handle is along the axis it is dragged on, which is where the
+  // pointer left it rather than where the pointer now is: a resize that hits a
+  // limit leaves the handle behind.
   private previousPos: number | undefined;
 
   oncreate(vnode: m.VnodeDOM<ResizeHandleAttrs, this>) {
@@ -91,8 +101,11 @@ export class ResizeHandle implements m.ClassComponent<ResizeHandleAttrs> {
           this.previousPos !== undefined
           // && this.handleElement!.hasPointerCapture(e.pointerId)
         ) {
-          attrs.onResize(pos - this.previousPos);
-          this.previousPos = pos;
+          const requested = pos - this.previousPos;
+          // Follow the element being resized, not the pointer, so that the
+          // handle doesn't run away from what it is attached to.
+          const applied = attrs.onResize(requested) ?? requested;
+          this.previousPos += applied;
         }
       },
       onpointerup: (e: PointerEvent) => {

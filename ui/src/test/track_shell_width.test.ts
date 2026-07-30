@@ -139,6 +139,58 @@ test('dragging the divider resizes the track name column', async ({
     .toBeCloseTo(initialBounds.left + 150, 0);
 });
 
+test('the divider stays under the pointer at the widest the column may be', async ({
+  browser,
+}) => {
+  const {page, timeline} = await openTimeline(browser);
+
+  const initialWidth = await trackShellWidth(timeline);
+  const widestAllowed = Math.floor(
+    (await page.evaluate(() => window.innerWidth)) / 2,
+  );
+  const initialBounds = await dividerBounds(timeline);
+
+  const handle = timeline.locator(HANDLE);
+  const box = assertExists(await handle.boundingBox());
+  const startX = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  // Where the pointer is when the column reaches the widest it may be: from
+  // there on it is dragging against the limit.
+  const limitX = startX + (widestAllowed - initialWidth);
+  // How far past the limit the pointer runs on. The window is wide enough for
+  // this, as the limit is only half of it.
+  const overshootPx = 200;
+  expect(limitX + overshootPx).toBeLessThan(
+    await page.evaluate(() => window.innerWidth),
+  );
+
+  const mouse = page.mouse;
+  await mouse.move(startX, y);
+  await mouse.down();
+
+  try {
+    // Dragging past the limit widens the column no further.
+    await mouse.move(limitX + overshootPx, y, {steps: 10});
+    await expect.poll(() => trackShellWidth(timeline)).toBe(widestAllowed);
+
+    // Turning back doesn't narrow the column until the pointer has caught up
+    // with the divider it left behind at the limit.
+    await mouse.move(limitX + overshootPx / 2, y, {steps: 5});
+    expect(await trackShellWidth(timeline)).toBe(widestAllowed);
+    await expect
+      .poll(async () => (await dividerBounds(timeline)).left)
+      .toBeCloseTo(initialBounds.left + (widestAllowed - initialWidth), 0);
+
+    // Once caught up, the divider follows the pointer again.
+    await mouse.move(limitX - 100, y, {steps: 5});
+    await expect
+      .poll(() => trackShellWidth(timeline))
+      .toBe(widestAllowed - 100);
+  } finally {
+    await mouse.up();
+  }
+});
+
 test('fitting the track name column reveals the full track names', async ({
   browser,
 }) => {
