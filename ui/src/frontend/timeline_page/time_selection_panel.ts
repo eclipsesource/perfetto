@@ -26,10 +26,10 @@ import {
   FONT_COMPACT,
   COLOR_TEXT_MUTED,
   COLOR_BORDER,
-  TRACK_SHELL_WIDTH,
   COLOR_TEXT,
 } from '../css_constants';
 import {generateTicks, getMaxMajorTicks, TickType} from './gridline_helper';
+import {trackShellWidth} from './track_shell_width';
 
 export interface BBox {
   x: number;
@@ -171,13 +171,15 @@ export class TimeSelectionPanel {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: Size2D) {
-    ctx.fillStyle = COLOR_BORDER;
-    ctx.fillRect(TRACK_SHELL_WIDTH - 1, 0, 1, size.height);
+    const shellWidth = trackShellWidth(this.trace.currentWorkspace);
 
-    const trackSize = {...size, width: size.width - TRACK_SHELL_WIDTH};
+    ctx.fillStyle = COLOR_BORDER;
+    ctx.fillRect(shellWidth - 1, 0, 1, size.height);
+
+    const trackSize = {...size, width: size.width - shellWidth};
 
     ctx.save();
-    ctx.translate(TRACK_SHELL_WIDTH, 0);
+    ctx.translate(shellWidth, 0);
     canvasClip(ctx, 0, 0, trackSize.width, trackSize.height);
     this.renderPanel(ctx, trackSize);
     ctx.restore();

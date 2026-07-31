@@ -57,7 +57,6 @@ import {
   COLOR_TEXT,
   COLOR_TEXT_MUTED,
   COLOR_TIMELINE_OVERLAY,
-  TRACK_SHELL_WIDTH,
 } from '../css_constants';
 import {renderFlows} from './flow_events_renderer';
 import {generateTicks, getMaxMajorTicks, TickType} from './gridline_helper';
@@ -66,6 +65,7 @@ import {
   wheelNavigationInteraction,
 } from './timeline_interactions';
 import {TrackView} from './track_view';
+import {trackShellWidth} from './track_shell_width';
 import {drawVerticalLineAtTime} from '../../base/vertical_line_helper';
 import {featureFlags} from '../../core/feature_flags';
 import {EmptyState} from '../../widgets/empty_state';
@@ -362,7 +362,7 @@ export class TrackTreeView implements m.ClassComponent<TrackTreeViewAttrs> {
     rootNode: TrackNode,
   ) {
     const timelineRect = new Rect2D({
-      left: TRACK_SHELL_WIDTH,
+      left: trackShellWidth(this.trace.currentWorkspace),
       top: 0,
       right: size.width,
       bottom: size.height,

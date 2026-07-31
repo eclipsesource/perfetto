@@ -22,9 +22,10 @@ import {randomColor} from '../../components/colorizer';
 import {raf} from '../../core/raf_scheduler';
 import {TraceImpl} from '../../core/trace_impl';
 import {Note, SpanNote} from '../../public/note';
-import {COLOR_BORDER, TRACK_SHELL_WIDTH} from '../css_constants';
+import {COLOR_BORDER} from '../css_constants';
 import {generateTicks, getMaxMajorTicks, TickType} from './gridline_helper';
 import {TimelineToolbar} from './timeline_toolbar';
+import {trackShellWidth} from './track_shell_width';
 
 const FLAG_WIDTH = 16;
 const AREA_TRIANGLE_WIDTH = 10;
@@ -59,6 +60,10 @@ export class NotesPanel {
   }
 
   render(): m.Children {
+    // Read on each event rather than captured, as the user can resize the track
+    // shell at any time.
+    const shellWidth = () => trackShellWidth(this.trace.currentWorkspace);
+
     return m(
       '',
       {
@@ -72,18 +77,18 @@ export class NotesPanel {
         },
         onclick: (e: MouseEvent) => {
           if (!this.mouseDragging) {
-            const x = currentTargetOffset(e).x - TRACK_SHELL_WIDTH;
+            const x = currentTargetOffset(e).x - shellWidth();
             this.onClick(x);
             e.stopPropagation();
           }
         },
         onmousemove: (e: MouseEvent) => {
           this.mouseDragging = true;
-          this.hoveredX = currentTargetOffset(e).x - TRACK_SHELL_WIDTH;
+          this.hoveredX = currentTargetOffset(e).x - shellWidth();
           raf.scheduleCanvasRedraw();
         },
         onmouseenter: (e: MouseEvent) => {
-          this.hoveredX = currentTargetOffset(e).x - TRACK_SHELL_WIDTH;
+          this.hoveredX = currentTargetOffset(e).x - shellWidth();
           raf.scheduleCanvasRedraw();
         },
         onmouseout: () => {
@@ -96,13 +101,15 @@ export class NotesPanel {
   }
 
   renderCanvas(ctx: CanvasRenderingContext2D, size: Size2D) {
-    ctx.fillStyle = COLOR_BORDER;
-    ctx.fillRect(TRACK_SHELL_WIDTH - 1, 0, 1, size.height);
+    const shellWidth = trackShellWidth(this.trace.currentWorkspace);
 
-    const trackSize = {...size, width: size.width - TRACK_SHELL_WIDTH};
+    ctx.fillStyle = COLOR_BORDER;
+    ctx.fillRect(shellWidth - 1, 0, 1, size.height);
+
+    const trackSize = {...size, width: size.width - shellWidth};
 
     ctx.save();
-    ctx.translate(TRACK_SHELL_WIDTH, 0);
+    ctx.translate(shellWidth, 0);
     canvasClip(ctx, 0, 0, trackSize.width, trackSize.height);
     this.renderPanel(ctx, trackSize);
     ctx.restore();

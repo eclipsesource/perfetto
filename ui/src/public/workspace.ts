@@ -556,6 +556,12 @@ export class Workspace {
   public readonly id: string;
   public userEditable: boolean = true;
 
+  // The width of the track shell (i.e. the track name column) of the timeline
+  // when showing this workspace, in pixels. Each workspace remembers its own
+  // width, as the tracks it shows determine how much room their names need.
+  // Undefined means the default width.
+  public trackShellWidth?: number;
+
   // Dummy node to contain the pinned tracks
   public readonly pinnedTracksNode = new TrackNode();
   public readonly tracks = new TrackNode();

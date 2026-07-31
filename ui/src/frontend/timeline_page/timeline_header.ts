@@ -25,11 +25,11 @@ import {
   VirtualOverlayCanvas,
   VirtualOverlayCanvasDrawContext,
 } from '../../widgets/virtual_overlay_canvas';
-import {TRACK_SHELL_WIDTH} from '../css_constants';
 import {NotesPanel} from './notes_panel';
 import {TickmarkPanel} from './tickmark_panel';
 import {TimeAxisPanel} from './time_axis_panel';
 import {TimeSelectionPanel} from './time_selection_panel';
+import {trackShellWidth} from './track_shell_width';
 import {
   shiftDragPanInteraction,
   wheelNavigationInteraction,
@@ -93,7 +93,7 @@ export class TimelineHeader implements m.ClassComponent<TimelineHeaderAttrs> {
           disableCanvasRedrawOnMithrilUpdates: true,
           onCanvasRedraw: (ctx) => {
             const rect = new Rect2D({
-              left: TRACK_SHELL_WIDTH,
+              left: trackShellWidth(attrs.trace.currentWorkspace),
               right: ctx.virtualCanvasSize.width,
               top: 0,
               bottom: 0,
@@ -130,7 +130,7 @@ export class TimelineHeader implements m.ClassComponent<TimelineHeaderAttrs> {
     }
 
     const timelineRect = new Rect2D({
-      left: TRACK_SHELL_WIDTH,
+      left: trackShellWidth(this.trace.currentWorkspace),
       top: 0,
       right: virtualCanvasSize.width,
       bottom: virtualCanvasSize.height,

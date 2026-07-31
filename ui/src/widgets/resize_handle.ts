@@ -13,66 +13,99 @@
 // limitations under the License.
 
 import m from 'mithril';
+import {classNames} from '../base/classnames';
 import {HTMLAttrs} from './common';
 import {MithrilEvent} from '../base/mithril_utils';
 
+// Whether the handle resizes an element vertically (i.e. it is dragged up and
+// down) or horizontally (i.e. it is dragged left and right).
+export type ResizeHandleOrientation = 'vertical' | 'horizontal';
+
 export interface ResizeHandleAttrs extends HTMLAttrs {
-  onResize(deltaPx: number): void;
+  // Defaults to 'vertical'.
+  readonly orientation?: ResizeHandleOrientation;
+  // Resizes the element by deltaPx, and may return how many pixels of that were
+  // actually applied, which is less than asked for when the resize runs into a
+  // limit. Returning nothing means that the whole delta was applied.
+  //
+  // Reporting what was applied is what keeps the handle under the pointer: at a
+  // limit the pointer runs on but the handle does not, so the pointer has to
+  // come back to the handle before dragging the other way moves it again.
+  onResize(deltaPx: number): number | void;
   onResizeStart?(): void;
   onResizeEnd?(): void;
 }
 
 export class ResizeHandle implements m.ClassComponent<ResizeHandleAttrs> {
   private handleElement?: HTMLElement;
-  private previousY: number | undefined;
+  // Where the handle is along the axis it is dragged on, which is where the
+  // pointer left it rather than where the pointer now is: a resize that hits a
+  // limit leaves the handle behind.
+  private previousPos: number | undefined;
 
   oncreate(vnode: m.VnodeDOM<ResizeHandleAttrs, this>) {
     this.handleElement = vnode.dom as HTMLElement;
   }
 
   private endDrag(attrs: ResizeHandleAttrs, pointerId: number) {
-    if (this.previousY !== undefined) {
-      this.previousY = undefined;
+    if (this.previousPos !== undefined) {
+      this.previousPos = undefined;
       this.handleElement!.releasePointerCapture(pointerId);
       attrs.onResizeEnd?.();
     }
   }
 
+  // Returns the pointer position along the axis this handle is dragged on,
+  // relative to the element the handle is positioned within.
+  private pointerPos(e: PointerEvent, orientation: ResizeHandleOrientation) {
+    const offsetParent = this.handleElement?.offsetParent as HTMLElement;
+    const parentRect = offsetParent?.getBoundingClientRect();
+    if (orientation === 'horizontal') {
+      return e.clientX - (parentRect?.left ?? 0);
+    } else {
+      return e.clientY - (parentRect?.top ?? 0);
+    }
+  }
+
   view({attrs}: m.CVnode<ResizeHandleAttrs>): m.Children {
     const {
+      orientation = 'vertical',
       onResize: _onResize,
       onResizeStart: _onResizeStart,
       onResizeEnd: _onResizeEnd,
+      className,
       ...rest
     } = attrs;
 
     return m('.pf-resize-handle', {
+      className: classNames(
+        orientation === 'horizontal' && 'pf-resize-handle--horizontal',
+        className,
+      ),
       oncontextmenu: (e: Event) => {
         e.preventDefault();
       },
       onpointerdown: (e: PointerEvent) => {
-        const offsetParent = this.handleElement?.offsetParent as HTMLElement;
-        const offsetTop = offsetParent?.getBoundingClientRect().top ?? 0;
-        const mouseOffsetY = e.clientY - offsetTop;
-        this.previousY = mouseOffsetY;
+        this.previousPos = this.pointerPos(e, orientation);
 
         this.handleElement!.setPointerCapture(e.pointerId);
         attrs.onResizeStart?.();
       },
       onpointermove: (e: MithrilEvent<PointerEvent>) => {
-        const offsetParent = this.handleElement?.offsetParent as HTMLElement;
-        const offsetTop = offsetParent?.getBoundingClientRect().top ?? 0;
-        const mouseOffsetY = e.clientY - offsetTop;
+        const pos = this.pointerPos(e, orientation);
 
         // We typically just resize some element when dragging the handle, so we
         // tell Mithril not to redraw after this event.
         e.redraw = false;
         if (
-          this.previousY !== undefined
+          this.previousPos !== undefined
           // && this.handleElement!.hasPointerCapture(e.pointerId)
         ) {
-          attrs.onResize(mouseOffsetY - this.previousY);
-          this.previousY = mouseOffsetY;
+          const requested = pos - this.previousPos;
+          // Follow the element being resized, not the pointer, so that the
+          // handle doesn't run away from what it is attached to.
+          const applied = attrs.onResize(requested) ?? requested;
+          this.previousPos += applied;
         }
       },
       onpointerup: (e: PointerEvent) => {

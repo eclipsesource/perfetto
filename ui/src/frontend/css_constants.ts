@@ -12,11 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import {clamp} from '../base/math_utils';
+
 // This code can be used in unittests where we can't read CSS variables.
 // Also we cannot have global constructors because when the javascript is
 // loaded, the CSS might not be ready yet.
 export let TRACK_SHELL_WIDTH = 100;
 export let DEFAULT_DETAILS_CONTENT_HEIGHT = 308;
+
+// The name of the CSS variable that defines the track shell width. Its value on
+// :root is the default width, i.e. TRACK_SHELL_WIDTH, and each timeline sets it
+// on its own root element to lay its track shells out at the width of the
+// workspace it is showing. See frontend/timeline_page/track_shell_width.ts.
+export const TRACK_SHELL_WIDTH_VAR = '--track-shell-width';
+
+// The fallback default track shell width, for when the CSS variable has not
+// been read. Kept in step with common.scss.
+export const DEFAULT_TRACK_SHELL_WIDTH = 250;
+
+// Narrower than this and the track shell has no room for its buttons.
+export const MIN_TRACK_SHELL_WIDTH = 100;
+
+/**
+ * Returns the widest the track shell may become, which is a fraction of the
+ * window width, so that resizing it can never squash the timeline away
+ * entirely.
+ */
+export function maxTrackShellWidth(): number {
+  if (typeof window === 'undefined') return DEFAULT_TRACK_SHELL_WIDTH;
+  return Math.max(MIN_TRACK_SHELL_WIDTH, Math.floor(window.innerWidth / 2));
+}
+
+/**
+ * Constrains a track shell width to the range the timeline can accommodate.
+ *
+ * @param px The desired width in pixels.
+ * @returns The nearest usable whole number of pixels.
+ */
+export function clampTrackShellWidth(px: number): number {
+  // Only integral values, as initCssConstants() cannot parse anything else.
+  return Math.round(clamp(px, MIN_TRACK_SHELL_WIDTH, maxTrackShellWidth()));
+}
 
 export let FONT_COMPACT = '"Roboto Condensed", sans-serif';
 
@@ -51,7 +87,7 @@ export function initCssConstants(element?: Element) {
     return Number(match[1]);
   }
 
-  TRACK_SHELL_WIDTH = getCssNum('--track-shell-width') ?? TRACK_SHELL_WIDTH;
+  TRACK_SHELL_WIDTH = getCssNum(TRACK_SHELL_WIDTH_VAR) ?? TRACK_SHELL_WIDTH;
   COLOR_BORDER = getCssStr('--pf-color-border') ?? COLOR_BORDER;
   COLOR_BORDER_SECONDARY =
     getCssStr('--pf-color-border-secondary') ?? COLOR_BORDER_SECONDARY;
