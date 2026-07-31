@@ -689,8 +689,13 @@ export abstract class EngineBase implements Engine, Disposable {
   protected fail(reason: string) {
     this._failed = reason;
     const error = new Error(reason);
-    // Reject all pending operations so callers don't hang forever when the
-    // engine enters a failed state (e.g. after receiving an invalid_request).
+    this.rejectAllPending(error);
+    throw error;
+  }
+
+  // Rejects all pending operations so that callers don't hang forever when the
+  // engine enters a failed state (e.g. after receiving an invalid_request).
+  private rejectAllPending(error: Error) {
     for (const p of this.pendingParses) p.reject(error);
     this.pendingParses = [];
     for (const p of this.pendingEOFs) p.reject(error);
@@ -716,14 +721,13 @@ export abstract class EngineBase implements Engine, Disposable {
     if (this.pendingQueries.length > 0) {
       const errBatch = protos.QueryResult.encode(
         protos.QueryResult.create({
-          error: reason,
+          error: error.message,
           batch: [protos.QueryResult.CellsBatch.create({isLastBatch: true})],
         }),
       ).finish();
       for (const q of this.pendingQueries) q.appendResultBatch(errBatch);
       this.pendingQueries = [];
     }
-    throw error;
   }
 
   get failed(): string | undefined {
