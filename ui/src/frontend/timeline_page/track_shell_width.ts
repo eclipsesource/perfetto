@@ -108,7 +108,12 @@ export function trackShellWidth(workspace: Workspace): number {
  * @param timeline The root element of the timeline page showing the trace.
  */
 export function applyTrackShellWidth(trace: Trace, timeline: HTMLElement) {
-  timelines.set(trace.currentWorkspace, new WeakRef(timeline));
+  // Re-wrapping the same element on every render would churn weak refs, which
+  // are not free: each one created in a turn is held strongly until the next
+  // microtask checkpoint.
+  if (timelines.get(trace.currentWorkspace)?.deref() !== timeline) {
+    timelines.set(trace.currentWorkspace, new WeakRef(timeline));
+  }
   const width = `${trackShellWidth(trace.currentWorkspace)}px`;
   // Setting the same value again is a no-op, so this is safe to call on every
   // render.

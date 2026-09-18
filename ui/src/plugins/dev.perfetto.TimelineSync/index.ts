@@ -18,6 +18,7 @@ import {PerfettoPlugin} from '../../public/plugin';
 import {Time, TimeSpan} from '../../base/time';
 import {redrawModal, showModal} from '../../widgets/modal';
 import {assertExists} from '../../base/logging';
+import {DisposableStack} from '../../base/disposable_stack';
 import {Button, ButtonBar, ButtonVariant} from '../../widgets/button';
 import {Intent} from '../../widgets/common';
 
@@ -118,12 +119,34 @@ export default class implements PerfettoPlugin {
 
     // Start advertising this tab. This allows the command run in other
     // instances to discover us.
-    this._chan = new BroadcastChannel(DEFAULT_BROADCAST_CHANNEL);
-    this._chan.onmessage = this.onmessage.bind(this);
+    //
+    // Each of these outlives the trace unless it is torn down explicitly, so
+    // each is paired with its undo where it is made. The timer and the channel
+    // are roots in their own right: a pending interval is one by definition,
+    // and the browser keeps an open BroadcastChannel alive while it has a
+    // message listener. Both of their callbacks share this function's scope,
+    // which captures `ctx`, so neither is released merely by dropping our own
+    // reference to it.
+    const teardown = ctx.trash.use(new DisposableStack());
+
+    const chan = new BroadcastChannel(DEFAULT_BROADCAST_CHANNEL);
+    this._chan = chan;
+    chan.onmessage = this.onmessage.bind(this);
+    teardown.defer(() => {
+      chan.onmessage = null;
+      chan.close();
+      this._chan = undefined;
+    });
+
     const advertise = () => this.advertise();
     document.addEventListener('visibilitychange', advertise);
+    teardown.defer(() =>
+      document.removeEventListener('visibilitychange', advertise),
+    );
     window.addEventListener('focus', advertise);
+    teardown.defer(() => window.removeEventListener('focus', advertise));
     const advertiseTimer = setInterval(advertise, ADVERTISE_PERIOD_MS);
+    teardown.defer(() => clearInterval(advertiseTimer));
 
     // Allow auto-enabling of timeline sync from the URI. The user can
     // optionally specify a session id, otherwise we just use a default one.
@@ -140,17 +163,11 @@ export default class implements PerfettoPlugin {
     if (this._sessionidFromUrl !== 0) {
       this.enableTimelineSync(this._sessionidFromUrl);
     }
+    // Deferred after `teardown` so it runs before it: the stop message still
+    // needs the channel.
     ctx.trash.defer(() => {
       this.disableTimelineSync(this._sessionId);
       this._ctx = undefined;
-      // These outlive the trace otherwise. The timer is the worst of them: it is a root in its own
-      // right, and its callback shares this function's scope, so it holds `ctx` whether or not the
-      // callback reads it.
-      clearInterval(advertiseTimer);
-      document.removeEventListener('visibilitychange', advertise);
-      window.removeEventListener('focus', advertise);
-      this._chan?.close();
-      this._chan = undefined;
     });
   }
 
