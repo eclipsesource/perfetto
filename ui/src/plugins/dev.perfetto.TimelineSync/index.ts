@@ -120,9 +120,10 @@ export default class implements PerfettoPlugin {
     // instances to discover us.
     this._chan = new BroadcastChannel(DEFAULT_BROADCAST_CHANNEL);
     this._chan.onmessage = this.onmessage.bind(this);
-    document.addEventListener('visibilitychange', () => this.advertise());
-    window.addEventListener('focus', () => this.advertise());
-    setInterval(() => this.advertise(), ADVERTISE_PERIOD_MS);
+    const advertise = () => this.advertise();
+    document.addEventListener('visibilitychange', advertise);
+    window.addEventListener('focus', advertise);
+    const advertiseTimer = setInterval(advertise, ADVERTISE_PERIOD_MS);
 
     // Allow auto-enabling of timeline sync from the URI. The user can
     // optionally specify a session id, otherwise we just use a default one.
@@ -142,6 +143,14 @@ export default class implements PerfettoPlugin {
     ctx.trash.defer(() => {
       this.disableTimelineSync(this._sessionId);
       this._ctx = undefined;
+      // These outlive the trace otherwise. The timer is the worst of them: it is a root in its own
+      // right, and its callback shares this function's scope, so it holds `ctx` whether or not the
+      // callback reads it.
+      clearInterval(advertiseTimer);
+      document.removeEventListener('visibilitychange', advertise);
+      window.removeEventListener('focus', advertise);
+      this._chan?.close();
+      this._chan = undefined;
     });
   }
 
