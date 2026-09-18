@@ -27,12 +27,6 @@ import {SearchOverviewTrack} from './search_overview_track';
 // class can be delete and re-instantiated when switching between pages via
 // the sidebar. So we cache the overview track and bind it to the lifetime of
 // the TraceImpl object.
-//
-// The entry is removed when the trace is disposed rather than left to the
-// garbage collector. A cached track holds the trace it was built for, so it is
-// reachable from its own key and the map entry would never be collected; and
-// the track owns virtual tables in trace_processor, which no amount of
-// collecting the JS object would release.
 const trackTraceMap = new WeakMap<TraceImpl, SearchOverviewTrack>();
 
 // This is used to display the summary of search results.
@@ -41,17 +35,11 @@ export class TickmarkPanel {
   readonly height = 5;
 
   constructor(private readonly trace: TraceImpl) {
-    this.searchOverviewTrack = getOrCreate(trackTraceMap, trace, () => {
-      const track = new SearchOverviewTrack(trace);
-      trace.trash.defer(() => {
-        trackTraceMap.delete(trace);
-        // `trash` is synchronous, so the async teardown cannot be awaited here.
-        track[Symbol.asyncDispose]().catch((e) =>
-          console.error('Failed to dispose the search overview track', e),
-        );
-      });
-      return track;
-    });
+    this.searchOverviewTrack = getOrCreate(
+      trackTraceMap,
+      trace,
+      () => new SearchOverviewTrack(trace),
+    );
   }
 
   render(): m.Children {
