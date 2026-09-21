@@ -63,11 +63,16 @@ const TRACK_TITLE_POPUP_SELECTOR = '.pf-track__title-popup';
 // commands they register - are handed a proxy of the trace, which is not the
 // same object as the one the timeline page renders. Workspaces are shared, so
 // they are the same object either way.
-const timelines = new WeakMap<Workspace, HTMLElement>();
+//
+// The element is held weakly as well. A workspace outlives the page showing it,
+// and is shown by a new page each time it is opened, so a strong reference here
+// would keep every page a workspace has ever been shown by, and everything their
+// event handlers close over, for as long as the workspace itself.
+const timelines = new WeakMap<Workspace, WeakRef<HTMLElement>>();
 
 // Returns the timeline showing a trace, or undefined if it has none on screen.
 function timelineFor(trace: Trace): HTMLElement | undefined {
-  const timeline = timelines.get(trace.currentWorkspace);
+  const timeline = timelines.get(trace.currentWorkspace)?.deref();
   // A timeline page that has been removed can neither be laid out nor measured.
   return timeline?.isConnected ? timeline : undefined;
 }
@@ -103,7 +108,12 @@ export function trackShellWidth(workspace: Workspace): number {
  * @param timeline The root element of the timeline page showing the trace.
  */
 export function applyTrackShellWidth(trace: Trace, timeline: HTMLElement) {
-  timelines.set(trace.currentWorkspace, timeline);
+  // Re-wrapping the same element on every render would churn weak refs, which
+  // are not free: each one created in a turn is held strongly until the next
+  // microtask checkpoint.
+  if (timelines.get(trace.currentWorkspace)?.deref() !== timeline) {
+    timelines.set(trace.currentWorkspace, new WeakRef(timeline));
+  }
   const width = `${trackShellWidth(trace.currentWorkspace)}px`;
   // Setting the same value again is a no-op, so this is safe to call on every
   // render.

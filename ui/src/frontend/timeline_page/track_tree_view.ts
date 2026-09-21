@@ -352,6 +352,10 @@ export class TrackTreeView implements m.ClassComponent<TrackTreeViewAttrs> {
 
   onremove() {
     this.interactions?.[Symbol.dispose]();
+    // Releases the perf stats container registered in `oncreate`. `PerfManager.containers` lives on
+    // the app, not the trace, so a registration left behind holds this view and its trace for the
+    // life of the application.
+    this.trash.dispose();
   }
 
   private drawCanvas(
