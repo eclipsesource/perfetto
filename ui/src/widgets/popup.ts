@@ -422,6 +422,9 @@ export class Popup implements m.ClassComponent<PopupAttrs> {
     };
 
     const options: Partial<OptionsGeneric<ExtendedModifiers>> = {
+      // Fixed positioning escapes ancestors that clip overflow, such as a host
+      // page's panels when the UI is embedded, and keeps the popup in the viewport
+      strategy: 'fixed',
       placement: position,
       modifiers: [
         // Move the popup away from the target allowing room for the arrow
