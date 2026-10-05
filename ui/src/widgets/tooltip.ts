@@ -182,6 +182,8 @@ export class Tooltip implements m.ClassComponent<TooltipAttrs> {
     } = attrs;
 
     const options: Partial<OptionsGeneric<ExtendedModifiers>> = {
+      // As for popups, escape ancestors that clip overflow
+      strategy: 'fixed',
       placement: position,
       modifiers: [
         {

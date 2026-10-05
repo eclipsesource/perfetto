@@ -74,6 +74,8 @@ export class CursorTooltip implements m.ClassComponent<CursorTooltipAttrs> {
         onContentMount: (portal) => {
           this.virtualElement.setPosition(globalMousePos);
           this.popper = createPopper(this.virtualElement, portal, {
+            // As for popups, escape ancestors that clip overflow
+            strategy: 'fixed',
             placement: 'right',
             modifiers: [
               {
