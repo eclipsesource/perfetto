@@ -52,7 +52,12 @@ export class ScrollHelper {
     }
 
     if (track !== undefined) {
-      this.verticalScrollToTrack(track.uri, track.expandGroup ?? false);
+      // Wait for the redraw, as whatever asked for this scroll may also change
+      // the layout. Selecting an event, for one, can open the details panel
+      // over the bottom of the timeline.
+      raf.scheduleFullRedraw(() =>
+        this.verticalScrollToTrack(track.uri, track.expandGroup ?? false),
+      );
     }
   }
 
@@ -134,6 +139,7 @@ export class ScrollHelper {
       // future.
       trackNode.reveal();
       this.trackManager.scrollToTrackNodeId = trackNode.id;
+      raf.scheduleFullRedraw();
     } else {
       // Find the closest visible ancestor of our target track and scroll to
       // that instead.
