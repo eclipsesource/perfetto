@@ -70,6 +70,11 @@ class OmniboxOptionRow implements m.ClassComponent<OmniboxOptionRowAttrs> {
     }
   }
 
+  oncreate({attrs}: m.VnodeDOM<OmniboxOptionRowAttrs, this>) {
+    // Otherwise a row created highlighted scrolls into view on the next redraw.
+    this.highlightedBefore = attrs.highlighted;
+  }
+
   onupdate({attrs, dom}: m.VnodeDOM<OmniboxOptionRowAttrs, this>) {
     if (this.highlightedBefore !== attrs.highlighted) {
       if (attrs.highlighted) {
