@@ -58,6 +58,10 @@ export class SearchManagerImpl implements SearchManager {
   private _searchText = '';
   private _results?: SearchResults;
   private _resultIndex = -1;
+  // Where the first step lands: the first result at or after the start of the
+  // visible window. Kept apart from |_resultIndex| so that, until the user
+  // steps, no result is presented as the current one.
+  private _firstResultIndex = 0;
   private _searchInProgress = false;
 
   // TODO(primiano): once we get rid of globals, these below can be made always
@@ -97,6 +101,7 @@ export class SearchManagerImpl implements SearchManager {
     this._searchGeneration++;
     this._results = undefined;
     this._resultIndex = -1;
+    this._firstResultIndex = 0;
     this._searchInProgress = false;
     if (text !== '') {
       this._searchInProgress = true;
@@ -133,17 +138,14 @@ export class SearchManagerImpl implements SearchManager {
       return;
     }
 
-    if (reverse) {
-      --this._resultIndex;
-      if (this._resultIndex < 0) {
-        this._resultIndex = this._results.totalResults - 1;
-      }
+    const total = this._results.totalResults;
+    let index: number;
+    if (this._resultIndex === -1) {
+      index = reverse ? this._firstResultIndex - 1 : this._firstResultIndex;
     } else {
-      ++this._resultIndex;
-      if (this._resultIndex > this._results.totalResults - 1) {
-        this._resultIndex = 0;
-      }
+      index = this._resultIndex + (reverse ? -1 : 1);
     }
+    this._resultIndex = (index + total) % total;
     this._onResultStep?.({
       eventId: this._results.eventIds[this._resultIndex],
       ts: Time.fromRaw(this._results.tses[this._resultIndex]),
@@ -339,15 +341,7 @@ export class SearchManagerImpl implements SearchManager {
       const foundIndex = this._results.tses.findIndex(
         (ts) => ts >= visibleWindow.start,
       );
-      if (foundIndex === -1) {
-        this._resultIndex = -1;
-      } else {
-        // Store the value before the found one, so that when the user presses
-        // enter we navigate to the correct one.
-        this._resultIndex = foundIndex - 1;
-      }
-    } else {
-      this._resultIndex = -1;
+      this._firstResultIndex = Math.max(foundIndex, 0);
     }
   }
 
@@ -394,18 +388,11 @@ export class SearchManagerImpl implements SearchManager {
 
     // Find first result after the start of the visible window
     const visibleWindow = this._timeline?.visibleWindow.toTimeSpan();
-    if (visibleWindow && this._results.totalResults > 0) {
-      let foundIndex = -1;
-      for (let i = 0; i < this._results.tses.length; i++) {
-        if (this._results.tses[i] >= visibleWindow.start) {
-          foundIndex = i;
-          break;
-        }
-      }
-      // Store the index *before* the found one, so the first step lands on it.
-      this._resultIndex = foundIndex === -1 ? -1 : foundIndex - 1;
-    } else {
-      this._resultIndex = -1;
+    if (visibleWindow) {
+      const foundIndex = this._results.tses.findIndex(
+        (ts) => ts >= visibleWindow.start,
+      );
+      this._firstResultIndex = Math.max(foundIndex, 0);
     }
   }
 }
