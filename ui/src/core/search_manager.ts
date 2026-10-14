@@ -62,6 +62,9 @@ export class SearchManagerImpl implements SearchManager {
   // visible window. Kept apart from |_resultIndex| so that, until the user
   // steps, no result is presented as the current one.
   private _firstResultIndex = 0;
+  // A step asked for while the search was still running, taken when its
+  // results arrive.
+  private _pendingStep?: 'forward' | 'backward';
   private _searchInProgress = false;
 
   // TODO(primiano): once we get rid of globals, these below can be made always
@@ -102,6 +105,7 @@ export class SearchManagerImpl implements SearchManager {
     this._results = undefined;
     this._resultIndex = -1;
     this._firstResultIndex = 0;
+    this._pendingStep = undefined;
     this._searchInProgress = false;
     if (text !== '') {
       this._searchInProgress = true;
@@ -130,7 +134,12 @@ export class SearchManagerImpl implements SearchManager {
   }
 
   private stepInternal(reverse = false) {
-    if (this._results === undefined) return;
+    if (this._results === undefined) {
+      if (this._searchInProgress) {
+        this._pendingStep = reverse ? 'backward' : 'forward';
+      }
+      return;
+    }
 
     // If the value of |this._results.totalResults| is 0,
     // it means that the query is in progress or no results are found.
@@ -337,6 +346,7 @@ export class SearchManagerImpl implements SearchManager {
     }
     this._results = searchResults;
     this.updateFirstResultIndex();
+    this.takePendingStep();
   }
 
   private async executeDatasetSearch() {
@@ -380,6 +390,15 @@ export class SearchManagerImpl implements SearchManager {
     }
     this._results = searchResults;
     this.updateFirstResultIndex();
+    this.takePendingStep();
+  }
+
+  private takePendingStep() {
+    const pendingStep = this._pendingStep;
+    this._pendingStep = undefined;
+    if (pendingStep !== undefined) {
+      this.stepInternal(pendingStep === 'backward');
+    }
   }
 
   // Find the first result at or after the start of the visible window, where
