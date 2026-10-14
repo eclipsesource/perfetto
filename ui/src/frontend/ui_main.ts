@@ -317,11 +317,10 @@ export class UiMain implements m.ClassComponent<OptionalTraceImplAttrs> {
       const searchMgr = trace.search;
       const index = searchMgr.resultIndex;
       const total = results.totalResults ?? 0;
+      // Until the first step, no result is the current one.
+      const current = total === 0 ? '0' : index === -1 ? '-' : `${index + 1}`;
       children.push(
-        m(
-          '.pf-omnibox__stepthrough-current',
-          `${total === 0 ? '0 / 0' : `${index + 1} / ${total}`}`,
-        ),
+        m('.pf-omnibox__stepthrough-current', `${current} / ${total}`),
         m(Button, {
           onclick: () => searchMgr.stepBackwards(),
           icon: 'keyboard_arrow_left',
