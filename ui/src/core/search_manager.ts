@@ -58,6 +58,13 @@ export class SearchManagerImpl implements SearchManager {
   private _searchText = '';
   private _results?: SearchResults;
   private _resultIndex = -1;
+  // Where the first step lands: the first result at or after the start of the
+  // visible window. Kept apart from |_resultIndex| so that, until the user
+  // steps, no result is presented as the current one.
+  private _firstResultIndex = 0;
+  // A step asked for while the search was still running, taken when its
+  // results arrive.
+  private _pendingStep?: 'forward' | 'backward';
   private _searchInProgress = false;
 
   // TODO(primiano): once we get rid of globals, these below can be made always
@@ -97,16 +104,22 @@ export class SearchManagerImpl implements SearchManager {
     this._searchGeneration++;
     this._results = undefined;
     this._resultIndex = -1;
+    this._firstResultIndex = 0;
+    this._pendingStep = undefined;
     this._searchInProgress = false;
     if (text !== '') {
       this._searchInProgress = true;
+      const generation = this._searchGeneration;
       this._limiter.schedule(async () => {
         if (DATASET_SEARCH.get()) {
           await this.executeDatasetSearch();
         } else {
           await this.executeSearch();
         }
-        this._searchInProgress = false;
+        // A newer search may have started meanwhile and still be running.
+        if (generation === this._searchGeneration) {
+          this._searchInProgress = false;
+        }
         raf.scheduleFullRedraw();
       });
     }
@@ -125,7 +138,12 @@ export class SearchManagerImpl implements SearchManager {
   }
 
   private stepInternal(reverse = false) {
-    if (this._results === undefined) return;
+    if (this._results === undefined) {
+      if (this._searchInProgress) {
+        this._pendingStep = reverse ? 'backward' : 'forward';
+      }
+      return;
+    }
 
     // If the value of |this._results.totalResults| is 0,
     // it means that the query is in progress or no results are found.
@@ -133,17 +151,14 @@ export class SearchManagerImpl implements SearchManager {
       return;
     }
 
-    if (reverse) {
-      --this._resultIndex;
-      if (this._resultIndex < 0) {
-        this._resultIndex = this._results.totalResults - 1;
-      }
+    const total = this._results.totalResults;
+    let index: number;
+    if (this._resultIndex === -1) {
+      index = reverse ? this._firstResultIndex - 1 : this._firstResultIndex;
     } else {
-      ++this._resultIndex;
-      if (this._resultIndex > this._results.totalResults - 1) {
-        this._resultIndex = 0;
-      }
+      index = this._resultIndex + (reverse ? -1 : 1);
     }
+    this._resultIndex = (index + total) % total;
     this._onResultStep?.({
       eventId: this._results.eventIds[this._resultIndex],
       ts: Time.fromRaw(this._results.tses[this._resultIndex]),
@@ -273,6 +288,9 @@ export class SearchManagerImpl implements SearchManager {
     for (const track of workspace.flatTracksOrdered) {
       // We don't support searching for tracks that don't have a URI.
       if (!track.uri) continue;
+      // Headless nodes are never rendered, so they can be neither shown nor
+      // scrolled to. Their children are still searched.
+      if (track.headless) continue;
       if (track.name.toLowerCase().indexOf(lowerSearch) === -1) {
         continue;
       }
@@ -331,24 +349,8 @@ export class SearchManagerImpl implements SearchManager {
       return;
     }
     this._results = searchResults;
-
-    // We have changed the search results - try and find the first result that's
-    // after the start of this visible window.
-    const visibleWindow = this._timeline?.visibleWindow.toTimeSpan();
-    if (visibleWindow) {
-      const foundIndex = this._results.tses.findIndex(
-        (ts) => ts >= visibleWindow.start,
-      );
-      if (foundIndex === -1) {
-        this._resultIndex = -1;
-      } else {
-        // Store the value before the found one, so that when the user presses
-        // enter we navigate to the correct one.
-        this._resultIndex = foundIndex - 1;
-      }
-    } else {
-      this._resultIndex = -1;
-    }
+    this.updateFirstResultIndex();
+    this.takePendingStep();
   }
 
   private async executeDatasetSearch() {
@@ -391,21 +393,27 @@ export class SearchManagerImpl implements SearchManager {
       return;
     }
     this._results = searchResults;
+    this.updateFirstResultIndex();
+    this.takePendingStep();
+  }
 
-    // Find first result after the start of the visible window
+  private takePendingStep() {
+    const pendingStep = this._pendingStep;
+    this._pendingStep = undefined;
+    if (pendingStep !== undefined) {
+      this.stepInternal(pendingStep === 'backward');
+    }
+  }
+
+  // Find the first result at or after the start of the visible window, where
+  // the first step lands.
+  private updateFirstResultIndex() {
     const visibleWindow = this._timeline?.visibleWindow.toTimeSpan();
-    if (visibleWindow && this._results.totalResults > 0) {
-      let foundIndex = -1;
-      for (let i = 0; i < this._results.tses.length; i++) {
-        if (this._results.tses[i] >= visibleWindow.start) {
-          foundIndex = i;
-          break;
-        }
-      }
-      // Store the index *before* the found one, so the first step lands on it.
-      this._resultIndex = foundIndex === -1 ? -1 : foundIndex - 1;
-    } else {
-      this._resultIndex = -1;
+    if (this._results && visibleWindow) {
+      const foundIndex = this._results.tses.findIndex(
+        (ts) => ts >= visibleWindow.start,
+      );
+      this._firstResultIndex = Math.max(foundIndex, 0);
     }
   }
 }
