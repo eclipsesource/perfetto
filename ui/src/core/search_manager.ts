@@ -275,6 +275,9 @@ export class SearchManagerImpl implements SearchManager {
     for (const track of workspace.flatTracksOrdered) {
       // We don't support searching for tracks that don't have a URI.
       if (!track.uri) continue;
+      // Headless nodes are never rendered, so they can be neither shown nor
+      // scrolled to. Their children are still searched.
+      if (track.headless) continue;
       if (track.name.toLowerCase().indexOf(lowerSearch) === -1) {
         continue;
       }
