@@ -109,13 +109,17 @@ export class SearchManagerImpl implements SearchManager {
     this._searchInProgress = false;
     if (text !== '') {
       this._searchInProgress = true;
+      const generation = this._searchGeneration;
       this._limiter.schedule(async () => {
         if (DATASET_SEARCH.get()) {
           await this.executeDatasetSearch();
         } else {
           await this.executeSearch();
         }
-        this._searchInProgress = false;
+        // A newer search may have started meanwhile and still be running.
+        if (generation === this._searchGeneration) {
+          this._searchInProgress = false;
+        }
         raf.scheduleFullRedraw();
       });
     }
