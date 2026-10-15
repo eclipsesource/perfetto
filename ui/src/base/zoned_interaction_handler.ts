@@ -82,6 +82,9 @@ export interface InteractionWheelEvent {
 
   // Whether the ctrl key is held or not.
   readonly ctrlKey: boolean;
+
+  // Whether the meta (Command on Mac) key is held or not.
+  readonly metaKey: boolean;
 }
 
 export interface DragConfig {
@@ -285,6 +288,7 @@ export class ZonedInteractionHandler implements Disposable {
       deltaX: e.deltaX,
       deltaY: e.deltaY,
       ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
     });
   }
 

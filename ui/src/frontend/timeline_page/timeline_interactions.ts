@@ -19,6 +19,7 @@
  */
 
 import {Rect2D} from '../../base/geom';
+import {hasModKey} from '../../base/hotkeys';
 import {TimeScale} from '../../base/time_scale';
 import {Zone} from '../../base/zoned_interaction_handler';
 import {TraceImpl} from '../../core/trace_impl';
@@ -59,7 +60,9 @@ export function wheelNavigationInteraction(
         const tDelta = timescale.pxToDuration(e.deltaX);
         trace.timeline.panVisibleWindow(tDelta);
       } else {
-        if (e.ctrlKey) {
+        // Ctrl is also what a trackpad pinch reports, so it zooms everywhere;
+        // on Mac, Command zooms as well, as it does in Sokatoa's own views.
+        if (e.ctrlKey || hasModKey(e)) {
           const sign = e.deltaY < 0 ? -1 : 1;
           const deltaY = sign * Math.log2(1 + Math.abs(e.deltaY));
           const zoomPx = e.position.x - rect.left;

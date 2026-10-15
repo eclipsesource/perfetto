@@ -178,6 +178,7 @@ describe('ZonedInteractionHandler', () => {
         clientY: 50,
         deltaX: 5,
         deltaY: 10,
+        metaKey: true,
       }),
     );
 
@@ -186,6 +187,8 @@ describe('ZonedInteractionHandler', () => {
       position: {x: 50, y: 50},
       deltaX: 5,
       deltaY: 10,
+      ctrlKey: false,
+      metaKey: true,
     });
   });
 
